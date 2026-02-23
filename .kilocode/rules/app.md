@@ -5,6 +5,9 @@
 
 The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
 
+## Context
+This app is a Web NAS OS addon app. It aims to be a webapp installed on the OS (debian/ubuntu). It will control the disks using ZFS/EXT4, control docker apps etc. It is not made to run in a docker container.
+
 ## Foundational Context
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
@@ -28,7 +31,7 @@ The UI framework in use is mantine v8
 We're using Inertia with React for the frontend. You can use tailwind if you need CSS and @tabler/icons-react if you need icons.
 You should prioritize Inertia features for backend communication and use fetch only when using inertia is too complicated or will create complex code.
 Never run npm run build as npm run dev is always running.
-```
+
 ## Conventions
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
