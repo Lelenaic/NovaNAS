@@ -1,4 +1,4 @@
-import { Box, useMantineTheme } from '@mantine/core';
+import { Box, Text, useMantineTheme } from '@mantine/core';
 import { WindowProvider, useWindow } from './WindowContext';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -15,7 +15,7 @@ const APP_COMPONENTS = {
     storage: () => <SampleAppContent title="Storage" emoji="💾" />,
 };
 
-function DesktopContent() {
+function DesktopContent({ version }) {
     const theme = useMantineTheme();
     const { windows } = useWindow();
 
@@ -71,14 +71,28 @@ function DesktopContent() {
                     })}
                 </Box>
             </Box>
+
+            {/* Footer */}
+            <Text
+                size="xs"
+                c="dimmed"
+                style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '12px',
+                    zIndex: 10,
+                }}
+            >
+                NovaNAS v{version}
+            </Text>
         </Box>
     );
 }
 
-export function DesktopLayout({ children }) {
+export function DesktopLayout({ children, version = '1.0.0' }) {
     return (
         <WindowProvider>
-            <DesktopContent />
+            <DesktopContent version={version} />
             {children}
         </WindowProvider>
     );

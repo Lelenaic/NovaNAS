@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Group, Text, ActionIcon, Menu, Avatar, Tooltip, useMantineTheme } from '@mantine/core';
+import { usePage } from '@inertiajs/react';
 import {
     IconBell,
     IconSettings,
@@ -12,6 +13,9 @@ import {
 export function Header() {
     const theme = useMantineTheme();
     const [currentTime, setCurrentTime] = useState(new Date());
+    const { auth } = usePage().props;
+    const userName = auth?.user?.name;
+    const userInitial = userName?.charAt(0).toUpperCase() || 'U';
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -100,12 +104,12 @@ export function Header() {
                     <Menu.Target>
                         <ActionIcon variant="subtle" size="lg" radius="xl">
                             <Avatar size="sm" color="blue">
-                                A
+                                {userInitial}
                             </Avatar>
                         </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
-                        <Menu.Label>Admin</Menu.Label>
+                        <Menu.Label>{userName}</Menu.Label>
                         <Menu.Item leftSection={<IconUser size={14} />}>
                             Profile
                         </Menu.Item>
