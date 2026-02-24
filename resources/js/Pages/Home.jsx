@@ -1,5 +1,5 @@
+import { DesktopLayout } from '@/Components/Desktop/DesktopLayout';
+
 export default function Home() {
-    return (
-        <p>Hello</p>
-    )
+    return <DesktopLayout />;
 }

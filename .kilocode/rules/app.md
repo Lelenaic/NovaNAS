@@ -277,4 +277,106 @@ Do not write any tests until explicitly asked.
 # Context7
 Always use Context7 MCP when you need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 
+=== desktop_window_system ===
+
+# Desktop Window System
+
+This application uses a desktop-like window system similar to Synology OS/Qnap/Ugreen. Apps open in movable, resizable windows on a desktop.
+
+## Architecture
+
+The window system is built with React Context and consists of these key components:
+
+- **WindowContext** - Manages window state (open, close, maximize, focus, move, resize, z-index)
+- **DraggableWindow** - The actual window component with drag/resize functionality
+- **DesktopLayout** - Main container combining header + desktop area + window management
+- **DesktopIcons** - Desktop icons that open apps on single-click
+- **AppLauncher** - Grid of apps accessible from header launcher button
+
+## Creating a New App
+
+To create a new app that runs in the window system, follow these steps:
+
+### 1. Create the App Component
+
+Create your app component in `resources/js/Components/Apps/`. Use Mantine components for the UI.
+
+```jsx
+// resources/js/Components/Apps/MyNewApp.jsx
+import { ScrollArea, Stack, Text, Title } from '@mantine/core';
+
+export default function MyNewApp() {
+    return (
+        <ScrollArea h="100%">
+            <Stack p="md">
+                <Title order={2}>My New App</Title>
+                <Text>App content goes here...</Text>
+            </Stack>
+        </ScrollArea>
+    );
+}
+```
+
+### 2. Register the App in DesktopLayout
+
+Open `resources/js/Components/Desktop/DesktopLayout.jsx` and:
+
+1. Import your new app component:
+```jsx
+import MyNewApp from '../Apps/MyNewApp';
+```
+
+2. Add it to the `APP_COMPONENTS` object:
+```jsx
+const APP_COMPONENTS = {
+    filemanager: FileManagerApp,
+    settings: SettingsApp,
+    terminal: TerminalApp,
+    docker: DockerApp,
+    monitor: MonitorApp,
+    storage: StorageApp,
+    mynewapp: MyNewApp,  // Add this line
+};
+```
+
+3. Add the app to the `AVAILABLE_APPS` array in both `apps` and `desktopIcons`:
+```jsx
+const AVAILABLE_APPS = [
+    { id: 'filemanager', name: 'File Manager', icon: IconFolder, color: 'blue' },
+    { id: 'settings', name: 'Settings', icon: IconSettings, color: 'gray' },
+    { id: 'terminal', name: 'Terminal', icon: IconTerminal2, color: 'dark' },
+    { id: 'docker', name: 'Docker', icon: IconBrandDocker, color: 'blue' },
+    { id: 'monitor', name: 'Monitor', icon: IconActivity, color: 'green' },
+    { id: 'storage', name: 'Storage', icon: IconDisc, color: 'orange' },
+    { id: 'mynewapp', name: 'My New App', icon: IconApp, color: 'violet' },  // Add this
+];
+```
+
+### 3. Available Icons
+
+Use icons from `@tabler/icons-react`. Common ones include:
+- `IconFolder` - File Manager
+- `IconSettings` - Settings
+- `IconTerminal2` - Terminal
+- `IconBrandDocker` - Docker
+- `IconActivity` - Monitor
+- `IconDisc` - Storage
+- `IconApps` - Generic app
+- `IconCloud` - Cloud services
+- `IconUsers` - User management
+- `IconNetwork` - Network settings
+
+### 4. Window Features
+
+Windows automatically support:
+- **Drag** - Click and drag the title bar to move
+- **Resize** - Drag from edges/corners to resize
+- **Maximize** - Click the maximize button to fill the desktop area
+- **Close** - Click the X button to close the window
+- **Focus** - Clicking a window brings it to front (highest z-index)
+
+### 5. Adding to App Launcher
+
+The app will automatically appear in the App Launcher (accessible via the header button) and on the desktop icons if added to `desktopIcons` in `AVAILABLE_APPS`.
+
 </laravel-boost-guidelines>
