@@ -8,12 +8,14 @@ import {
     IconBell,
     IconCloud,
     IconWifi,
+    IconMail,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
 import { DynDnsTab } from './Settings/DynDnsTab';
 import { UpnpTab } from './Settings/UpnpTab';
 import { UsersTab } from './Settings/UsersTab';
+import { EmailTab } from './Settings/EmailTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
@@ -22,6 +24,7 @@ const tabs = [
     { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
     { id: 'account', label: 'Users', icon: IconUsers },
     { id: 'security', label: 'Security', icon: IconShield },
+    { id: 'email', label: 'Email', icon: IconMail },
     { id: 'notifications', label: 'Notifications', icon: IconBell },
 ];
 
@@ -45,6 +48,8 @@ export function SettingsAppContent() {
                 return <UsersTab />;
             case 'security':
                 return <Text c="dimmed">Security settings will appear here.</Text>;
+            case 'email':
+                return <EmailTab />;
             case 'notifications':
                 return <Text c="dimmed">Notification settings will appear here.</Text>;
             default:

@@ -13,6 +13,8 @@ use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SmartController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\EmailSettingsController;
+use App\Http\Controllers\GeneralSettingsController;
 
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
@@ -115,6 +117,15 @@ Route::group(['middleware' => 'auth'], function () {
 
         // Available Linux users for linking
         Route::get('/api/users/linux/available', [UserController::class, 'availableLinuxUsers']);
+
+        // Email/SMTP settings routes
+        Route::get('/api/email/settings', [EmailSettingsController::class, 'index']);
+        Route::post('/api/email/settings', [EmailSettingsController::class, 'store']);
+        Route::post('/api/email/test', [EmailSettingsController::class, 'test']);
+
+        // General settings routes
+        Route::get('/api/settings/general', [GeneralSettingsController::class, 'index']);
+        Route::put('/api/settings/general', [GeneralSettingsController::class, 'update']);
     });
 
     // API routes - exclude Inertia middleware

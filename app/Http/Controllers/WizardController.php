@@ -7,7 +7,6 @@ use App\Services\LinuxUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class WizardController extends Controller
 {
