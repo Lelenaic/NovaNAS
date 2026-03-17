@@ -12,10 +12,11 @@ class AuthController extends Controller
     /**
      * Display the login page.
      */
-    public function login()
+    public function login(Request $request)
     {
         return Inertia::render('Login', [
             'version' => config('app.version'),
+            'passwordSet' => $request->boolean('password_set', false),
         ]);
     }
 

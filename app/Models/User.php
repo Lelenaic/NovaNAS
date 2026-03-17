@@ -13,6 +13,11 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Temporary storage for the plain password before it's hashed.
+     */
+    protected ?string $plainPassword = null;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -22,6 +27,7 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'samba_password',
         'invitation_token',
         'invitation_expires_at',
         'status',
@@ -38,6 +44,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'invitation_token',
+        'plainPassword',
     ];
 
     /**
@@ -54,6 +61,62 @@ class User extends Authenticatable
             'password_set_at' => 'datetime',
             'is_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Set the user's password and generate Samba password hash.
+     *
+     * @param string $value
+     * @return void
+     */
+    public function setPasswordAttribute(string $value): void
+    {
+        // Store the plain password before hashing for Samba hash generation
+        // Check if the value is already hashed (starts with $2y$ or $2a$)
+        if (preg_match('/^\$2[ayb]\$/', $value)) {
+            // Password is already hashed, we can't generate Samba hash
+            $this->attributes['password'] = $value;
+            $this->plainPassword = null;
+        } else {
+            // Plain password - store it for Samba hash generation
+            $this->plainPassword = $value;
+            $this->attributes['password'] = $value;
+        }
+    }
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (User $user) {
+            // Generate Samba password after the model is saved
+            // At this point, the password has been hashed and we have the plain password
+            if ($user->plainPassword) {
+                $user->samba_password = $user->generateSambaPassword($user->plainPassword);
+                $user->plainPassword = null;
+                $user->saveQuietly();
+            }
+        });
+    }
+
+    /**
+     * Generate a Samba NT (MD4) password hash from the user's password.
+     *
+     * @param string $password
+     * @return string
+     */
+    public function generateSambaPassword(string $password): string
+    {
+        if (empty($password)) {
+            return '';
+        }
+
+        // Convert UTF-8 to UTF-16LE
+        $unicode = iconv('UTF-8', 'UTF-16LE', $password);
+
+        // Compute MD4 hash, uppercase hex
+        return strtoupper(bin2hex(hash('md4', $unicode, true)));
     }
 
     /**

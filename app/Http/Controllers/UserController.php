@@ -203,7 +203,7 @@ class UserController extends Controller
 
         // Generate the invitation URL
         $appUrl = config('app.url', 'http://localhost');
-        $invitationUrl = "{$appUrl}/set-password?token={$token}";
+        $invitationUrl = "{$appUrl}/invitation/{$token}";
 
         return response()->json([
             'message' => 'Invitation created successfully',
@@ -341,22 +341,18 @@ class UserController extends Controller
     /**
      * Set password for invited user.
      */
-    public function setPassword(SetPasswordRequest $request): JsonResponse
+    public function setPassword(SetPasswordRequest $request): \Symfony\Component\HttpFoundation\Response
     {
         $validated = $request->validated();
 
         $user = User::where('invitation_token', $validated['token'])->first();
 
         if (!$user) {
-            return response()->json([
-                'error' => 'Invalid invitation token.',
-            ], 422);
+            abort(404, 'Invalid invitation token.');
         }
 
         if (!$user->canSetPassword()) {
-            return response()->json([
-                'error' => 'This invitation has expired or is invalid.',
-            ], 422);
+            abort(400, 'This invitation has expired or is invalid.');
         }
 
         // Update the password
@@ -381,9 +377,7 @@ class UserController extends Controller
             }
         }
 
-        return response()->json([
-            'message' => 'Password set successfully. You can now log in.',
-        ]);
+        return Inertia::location('/login?password_set=true');
     }
 
     /**

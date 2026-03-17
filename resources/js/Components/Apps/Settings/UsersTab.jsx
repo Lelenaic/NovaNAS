@@ -109,7 +109,14 @@ export function UsersTab() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to invite user');
+                // Check for validation errors first (data.errors)
+                if (data.errors) {
+                    const firstErrorKey = Object.keys(data.errors)[0];
+                    const firstError = data.errors[firstErrorKey];
+                    throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+                }
+                // Then check for data.message
+                throw new Error(data.message || data.error || 'Failed to invite user');
             }
 
             await fetchInvitations();
@@ -209,14 +216,46 @@ export function UsersTab() {
     };
 
     const copyToClipboard = (text, id) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setCopiedLink(id);
-            setTimeout(() => setCopiedLink(null), 2000);
-        });
+        // Try using the Clipboard API first, fall back to textarea method
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                setCopiedLink(id);
+                setTimeout(() => setCopiedLink(null), 2000);
+            }).catch(() => {
+                // Fallback if clipboard API fails
+                fallbackCopy(text, id);
+            });
+        } else {
+            // Clipboard API not available (HTTP or unsupported browser)
+            fallbackCopy(text, id);
+        }
     };
 
-    // Get the first user's ID (default admin - cannot be deleted)
-    const firstUserId = users.length > 0 ? users[0].id : null;
+    const fallbackCopy = (text, id) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            setCopiedLink(id);
+            setTimeout(() => setCopiedLink(null), 2000);
+        } catch (err) {
+            console.error('Copy failed:', err);
+        }
+        document.body.removeChild(textArea);
+    };
+
+    // Get the default admin user's ID (the first user created - identified by lowest ID)
+    // This matches the backend logic in UserController::destroy
+    const getFirstUserId = () => {
+        if (users.length === 0) return null;
+        return Math.min(...users.map(u => u.id));
+    };
 
     if (loading) {
         return (
@@ -344,7 +383,7 @@ export function UsersTab() {
                                                 >
                                                     <IconEdit size={16} />
                                                 </ActionIcon>
-                                                {user.id === firstUserId ? (
+                                                {user.id === getFirstUserId() ? (
                                                     <Tooltip label="Cannot delete the default admin user">
                                                         <ActionIcon variant="subtle" color="gray" disabled>
                                                             <IconTrash size={16} />
@@ -432,7 +471,7 @@ export function UsersTab() {
                                                 size="xs"
                                                 leftSection={copiedLink === invitation.id ? <IconCheck size={14} /> : <IconCopy size={14} />}
                                                 onClick={() => copyToClipboard(
-                                                    `${window.location.origin}/set-password?token=${invitation.invitation_token || ''}`,
+                                                    `${window.location.origin}/invitation/${invitation.invitation_token || ''}`,
                                                     invitation.id
                                                 )}
                                             >

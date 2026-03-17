@@ -1,7 +1,6 @@
 import {
     Box,
     Button,
-    Center,
     Checkbox,
     Container,
     Group,
@@ -12,11 +11,12 @@ import {
     TextInput,
     Title,
     rem,
+    Alert,
 } from '@mantine/core';
-import { IconCloudComputing, IconLock, IconMail } from '@tabler/icons-react';
+import { IconCloudComputing, IconLock, IconMail, IconCheck } from '@tabler/icons-react';
 import { useForm } from '@inertiajs/react';
 
-export default function Login({ version, errors }) {
+export default function Login({ version, errors, passwordSet }) {
     const { data, setData, post, processing } = useForm({
         email: '',
         password: '',
@@ -157,6 +157,15 @@ export default function Login({ version, errors }) {
 
                     <form onSubmit={handleSubmit}>
                         <Stack mt={rem(32)} gap="md">
+                            {passwordSet && (
+                                <Alert
+                                    color="green"
+                                    variant="light"
+                                    icon={<IconCheck size={16} />}
+                                >
+                                    Password set successfully. You can now log in.
+                                </Alert>
+                            )}
                             <TextInput
                                 size="md"
                                 placeholder="Email"

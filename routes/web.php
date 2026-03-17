@@ -15,6 +15,7 @@ use App\Http\Controllers\SmartController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\EmailSettingsController;
 use App\Http\Controllers\GeneralSettingsController;
+use App\Http\Controllers\DockerSettingsController;
 
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
@@ -33,6 +34,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Password set route for invited users (no auth required)
 Route::get('/set-password', [UserController::class, 'showSetPassword']);
 Route::post('/set-password', [UserController::class, 'setPassword']);
+
+// Invitation route (clean URL structure)
+Route::get('/invitation/{token}', [UserController::class, 'showSetPassword']);
 
 
 Route::group(['middleware' => 'auth'], function () {
@@ -126,6 +130,11 @@ Route::group(['middleware' => 'auth'], function () {
         // General settings routes
         Route::get('/api/settings/general', [GeneralSettingsController::class, 'index']);
         Route::put('/api/settings/general', [GeneralSettingsController::class, 'update']);
+
+        // Docker settings routes
+        Route::get('/api/settings/docker', [DockerSettingsController::class, 'index']);
+        Route::post('/api/settings/docker/move-data-directory', [DockerSettingsController::class, 'moveDataDirectory']);
+        Route::get('/api/settings/docker/mount-points', [DockerSettingsController::class, 'mountPoints']);
     });
 
     // API routes - exclude Inertia middleware

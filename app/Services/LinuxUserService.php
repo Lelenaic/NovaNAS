@@ -139,6 +139,7 @@ class LinuxUserService
 
         // Create user with home directory
         $process = new Process([
+            'sudo',
             'useradd',
             '-m',
             '-d', $homeDir,
@@ -168,6 +169,7 @@ class LinuxUserService
     {
         // Use chpasswd to set the password
         $process = new Process([
+            'sudo',
             'chpasswd',
         ]);
 

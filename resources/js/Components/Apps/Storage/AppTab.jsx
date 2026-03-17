@@ -21,11 +21,14 @@ import {
     IconArrowRight,
     IconFolderOpen,
     IconAlertCircle,
+    IconBrandDocker,
+    IconCheck,
 } from '@tabler/icons-react';
 
 const SETTINGS_KEYS = {
     userFilesHome: 'storage.user_files_home',
     appFoldersHome: 'storage.app_folders_home',
+    dockerDataDir: 'storage.docker_data_directory',
 };
 
 function DirectorySelectModal({ opened, onClose, onSelect, pools = [], loadingPools = false }) {
@@ -255,6 +258,192 @@ function SettingRow({ icon: Icon, label, description, value, onMove }) {
     );
 }
 
+function DockerDataDirectoryRow() {
+    const theme = useMantineTheme();
+    const [dockerStatus, setDockerStatus] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
+    const [moving, setMoving] = useState(false);
+    const [pools, setPools] = useState([]);
+    const [loadingPools, setLoadingPools] = useState(false);
+    const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+
+    const fetchDockerSettings = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/settings/docker');
+            const data = await response.json();
+            setDockerStatus({
+                isInstalled: data.is_installed,
+                isRunning: data.is_running,
+                dataDirectory: data.data_directory,
+            });
+        } catch (err) {
+            setError('Failed to load Docker settings');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchPools = async () => {
+        setLoadingPools(true);
+        try {
+            const response = await fetch('/api/storage/pools');
+            const data = await response.json();
+            setPools(data.pools || []);
+        } catch (err) {
+            console.error('Error fetching pools:', err);
+        } finally {
+            setLoadingPools(false);
+        }
+    };
+
+    const handleOpenModal = () => {
+        fetchPools();
+        openModal();
+    };
+
+    const handleSelectDirectory = ({ pool, path }) => {
+        const fullPath = `${path}`;
+        moveDockerDirectory(fullPath);
+    };
+
+    const moveDockerDirectory = async (newDataDir) => {
+        setError(null);
+        setSuccess(null);
+        closeModal();
+        setMoving(true);
+
+        try {
+            const response = await fetch('/api/settings/docker/move-data-directory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({
+                    new_data_directory: newDataDir,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to move data directory');
+            }
+
+            setSuccess(data.message);
+            await fetchDockerSettings();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setMoving(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDockerSettings();
+    }, []);
+
+    if (loading) {
+        return (
+            <Box
+                style={{
+                    backgroundColor: theme.colors.dark[6],
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: `1px solid ${theme.colors.dark[4]}`,
+                }}
+            >
+                <LoadingOverlay visible={true} />
+            </Box>
+        );
+    }
+
+    if (!dockerStatus?.isInstalled) {
+        return (
+            <Box
+                style={{
+                    backgroundColor: theme.colors.dark[6],
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: `1px solid ${theme.colors.dark[4]}`,
+                }}
+            >
+                <Group gap="md">
+                    <ThemeIcon size="lg" radius="md" variant="light" color="yellow">
+                        <IconAlertCircle size={20} />
+                    </ThemeIcon>
+                    <Box>
+                        <Text size="md" fw={600}>Docker Data Directory</Text>
+                        <Text size="sm" c="dimmed">Docker is not installed on this system</Text>
+                    </Box>
+                </Group>
+            </Box>
+        );
+    }
+
+    return (
+        <>
+            <Box
+                style={{
+                    backgroundColor: theme.colors.dark[6],
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: `1px solid ${theme.colors.dark[4]}`,
+                }}
+            >
+                <Group justify="space-between" align="flex-start">
+                    <Group gap="md">
+                        <ThemeIcon size="lg" radius="md" variant="light" color="blue">
+                            <IconBrandDocker size={20} />
+                        </ThemeIcon>
+                        <Box>
+                            <Text size="md" fw={600}>Docker Data Directory</Text>
+                            <Text size="sm" c="dimmed">Location where Docker stores images, containers, and volumes</Text>
+                            {dockerStatus?.dataDirectory && (
+                                <Text size="xs" c="blue" mt="xs" fw={500}>
+                                    {dockerStatus.dataDirectory}
+                                </Text>
+                            )}
+                        </Box>
+                    </Group>
+                    <Button
+                        variant="light"
+                        leftSection={<IconFolder size={16} />}
+                        onClick={handleOpenModal}
+                        loading={moving}
+                    >
+                        Move
+                    </Button>
+                </Group>
+
+                {error && (
+                    <Alert color="red" variant="light" mt="md" onClose={() => setError(null)} withCloseButton>
+                        {error}
+                    </Alert>
+                )}
+
+                {success && (
+                    <Alert color="green" variant="light" mt="md" icon={<IconCheck size={16} />} onClose={() => setSuccess(null)} withCloseButton>
+                        {success}
+                    </Alert>
+                )}
+            </Box>
+
+            <DirectorySelectModal
+                opened={modalOpened}
+                onClose={closeModal}
+                onSelect={handleSelectDirectory}
+                pools={pools}
+                loadingPools={loadingPools}
+            />
+        </>
+    );
+}
+
 export function AppTab() {
     const theme = useMantineTheme();
     const [settings, setSettings] = useState({
@@ -382,6 +571,8 @@ export function AppTab() {
                     value={settings[SETTINGS_KEYS.appFoldersHome]}
                     onMove={() => handleOpenModal(SETTINGS_KEYS.appFoldersHome)}
                 />
+
+                <DockerDataDirectoryRow />
             </Stack>
 
             <DirectorySelectModal
