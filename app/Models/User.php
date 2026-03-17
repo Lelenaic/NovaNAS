@@ -49,11 +49,43 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'invitation_expires_at' => 'datetime',
             'password_set_at' => 'datetime',
             'is_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Store the plain password before hashing for Samba sync.
+     * This attribute is not persisted to database.
+     */
+    protected ?string $plainPasswordForSamba = null;
+
+    /**
+     * Set the user's password attribute.
+     *
+     * This mutator captures and hashes the plain password, storing it in a
+     * temporary attribute for Samba sync before the hashed version is saved.
+     */
+    public function setPasswordAttribute(mixed $value): void
+    {
+        // Store the plain password before hashing for Samba sync
+        if ($value !== null) {
+            $this->plainPasswordForSamba = $value;
+            // Hash the password ourselves instead of relying on the 'hashed' cast
+            // This ensures it works correctly with update() method
+            $this->attributes['password'] = \Illuminate\Support\Facades\Hash::make($value);
+        } else {
+            $this->attributes['password'] = null;
+        }
+    }
+
+    /**
+     * Get the plain password stored for Samba sync.
+     */
+    public function getPlainPasswordForSamba(): ?string
+    {
+        return $this->plainPasswordForSamba;
     }
 
     /**
@@ -62,48 +94,38 @@ class User extends Authenticatable
      */
     protected static function booted(): void
     {
-        // Capture password before it's set on the model during creation
-        static::creating(function (User $user) {
-            if (isset($user->attributes['password']) && $user->username) {
-                // Store plain password temporarily for sync after creation
-                $user->setRelation('plainPassword', $user->attributes['password']);
-            }
-        });
-
-        // Capture password before it's set on the model during update
-        static::updating(function (User $user) {
-            if (isset($user->attributes['password']) && $user->isDirty('password') && $user->username) {
-                // Get the original password from the dirty array
-                $plainPassword = $user->attributes['password'];
-                // Store plain password temporarily for sync after update
-                $user->setRelation('plainPassword', $plainPassword);
-            }
-        });
-
         // After creation, sync to Samba
         static::created(function (User $user) {
-            $plainPassword = $user->getRelation('plainPassword');
+            // Use the plain password captured by the setter
+            $plainPassword = $user->getPlainPasswordForSamba();
             if ($plainPassword && $user->username) {
                 try {
                     $samba = app(SambaService::class);
                     $samba->updatePassword($user->username, $plainPassword);
+                    \Log::info("Samba password synced successfully for user: {$user->username}");
                 } catch (\RuntimeException $e) {
                     \Log::warning("Failed to sync password to Samba: {$e->getMessage()}");
                 }
             }
+            // Clear the plain password after sync
+            $user->plainPasswordForSamba = null;
         });
 
         // After update, sync to Samba
         static::updated(function (User $user) {
-            $plainPassword = $user->getRelation('plainPassword');
+            // Use the plain password captured by the setter
+            $plainPassword = $user->getPlainPasswordForSamba();
             if ($plainPassword && $user->username && $user->wasChanged('password')) {
                 try {
                     $samba = app(SambaService::class);
                     $samba->updatePassword($user->username, $plainPassword);
+                    \Log::info("Samba password synced successfully for user: {$user->username}");
                 } catch (\RuntimeException $e) {
                     \Log::warning("Failed to sync password to Samba: {$e->getMessage()}");
                 }
             }
+            // Clear the plain password after sync
+            $user->plainPasswordForSamba = null;
         });
     }
 

@@ -37,9 +37,22 @@ class SambaService
             return false;
         }
 
-        $users = explode("\n", $process->getOutput());
+        $lines = explode("\n", $process->getOutput());
 
-        return in_array($username, array_map('trim', $users), true);
+        // pdbedit -L output format is: username:uid:gecos
+        // We need to extract just the username (part before first colon)
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (empty($trimmed)) {
+                continue;
+            }
+            $parts = explode(':', $trimmed);
+            if (isset($parts[0]) && $parts[0] === $username) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -111,8 +124,8 @@ class SambaService
     /**
      * Add or update a Samba user password.
      *
-     * This method creates a temporary file with the Samba password entry
-     * and imports it using pdbedit.
+     * This method uses smbpasswd command to update the Samba password.
+     * The -a flag adds or updates the user, -s reads from stdin.
      *
      * @param string $username The username
      * @param string $password The plain text password
@@ -121,45 +134,44 @@ class SambaService
      */
     public function updatePassword(string $username, string $password): bool
     {
-        // Get the user's UID
-        $uid = $this->linuxUserService->getUid($username);
-
-        if ($uid === null) {
+        // Verify the user exists on the system
+        if (!$this->linuxUserService->userExists($username)) {
             throw new \RuntimeException("Cannot update Samba password: user '{$username}' not found on system.");
         }
 
-        // Generate NT hash
-        $ntHash = $this->generateNtHash($password);
+        // smbpasswd -a -s requires the password TWICE (new password + confirmation)
+        // Each on a separate line
+        $passwordWithConfirmation = $password . "\n" . $password . "\n";
 
-        // Create passdb line
-        $passdbLine = $this->createPassdbLine($username, $uid, $ntHash);
-
-        // Create temporary file using sudo tee
-        $tempFile = '/tmp/smbusers_' . uniqid() . '.tmp';
-
-        // Write to temp file using sudo tee
-        $writeProcess = new Process(['sudo', 'tee', $tempFile]);
-        $writeProcess->setInput($passdbLine);
+        // Write password to temp file
+        $tempFile = '/tmp/smbpass_' . uniqid() . '.tmp';
+        file_put_contents($tempFile, $passwordWithConfirmation);
+        chmod($tempFile, 0600);
 
         try {
-            $writeProcess->mustRun();
-        } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to write temporary Samba passdb file: " . $writeProcess->getErrorOutput());
+            // Run smbpasswd with password from file
+            $cmd = sprintf(
+                'sudo smbpasswd -a -s %s < %s 2>&1',
+                escapeshellarg($username),
+                escapeshellarg($tempFile)
+            );
+
+            $output = shell_exec($cmd);
+
+            // Check for errors in output
+            if ($output && (strpos($output, 'Unable to get new password') !== false ||
+                           strpos($output, 'Mismatch') !== false ||
+                           strpos($output, 'error') !== false)) {
+                @unlink($tempFile);
+                throw new \RuntimeException("Failed to update Samba password: " . trim($output));
+            }
+        } catch (\Exception $e) {
+            @unlink($tempFile);
+            throw new \RuntimeException("Failed to update Samba password: " . $e->getMessage());
         }
 
-        try {
-            // Import using pdbedit
-            $importProcess = new Process(['sudo', 'pdbedit', '-i', 'smbpasswd:' . $tempFile, '--force']);
-            $importProcess->mustRun();
-        } catch (ProcessFailedException $e) {
-            // Clean up temp file
-            $this->cleanupTempFile($tempFile);
-
-            throw new \RuntimeException("Failed to import Samba password: " . $importProcess->getErrorOutput());
-        }
-
-        // Clean up temp file
-        $this->cleanupTempFile($tempFile);
+        // Clean up
+        @unlink($tempFile);
 
         return true;
     }
