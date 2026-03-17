@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Services\LinuxUserService;
+use App\Services\SambaService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class UserController extends Controller
 {
     public function __construct(
         public LinuxUserService $linuxUserService,
-        public SettingsService $settingsService
+        public SettingsService $settingsService,
+        public SambaService $sambaService
     ) {
     }
 
@@ -118,12 +120,12 @@ class UserController extends Controller
             ], 500);
         }
 
-        // Create the user in the database
+        // Create the user in the database (model handles password hashing and Samba sync)
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'username' => $validated['username'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'is_admin' => $validated['is_admin'] ?? false,
             'status' => 'active',
             'password_set_at' => now(),
@@ -356,14 +358,14 @@ class UserController extends Controller
             abort(400, 'This invitation has expired or is invalid.');
         }
 
-        // Update the password
+        // Update the password (model handles password hashing and Samba sync)
         $user->update([
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'status' => 'active',
             'password_set_at' => now(),
             'invitation_token' => null,
             'invitation_expires_at' => null,
-            'name' => $user->username ?? $user->email, // Use username as name if available
+            'name' => $user->username ?? $user->email,
         ]);
 
         // Update the Linux user password
@@ -395,7 +397,7 @@ class UserController extends Controller
             'email' => $validated['email'],
         ]);
 
-        // Update password if provided
+        // Update password if provided (model handles password hashing and Samba sync)
         if (!empty($validated['password'])) {
             $user->update([
                 'password' => $validated['password'],

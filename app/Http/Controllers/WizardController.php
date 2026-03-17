@@ -72,7 +72,7 @@ class WizardController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'is_admin' => true,
         ]);
 
@@ -150,7 +150,7 @@ class WizardController extends Controller
         $user = User::create([
             'name' => 'Admin',
             'email' => 'admin@novanas.local',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'is_admin' => true,
         ]);
 
