@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Services\SambaService;
 
 class User extends Authenticatable
 {
@@ -93,9 +93,19 @@ class User extends Authenticatable
             // Generate Samba password after the model is saved
             // At this point, the password has been hashed and we have the plain password
             if ($user->plainPassword) {
-                $user->samba_password = $user->generateSambaPassword($user->plainPassword);
+                $plainPassword = $user->plainPassword;
+                $user->samba_password = $user->generateSambaPassword($plainPassword);
                 $user->plainPassword = null;
                 $user->saveQuietly();
+
+                // Sync password to Samba using SambaService
+                try {
+                    $sambaService = app(SambaService::class);
+                    $sambaService->updatePassword($user->username, $plainPassword);
+                } catch (\RuntimeException $e) {
+                    // Log error but don't fail the user save
+                    report($e);
+                }
             }
         });
     }

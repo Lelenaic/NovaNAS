@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\InviteUserRequest;
 use App\Http\Requests\SetPasswordRequest;
 use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Services\LinuxUserService;
@@ -378,6 +379,56 @@ class UserController extends Controller
         }
 
         return Inertia::location('/login?password_set=true');
+    }
+
+    /**
+     * Update the current user's profile.
+     */
+    public function profile(UpdateProfileRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $user = $request->user();
+
+        // Update name and email
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        // Update password if provided
+        if (!empty($validated['password'])) {
+            $user->update([
+                'password' => $validated['password'],
+                'password_set_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'username' => $user->username,
+            ],
+        ]);
+    }
+
+    /**
+     * Get the current user's profile.
+     */
+    public function showProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'username' => $user->username,
+            ],
+        ]);
     }
 
     /**

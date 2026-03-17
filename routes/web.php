@@ -114,6 +114,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/api/users/{user}', [UserController::class, 'update']);
         Route::delete('/api/users/{user}', [UserController::class, 'destroy']);
 
+        // Current user profile route
+        Route::get('/api/profile', [UserController::class, 'showProfile']);
+        Route::put('/api/profile', [UserController::class, 'profile']);
+
         // User invitation routes
         Route::get('/api/users/pending', [UserController::class, 'pending']);
         Route::post('/api/users/invite', [UserController::class, 'invite']);

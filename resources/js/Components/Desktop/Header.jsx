@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Group, Text, ActionIcon, Menu, Avatar, Tooltip, useMantineTheme } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { usePage, router } from '@inertiajs/react';
 import {
     IconBell,
@@ -9,6 +10,7 @@ import {
     IconWifi,
     IconCpu,
 } from '@tabler/icons-react';
+import { ProfileModal } from './ProfileModal';
 
 export function Header() {
     const theme = useMantineTheme();
@@ -16,6 +18,7 @@ export function Header() {
     const { auth } = usePage().props;
     const userName = auth?.user?.name;
     const userInitial = userName?.charAt(0).toUpperCase() || 'U';
+    const [profileModalOpened, { open: openProfileModal, close: closeProfileModal }] = useDisclosure(false);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -110,7 +113,7 @@ export function Header() {
                     </Menu.Target>
                     <Menu.Dropdown>
                         <Menu.Label>{userName}</Menu.Label>
-                        <Menu.Item leftSection={<IconUser size={14} />}>
+                        <Menu.Item leftSection={<IconUser size={14} />} onClick={openProfileModal}>
                             Profile
                         </Menu.Item>
                         <Menu.Item leftSection={<IconSettings size={14} />}>
@@ -127,6 +130,8 @@ export function Header() {
                     </Menu.Dropdown>
                 </Menu>
             </Group>
+
+            <ProfileModal opened={profileModalOpened} onClose={closeProfileModal} />
         </Box>
     );
 }
