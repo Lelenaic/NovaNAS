@@ -16,6 +16,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\EmailSettingsController;
 use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\DockerSettingsController;
+use App\Http\Controllers\ServicesController;
 
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
@@ -147,6 +148,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/settings/docker', [DockerSettingsController::class, 'index']);
         Route::post('/api/settings/docker/move-data-directory', [DockerSettingsController::class, 'moveDataDirectory']);
         Route::get('/api/settings/docker/mount-points', [DockerSettingsController::class, 'mountPoints']);
+
+        // Services routes
+        Route::get('/api/services', [ServicesController::class, 'index']);
+        Route::post('/api/services/toggle', [ServicesController::class, 'toggle']);
     });
 
     // API routes - exclude Inertia middleware

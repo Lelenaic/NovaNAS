@@ -426,6 +426,7 @@ export function SharesTab() {
     const [toggling, setToggling] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [sambaEnabled, setSambaEnabled] = useState(null);
 
     const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
     const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -461,11 +462,23 @@ export function SharesTab() {
         }
     };
 
+    const fetchServiceStatus = async () => {
+        try {
+            const response = await fetch('/api/services');
+            const data = await response.json();
+            const smbdService = data.services?.find(s => s.id === 'smbd');
+            setSambaEnabled(smbdService?.enabled ?? false);
+        } catch (err) {
+            console.error('Error fetching service status:', err);
+            setSambaEnabled(false);
+        }
+    };
+
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
             setError(null);
-            await Promise.all([fetchShares(), fetchUsers()]);
+            await Promise.all([fetchShares(), fetchUsers(), fetchServiceStatus()]);
             setLoading(false);
         };
         loadData();
@@ -586,6 +599,35 @@ export function SharesTab() {
     // Separate homes and custom shares
     const homesShare = shares.find(s => s.name === 'homes');
     const customShares = shares.filter(s => s.name !== 'homes');
+
+    // Show warning if Samba is not enabled
+    if (sambaEnabled === false && !loading) {
+        return (
+            <Box style={{ position: 'relative' }}>
+                <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2 }} />
+
+                <Group justify="space-between" mb="lg">
+                    <Box>
+                        <Text size="xl" fw={700}>Samba Shares</Text>
+                        <Text size="sm" c="dimmed">
+                            Manage network shares for Windows/SMB access
+                        </Text>
+                    </Box>
+                </Group>
+
+                <Alert
+                    icon={<IconAlertCircle size={24} />}
+                    color="orange"
+                    variant="light"
+                    title="Samba Service Disabled"
+                >
+                    <Text size="sm">
+                        The Samba service (smbd) is disabled. You need to enable it in Settings &gt; Services before you can manage shares.
+                    </Text>
+                </Alert>
+            </Box>
+        );
+    }
 
     return (
         <Box style={{ position: 'relative' }}>

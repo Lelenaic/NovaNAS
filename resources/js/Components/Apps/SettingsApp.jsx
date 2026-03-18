@@ -9,6 +9,7 @@ import {
     IconCloud,
     IconWifi,
     IconMail,
+    IconServer,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -16,12 +17,14 @@ import { DynDnsTab } from './Settings/DynDnsTab';
 import { UpnpTab } from './Settings/UpnpTab';
 import { UsersTab } from './Settings/UsersTab';
 import { EmailTab } from './Settings/EmailTab';
+import { ServicesTab } from './Settings/ServicesTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
     { id: 'network', label: 'Network', icon: IconNetwork },
     { id: 'upnp', label: 'UPNP', icon: IconWifi },
     { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
+    { id: 'services', label: 'Services', icon: IconServer },
     { id: 'account', label: 'Users', icon: IconUsers },
     { id: 'security', label: 'Security', icon: IconShield },
     { id: 'email', label: 'Email', icon: IconMail },
@@ -42,6 +45,8 @@ export function SettingsAppContent() {
                 return <UpnpTab />;
             case 'dyndns':
                 return <DynDnsTab />;
+            case 'services':
+                return <ServicesTab />;
             case 'appearance':
                 return <Text c="dimmed">Appearance settings will appear here.</Text>;
             case 'account':
