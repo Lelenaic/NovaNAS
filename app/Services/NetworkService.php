@@ -397,6 +397,37 @@ class NetworkService
     }
 
     /**
+     * Get the server's default IP address.
+     * This is the IP address of the primary network interface (the one with the default route).
+     */
+    public function getDefaultIPAddress(): ?string
+    {
+        // Get the default route to find the primary interface
+        $output = $this->execute('ip route | grep default');
+
+        if (empty($output)) {
+            return null;
+        }
+
+        // Extract the interface name from the default route
+        // Example output: "default via 192.168.0.1 dev enp8s0 proto dhcp metric 100"
+        if (preg_match('/dev\s+(\S+)/', $output, $matches)) {
+            $interface = $matches[1];
+
+            // Get the IP address of this interface
+            $result = Process::run("ip -4 addr show {$interface} 2>/dev/null");
+            if ($result->successful()) {
+                $addrOutput = $result->output();
+                if (preg_match('/inet (\d+\.\d+\.\d+\.\d+)/', $addrOutput, $ipMatches)) {
+                    return $ipMatches[1];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Execute a shell command and return the output.
      */
     protected function execute(string $command): string

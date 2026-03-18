@@ -8,6 +8,7 @@ use App\Services\Storage\StorageService;
 use App\Services\SettingsService;
 use App\Services\SambaService;
 use App\Services\LinuxUserService;
+use App\Services\NetworkService;
 
 class StorageController extends Controller
 {
@@ -15,7 +16,8 @@ class StorageController extends Controller
         protected StorageService $storageService,
         protected SettingsService $settingsService,
         protected SambaService $sambaService,
-        protected LinuxUserService $linuxUserService
+        protected LinuxUserService $linuxUserService,
+        protected NetworkService $networkService
     ) {}
 
     /**
@@ -132,8 +134,12 @@ class StorageController extends Controller
             return $share['type'] === 'custom' || $share['name'] === 'homes';
         });
 
+        // Get the default IP address for network paths
+        $ipAddress = $this->networkService->getDefaultIPAddress();
+
         return response()->json([
             'shares' => array_values($shares),
+            'ip_address' => $ipAddress,
         ]);
     }
 

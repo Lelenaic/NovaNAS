@@ -17,6 +17,7 @@ import {
     Alert,
     Card,
     SimpleGrid,
+    Divider,
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -28,6 +29,9 @@ import {
     IconAlertCircle,
     IconCheck,
     IconHome,
+    IconCopy,
+    IconBrandWindows,
+    IconBrandApple,
 } from '@tabler/icons-react';
 
 function ShareModal({ opened, onClose, onSave, initialData, users, existingShares, loading }) {
@@ -208,10 +212,55 @@ function DeleteConfirmModal({ opened, onClose, onConfirm, shareName, loading }) 
     );
 }
 
-function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggle }) {
+function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggle, ipAddress }) {
     const theme = useMantineTheme();
     const isHomes = share.name === 'homes';
     const isEnabled = share.enabled !== false;
+    const [copiedLinux, setCopiedLinux] = useState(false);
+    const [copiedWindows, setCopiedWindows] = useState(false);
+
+    const smbAddressLinux = ipAddress ? `smb://${ipAddress}/${share.name}` : null;
+    const smbAddressWindows = ipAddress ? '\\\\' + ipAddress + '\\' + share.name : null;
+
+    const handleCopyLinux = async () => {
+        if (smbAddressLinux) {
+            try {
+                await navigator.clipboard.writeText(smbAddressLinux);
+            } catch {
+                // Fallback for browsers without clipboard API
+                const textarea = document.createElement('textarea');
+                textarea.value = smbAddressLinux;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            setCopiedLinux(true);
+            setTimeout(() => setCopiedLinux(false), 2000);
+        }
+    };
+
+    const handleCopyWindows = async () => {
+        if (smbAddressWindows) {
+            try {
+                await navigator.clipboard.writeText(smbAddressWindows);
+            } catch {
+                // Fallback for browsers without clipboard API
+                const textarea = document.createElement('textarea');
+                textarea.value = smbAddressWindows;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            setCopiedWindows(true);
+            setTimeout(() => setCopiedWindows(false), 2000);
+        }
+    };
 
     return (
         <Card
@@ -286,6 +335,57 @@ function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggl
                                 <Text size="xs">{share['valid users']}</Text>
                             </Group>
                         )}
+
+                        {/* Network Address Section */}
+                        {ipAddress && !isHomes && (
+                            <Box
+                                mt="xs"
+                                p="sm"
+                                style={{
+                                    backgroundColor: theme.colors.dark[7],
+                                    borderRadius: theme.radius.sm,
+                                    border: `1px solid ${theme.colors.dark[4]}`,
+                                }}
+                            >
+                                <Group gap="xs" mb="xs">
+                                    <IconBrandApple size={16} color={theme.colors.orange[5]} />
+                                    <Text size="xs" fw={600} c="orange">Linux / macOS</Text>
+                                </Group>
+                                <Group gap="xs" mb="xs">
+                                    <Text size="xs" ff="monospace" c="dimmed" style={{ flex: 1 }}>
+                                        {smbAddressLinux}
+                                    </Text>
+                                    <ActionIcon
+                                        variant="light"
+                                        color="orange"
+                                        size="sm"
+                                        onClick={handleCopyLinux}
+                                    >
+                                        {copiedLinux ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                                    </ActionIcon>
+                                </Group>
+
+                                <Divider my="xs" color="dark.4" />
+
+                                <Group gap="xs" mb="xs">
+                                    <IconBrandWindows size={16} color={theme.colors.blue[5]} />
+                                    <Text size="xs" fw={600} c="blue">Windows</Text>
+                                </Group>
+                                <Group gap="xs">
+                                    <Text size="xs" ff="monospace" c="dimmed" style={{ flex: 1 }}>
+                                        {smbAddressWindows}
+                                    </Text>
+                                    <ActionIcon
+                                        variant="light"
+                                        color="blue"
+                                        size="sm"
+                                        onClick={handleCopyWindows}
+                                    >
+                                        {copiedWindows ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                                    </ActionIcon>
+                                </Group>
+                            </Box>
+                        )}
                     </Stack>
 
                     <Group justify="flex-end" gap="xs">
@@ -320,6 +420,7 @@ export function SharesTab() {
     const theme = useMantineTheme();
     const [shares, setShares] = useState([]);
     const [users, setUsers] = useState([]);
+    const [ipAddress, setIpAddress] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toggling, setToggling] = useState(false);
@@ -339,6 +440,7 @@ export function SharesTab() {
             });
             const data = await response.json();
             setShares(data.shares || []);
+            setIpAddress(data.ip_address || null);
         } catch (err) {
             console.error('Error fetching shares:', err);
             setError('Failed to load shares');
@@ -532,7 +634,7 @@ export function SharesTab() {
             {homesShare && (
                 <Box mb="xl">
                     <Text size="md" fw={600} mb="sm">Home Directories</Text>
-                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                    <SimpleGrid cols={1} spacing="md">
                         <ShareCard
                             share={homesShare}
                             onEdit={() => {}}
@@ -540,6 +642,7 @@ export function SharesTab() {
                             onToggleHomes={handleToggleHomes}
                             users={users}
                             loadingToggle={toggling}
+                            ipAddress={ipAddress}
                         />
                     </SimpleGrid>
                 </Box>
@@ -563,6 +666,7 @@ export function SharesTab() {
                                 onToggleHomes={() => {}}
                                 users={users}
                                 loadingToggle={false}
+                                ipAddress={ipAddress}
                             />
                         ))}
                     </SimpleGrid>
