@@ -8,13 +8,14 @@ import { SampleAppContent } from '../Apps/SampleApp';
 import { SettingsAppContent } from '../Apps/SettingsApp';
 import { FirewallAppContent } from '../Apps/FirewallApp';
 import { StorageAppContent } from '../Apps/StorageApp';
+import { DockerAppContent } from '../Apps/DockerApp';
 import { useCallback, useState } from 'react';
 
 const APP_COMPONENTS = {
     filemanager: () => <SampleAppContent title="File Manager" emoji="📁" />,
     settings: () => <SettingsAppContent />,
     terminal: () => <SampleAppContent title="Terminal" emoji="💻" />,
-    docker: () => <SampleAppContent title="Docker" emoji="🐳" />,
+    docker: () => <DockerAppContent />,
     monitor: () => <SampleAppContent title="Monitor" emoji="📊" />,
     storage: () => <StorageAppContent />,
     firewall: () => <FirewallAppContent />,

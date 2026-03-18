@@ -15,6 +15,7 @@ use App\Http\Controllers\SmartController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\EmailSettingsController;
 use App\Http\Controllers\GeneralSettingsController;
+use App\Http\Controllers\DockerController;
 use App\Http\Controllers\DockerSettingsController;
 use App\Http\Controllers\ServicesController;
 
@@ -148,6 +149,47 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/settings/docker', [DockerSettingsController::class, 'index']);
         Route::post('/api/settings/docker/move-data-directory', [DockerSettingsController::class, 'moveDataDirectory']);
         Route::get('/api/settings/docker/mount-points', [DockerSettingsController::class, 'mountPoints']);
+
+        // Docker API routes
+        Route::get('/api/docker/ping', [DockerController::class, 'ping']);
+        Route::get('/api/docker/info', [DockerController::class, 'info']);
+        Route::get('/api/docker/version', [DockerController::class, 'version']);
+
+        // Containers
+        Route::get('/api/docker/containers', [DockerController::class, 'containers']);
+        Route::get('/api/docker/containers/{id}', [DockerController::class, 'container']);
+        Route::post('/api/docker/containers/{id}/start', [DockerController::class, 'startContainer']);
+        Route::post('/api/docker/containers/{id}/stop', [DockerController::class, 'stopContainer']);
+        Route::post('/api/docker/containers/{id}/restart', [DockerController::class, 'restartContainer']);
+        Route::delete('/api/docker/containers/{id}', [DockerController::class, 'removeContainer']);
+        Route::get('/api/docker/containers/{id}/logs', [DockerController::class, 'containerLogs']);
+        Route::get('/api/docker/containers/{id}/stats', [DockerController::class, 'containerStats']);
+
+        // Images
+        Route::get('/api/docker/images', [DockerController::class, 'images']);
+        Route::get('/api/docker/images/{id}', [DockerController::class, 'image']);
+        Route::post('/api/docker/images/pull', [DockerController::class, 'pull']);
+        Route::delete('/api/docker/images/{id}', [DockerController::class, 'removeImage']);
+
+        // Volumes
+        Route::get('/api/docker/volumes', [DockerController::class, 'volumes']);
+        Route::get('/api/docker/volumes/{name}', [DockerController::class, 'volume']);
+        Route::post('/api/docker/volumes', [DockerController::class, 'createVolume']);
+        Route::delete('/api/docker/volumes/{name}', [DockerController::class, 'removeVolume']);
+
+        // Networks
+        Route::get('/api/docker/networks', [DockerController::class, 'networks']);
+        Route::get('/api/docker/networks/{id}', [DockerController::class, 'network']);
+        Route::post('/api/docker/networks', [DockerController::class, 'createNetwork']);
+        Route::delete('/api/docker/networks/{id}', [DockerController::class, 'removeNetwork']);
+        Route::post('/api/docker/networks/{id}/connect', [DockerController::class, 'connectNetwork']);
+        Route::post('/api/docker/networks/{id}/disconnect', [DockerController::class, 'disconnectNetwork']);
+
+        // Prune
+        Route::post('/api/docker/prune/containers', [DockerController::class, 'pruneContainers']);
+        Route::post('/api/docker/prune/images', [DockerController::class, 'pruneImages']);
+        Route::post('/api/docker/prune/volumes', [DockerController::class, 'pruneVolumes']);
+        Route::post('/api/docker/prune/networks', [DockerController::class, 'pruneNetworks']);
 
         // Services routes
         Route::get('/api/services', [ServicesController::class, 'index']);
