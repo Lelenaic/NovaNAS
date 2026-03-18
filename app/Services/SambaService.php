@@ -287,24 +287,26 @@ class SambaService
     /**
      * Update an existing share.
      *
-     * @param array{comment?: string|null, path?: string|null, writable?: string|null, guest?: string|null, 'valid users'?: string|null} $config
+     * @param array{comment?: string|null, path?: string|null, writable?: string|null, guest?: string|null, 'valid users'?: string|null, name?: string|null} $config
      * @return bool
      * @throws \RuntimeException
      */
-    public function updateShare(string $name, array $config): bool
+    public function updateShare(string $originalName, array $config): bool
     {
+        \Illuminate\Support\Facades\Log::info('[updateShare] Called with originalName: ' . $originalName . ', config: ' . json_encode($config));
+
         $shares = $this->getShares();
         $shareIndex = null;
 
         foreach ($shares as $index => $share) {
-            if ($share['name'] === $name) {
+            if ($share['name'] === $originalName) {
                 $shareIndex = $index;
                 break;
             }
         }
 
         if ($shareIndex === null) {
-            throw new \RuntimeException("Share '{$name}' not found");
+            throw new \RuntimeException("Share '{$originalName}' not found");
         }
 
         // Cannot edit system shares
@@ -312,13 +314,56 @@ class SambaService
             throw new \RuntimeException('Cannot modify system shares');
         }
 
-        // Merge config
+        // Check if name is being changed
+        $newName = $config['name'] ?? $originalName;
+        $isRenaming = $newName !== $originalName;
+
+        // If renaming, check if the new name already exists
+        if ($isRenaming) {
+            foreach ($shares as $share) {
+                if ($share['name'] === $newName) {
+                    throw new \RuntimeException("Share '{$newName}' already exists");
+                }
+            }
+        }
+
+        // Merge config - always include all fields from the request
         $currentShare = $shares[$shareIndex];
+        \Illuminate\Support\Facades\Log::info('[updateShare] Current share before merge: ' . json_encode($currentShare));
+
+        // Keys that are explicitly provided (even if empty/null) should be updated
+        // This allows clearing fields like 'valid users' by setting them to empty string
+        $explicitKeys = ['valid users', 'path', 'comment', 'writable', 'guest'];
 
         foreach ($config as $key => $value) {
-            if ($value !== null && array_key_exists($key, $currentShare)) {
-                $currentShare[$key] = $value;
+            if ($key !== 'name' && array_key_exists($key, $currentShare)) {
+                // For fields that can be explicitly cleared (like valid users),
+                // we update if the key was explicitly provided in the config
+                if (in_array($key, $explicitKeys, true)) {
+                    // If value is null or empty, set to empty string to clear the field
+                    // Otherwise use the provided value
+                    $currentShare[$key] = ($value === null || $value === '') ? '' : $value;
+                } else {
+                    // For other fields, preserve existing value if incoming is null
+                    if ($value !== null && $value !== '') {
+                        $currentShare[$key] = $value;
+                    }
+                }
             }
+        }
+
+        \Illuminate\Support\Facades\Log::info('[updateShare] Current share after merge: ' . json_encode($currentShare));
+
+        // Update the shares array with the modified share
+        $shares[$shareIndex] = $currentShare;
+
+        // Handle renaming: update the name in the share array
+        if ($isRenaming) {
+            $currentShare['name'] = $newName;
+            // Remove old share and add new one with updated name
+            unset($shares[$shareIndex]);
+            $shares[] = $currentShare;
+            $shares = array_values($shares);
         }
 
         // Rebuild entire config
@@ -492,6 +537,13 @@ class SambaService
     {
         \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Called with ' . count($shares) . ' shares');
 
+        // DEBUG: Log the actual share data being passed
+        foreach ($shares as $s) {
+            if ($s['name'] === 'share') {
+                \Illuminate\Support\Facades\Log::info('[writeSharesConfig] DEBUG share data: ' . json_encode($s));
+            }
+        }
+
         // Read existing config
         $existingContent = file_get_contents(self::SMBCONF_PATH);
         if ($existingContent === false) {
@@ -570,6 +622,9 @@ class SambaService
                 if (empty($share['browseable'])) {
                     $shareConfig[] = '   browseable = no';
                 }
+                // Strict masks for home directories - only owner can access
+                $shareConfig[] = '   create mask = 0700';
+                $shareConfig[] = '   directory mask = 0700';
             }
 
             $sections[$shareName] = $shareConfig;
@@ -619,6 +674,10 @@ class SambaService
 
         \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Written to temp file: ' . $tempFile);
 
+        // DEBUG: Log temp file content
+        $tempContent = file_get_contents($tempFile);
+        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Temp file [share] section: ' . (preg_match('/\[share\](.*?)(?=\[|$)/s', $tempContent, $m) ? $m[0] : 'NOT FOUND'));
+
         // Validate
         $process = new Process(['sudo', 'testparm', '-s', $tempFile]);
         $process->run();
@@ -635,12 +694,25 @@ class SambaService
         $process = new Process(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
         $process->run();
 
+        // DEBUG: Log the actual output
+        $stdout = $process->getOutput();
+        $stderr = $process->getErrorOutput();
+        $exitCode = $process->getExitCode();
+
+        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv stdout: "' . $stdout . '"');
+        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv stderr: "' . $stderr . '"');
+        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv exitCode: ' . $exitCode);
+
         if (!$process->isSuccessful()) {
             \Illuminate\Support\Facades\Log::error('[writeSharesConfig] mv failed: ' . $process->getErrorOutput());
             throw new \RuntimeException('Failed to update smb.conf: ' . $process->getErrorOutput());
         }
 
         \Illuminate\Support\Facades\Log::info('[writeSharesConfig] File moved successfully');
+
+        // DEBUG: Verify the file was actually written
+        $verifyContent = file_get_contents(self::SMBCONF_PATH);
+        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Verified file content (first 200 chars): ' . substr($verifyContent, 0, 200));
 
         return $this->restartSmb();
     }
@@ -650,9 +722,15 @@ class SambaService
      */
     public function restartSmb(): bool
     {
+        \Illuminate\Support\Facades\Log::info('[restartSmb] Starting restart...');
+
         // Try to restart smbd first, then nmbd
         $process = new Process(['sudo', 'systemctl', 'restart', 'smbd']);
         $process->run();
+
+        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart stdout: ' . $process->getOutput());
+        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart stderr: ' . $process->getErrorOutput());
+        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart exitCode: ' . $process->getExitCode());
 
         if (!$process->isSuccessful()) {
             // Try alternative service names
@@ -669,6 +747,8 @@ class SambaService
         // Also restart nmbd if it exists
         $process = new Process(['sudo', 'systemctl', 'restart', 'nmbd']);
         $process->run();
+
+        \Illuminate\Support\Facades\Log::info('[restartSmb] nmbd restart exitCode: ' . $process->getExitCode());
 
         return true;
     }

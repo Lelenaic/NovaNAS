@@ -30,7 +30,7 @@ import {
     IconHome,
 } from '@tabler/icons-react';
 
-function ShareModal({ opened, onClose, onSave, initialData, users, loading }) {
+function ShareModal({ opened, onClose, onSave, initialData, users, existingShares, loading }) {
     const theme = useMantineTheme();
     const [name, setName] = useState('');
     const [comment, setComment] = useState('');
@@ -64,6 +64,19 @@ function ShareModal({ opened, onClose, onSave, initialData, users, loading }) {
             setError('Share name is required');
             return;
         }
+
+        // Check for duplicate name (excluding current share if editing)
+        if (existingShares) {
+            const isDuplicate = existingShares.some(share =>
+                share.name.toLowerCase() === name.trim().toLowerCase() &&
+                (!initialData || share.name !== initialData.name)
+            );
+            if (isDuplicate) {
+                setError(`A share named "${name.trim()}" already exists`);
+                return;
+            }
+        }
+
         if (!path.trim() && !initialData) {
             setError('Path is required');
             return;
@@ -104,9 +117,8 @@ function ShareModal({ opened, onClose, onSave, initialData, users, loading }) {
                     placeholder="e.g., documents"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    disabled={!!initialData}
                     description="Alphanumeric characters, hyphens and underscores only"
-                    required={!initialData}
+                    required
                 />
 
                 <TextInput
@@ -116,25 +128,14 @@ function ShareModal({ opened, onClose, onSave, initialData, users, loading }) {
                     onChange={(e) => setComment(e.target.value)}
                 />
 
-                {!initialData && (
-                    <TextInput
-                        label="Path"
-                        placeholder="/media/main/share"
-                        value={path}
-                        onChange={(e) => setPath(e.target.value)}
-                        required
-                        description="Full path to the shared directory"
-                    />
-                )}
-
-                {initialData && (
-                    <TextInput
-                        label="Path"
-                        value={path}
-                        disabled
-                        description="Path cannot be changed after creation"
-                    />
-                )}
+                <TextInput
+                    label="Path"
+                    placeholder="/media/main/share"
+                    value={path}
+                    onChange={(e) => setPath(e.target.value)}
+                    required
+                    description="Full path to the shared directory"
+                />
 
                 <Select
                     label="Writable"
@@ -575,6 +576,7 @@ export function SharesTab() {
                 onSave={handleSave}
                 initialData={selectedShare}
                 users={users}
+                existingShares={customShares}
                 loading={saving}
             />
 

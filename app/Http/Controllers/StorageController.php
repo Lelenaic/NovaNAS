@@ -176,6 +176,7 @@ class StorageController extends Controller
     public function updateShare(Request $request, string $name): JsonResponse
     {
         $validated = $request->validate([
+            'name' => 'nullable|string|max:80|regex:/^[a-zA-Z0-9_-]+$/',
             'comment' => 'nullable|string|max:255',
             'path' => 'nullable|string|max:4096',
             'writable' => 'nullable|in:yes,no',
@@ -183,8 +184,20 @@ class StorageController extends Controller
             'valid_users' => 'nullable|string|max:1000',
         ]);
 
+        // Check if name is being changed to a name that's already used
+        $newName = $validated['name'] ?? $name;
+        if ($newName !== $name) {
+            $existingShare = $this->sambaService->getShare($newName);
+            if ($existingShare !== null) {
+                return response()->json([
+                    'error' => "Share '{$newName}' already exists",
+                ], 422);
+            }
+        }
+
         try {
             $this->sambaService->updateShare($name, [
+                'name' => $validated['name'] ?? null,
                 'comment' => $validated['comment'] ?? null,
                 'path' => $validated['path'] ?? null,
                 'writable' => $validated['writable'] ?? null,
