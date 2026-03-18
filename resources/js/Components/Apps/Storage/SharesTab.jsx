@@ -309,7 +309,7 @@ function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggl
 
             {isHomes && (
                 <Text size="xs" c="dimmed" mt="xs">
-                    Provides each user access to their home directory ({'%S'})
+                    Provides each user access to their home directory
                 </Text>
             )}
         </Card>
