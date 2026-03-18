@@ -6,12 +6,16 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\Storage\StorageService;
 use App\Services\SettingsService;
+use App\Services\SambaService;
+use App\Services\LinuxUserService;
 
 class StorageController extends Controller
 {
     public function __construct(
         protected StorageService $storageService,
-        protected SettingsService $settingsService
+        protected SettingsService $settingsService,
+        protected SambaService $sambaService,
+        protected LinuxUserService $linuxUserService
     ) {}
 
     /**
@@ -114,5 +118,144 @@ class StorageController extends Controller
         return response()->json([
             'directories' => $directories,
         ]);
+    }
+
+    /**
+     * List all shares from smb.conf.
+     */
+    public function shares(): JsonResponse
+    {
+        $allShares = $this->sambaService->getShares();
+
+        // Filter to show only custom shares and homes
+        $shares = array_filter($allShares, function ($share) {
+            return $share['type'] === 'custom' || $share['name'] === 'homes';
+        });
+
+        return response()->json([
+            'shares' => array_values($shares),
+        ]);
+    }
+
+    /**
+     * Create a new share.
+     */
+    public function createShare(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:80|regex:/^[a-zA-Z0-9_-]+$/',
+            'comment' => 'nullable|string|max:255',
+            'path' => 'required|string|max:4096',
+            'writable' => 'nullable|in:yes,no',
+            'guest' => 'nullable|in:yes,no,only',
+            'valid_users' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $this->sambaService->createShare($validated['name'], [
+                'comment' => $validated['comment'] ?? null,
+                'path' => $validated['path'],
+                'writable' => $validated['writable'] ?? 'yes',
+                'guest' => $validated['guest'] ?? 'no',
+                'valid users' => $validated['valid_users'] ?? null,
+            ]);
+
+            return response()->json([
+                'message' => 'Share created successfully',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Update an existing share.
+     */
+    public function updateShare(Request $request, string $name): JsonResponse
+    {
+        $validated = $request->validate([
+            'comment' => 'nullable|string|max:255',
+            'path' => 'nullable|string|max:4096',
+            'writable' => 'nullable|in:yes,no',
+            'guest' => 'nullable|in:yes,no,only',
+            'valid_users' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $this->sambaService->updateShare($name, [
+                'comment' => $validated['comment'] ?? null,
+                'path' => $validated['path'] ?? null,
+                'writable' => $validated['writable'] ?? null,
+                'guest' => $validated['guest'] ?? null,
+                'valid users' => $validated['valid_users'] ?? null,
+            ]);
+
+            return response()->json([
+                'message' => 'Share updated successfully',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Delete a share.
+     */
+    public function deleteShare(string $name): JsonResponse
+    {
+        try {
+            $this->sambaService->deleteShare($name);
+
+            return response()->json([
+                'message' => 'Share deleted successfully',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Get available users for share access.
+     */
+    public function shareUsers(): JsonResponse
+    {
+        $users = $this->linuxUserService->listUsers();
+
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
+
+    /**
+     * Toggle homes share enabled/disabled.
+     */
+    public function toggleHomes(Request $request): JsonResponse
+    {
+        \Illuminate\Support\Facades\Log::info('[StorageController] toggleHomes called');
+
+        $validated = $request->validate([
+            'enabled' => 'required|boolean',
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('[StorageController] validated enabled: ' . ($validated['enabled'] ? 'true' : 'false'));
+
+        try {
+            $this->sambaService->setHomesEnabled($validated['enabled']);
+
+            return response()->json([
+                'message' => 'Homes share ' . ($validated['enabled'] ? 'enabled' : 'disabled') . ' successfully',
+            ]);
+        } catch (\RuntimeException $e) {
+            \Illuminate\Support\Facades\Log::error('[StorageController] toggleHomes error: ' . $e->getMessage());
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
     }
 }

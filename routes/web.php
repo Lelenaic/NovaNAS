@@ -108,6 +108,14 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/storage/smart/{device}/test', [SmartController::class, 'startTest']);
         Route::post('/api/storage/smart/scan-all', [SmartController::class, 'scanAll']);
 
+        // Shares routes
+        Route::get('/api/storage/shares', [StorageController::class, 'shares']);
+        Route::post('/api/storage/shares', [StorageController::class, 'createShare']);
+        Route::put('/api/storage/shares/{name}', [StorageController::class, 'updateShare']);
+        Route::delete('/api/storage/shares/{name}', [StorageController::class, 'deleteShare']);
+        Route::get('/api/storage/shares/users', [StorageController::class, 'shareUsers']);
+        Route::post('/api/storage/shares/homes', [StorageController::class, 'toggleHomes']);
+
         // User management routes
         Route::get('/api/users', [UserController::class, 'index']);
         Route::post('/api/users', [UserController::class, 'store']);

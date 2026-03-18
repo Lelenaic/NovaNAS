@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { Box, Text, useMantineTheme } from '@mantine/core';
 import {
     IconDisc,
-    IconServer,
     IconStack2,
     IconHeart,
     IconApps,
+    IconFolderShare,
 } from '@tabler/icons-react';
 import { DisksTab } from './Storage/DisksTab';
 import { HealthTab } from './Storage/HealthTab';
 import { PoolsTab } from './Storage/PoolsTab';
 import { AppTab } from './Storage/AppTab';
+import { SharesTab } from './Storage/SharesTab';
 
 const tabs = [
     { id: 'disks', label: 'Disks', icon: IconDisc },
     { id: 'health', label: 'Health', icon: IconHeart },
     { id: 'pools', label: 'Pools', icon: IconStack2 },
+    { id: 'shares', label: 'Shares', icon: IconFolderShare },
     { id: 'app', label: 'App', icon: IconApps },
 ];
 
@@ -31,6 +33,8 @@ export function StorageAppContent() {
                 return <HealthTab />;
             case 'pools':
                 return <PoolsTab />;
+            case 'shares':
+                return <SharesTab />;
             case 'app':
                 return <AppTab />;
             default:
