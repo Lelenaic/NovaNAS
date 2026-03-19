@@ -482,4 +482,68 @@ class SystemController extends Controller
 
         return $config;
     }
+
+    /**
+     * List contents of a directory.
+     */
+    public function listDirectory(): JsonResponse
+    {
+        $path = request()->input('path', '/');
+
+        // Security: Only allow access to specific paths
+        $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
+        $isAllowed = false;
+
+        if ($path === '/') {
+            $isAllowed = true;
+        } else {
+            foreach ($allowedPaths as $allowed) {
+                if (str_starts_with($path, $allowed)) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$isAllowed) {
+            return response()->json(['error' => 'Access denied to this path'], 403);
+        }
+
+        if (!is_dir($path)) {
+            return response()->json(['error' => 'Path is not a directory'], 400);
+        }
+
+        $items = [];
+        $handle = opendir($path);
+
+        if (!$handle) {
+            return response()->json(['error' => 'Cannot open directory'], 500);
+        }
+
+        while (($entry = readdir($handle)) !== false) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $fullPath = $path === '/' ? '/' . $entry : $path . '/' . $entry;
+            $isDirectory = is_dir($fullPath);
+
+            $items[] = [
+                'name' => $entry,
+                'path' => $fullPath,
+                'type' => $isDirectory ? 'directory' : 'file',
+            ];
+        }
+
+        closedir($handle);
+
+        usort($items, function ($a, $b) {
+            if ($a['type'] !== $b['type']) {
+                return $a['type'] === 'directory' ? -1 : 1;
+            }
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        return response()->json($items);
+    }
 }

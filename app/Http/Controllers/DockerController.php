@@ -259,6 +259,253 @@ class DockerController extends Controller
         return response()->json(json_decode($result['output'], true) ?: []);
     }
 
+    /**
+     * Create a container.
+     */
+    public function createContainer(Request $request): JsonResponse
+    {
+        $name = $request->input('name');
+        $image = $request->input('image');
+        $tag = $request->input('tag', 'latest');
+        $restartPolicy = $request->input('restart_policy', 'no');
+        $ports = $request->input('ports', []);
+        $volumes = $request->input('volumes', []);
+        $environment = $request->input('environment', []);
+        $envFile = $request->input('env_file');
+
+        if (empty($name) || empty($image)) {
+            return response()->json([
+                'error' => 'Container name and image are required',
+            ], 422);
+        }
+
+        $imageName = $tag ? "{$image}:{$tag}" : $image;
+
+        $args = ['run', '-d', '--name', $name];
+
+        $restartMap = [
+            'no' => 'no',
+            'on-failure' => 'on-failure',
+            'always' => 'always',
+            'unless-stopped' => 'unless-stopped',
+        ];
+        $args[] = '--restart';
+        $args[] = $restartMap[$restartPolicy] ?? 'no';
+
+        foreach ($ports as $port) {
+            if (!empty($port['host']) && !empty($port['container'])) {
+                $args[] = '-p';
+                $args[] = "{$port['host']}:{$port['container']}";
+            }
+        }
+
+        foreach ($volumes as $volume) {
+            if (!empty($volume['container_path'])) {
+                $args[] = '-v';
+                if ($volume['type'] === 'bind' && !empty($volume['host_path'])) {
+                    $args[] = "{$volume['host_path']}:{$volume['container_path']}";
+                } elseif ($volume['type'] === 'volume' && !empty($volume['volume_name'])) {
+                    $args[] = "{$volume['volume_name']}:{$volume['container_path']}";
+                }
+            }
+        }
+
+        foreach ($environment as $env) {
+            if (!empty($env['key'])) {
+                $args[] = '-e';
+                $args[] = "{$env['key']}={$env['value']}";
+            }
+        }
+
+        if (!empty($envFile)) {
+            $args[] = '--env-file';
+            $args[] = $envFile;
+        }
+
+        $args[] = $imageName;
+
+        $result = $this->runDockerCommand($args);
+
+        if (!$result['success']) {
+            return response()->json([
+                'error' => 'Failed to create container',
+                'details' => $result['error'],
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Container {$name} created successfully",
+        ]);
+    }
+
+    /**
+     * Recreate a container (stop, remove, create new).
+     */
+    public function recreateContainer(Request $request, string $id): JsonResponse
+    {
+        $inspectResult = $this->runDockerCommand(['inspect', '--format={{json .}}', $id]);
+
+        if (!$inspectResult['success']) {
+            return response()->json([
+                'error' => 'Container not found',
+            ], 404);
+        }
+
+        $containerConfig = json_decode($inspectResult['output'], true);
+        $oldName = trim($containerConfig['Name'], '/');
+
+        $name = $request->input('name', $oldName);
+        $image = $request->input('image', $containerConfig['Config']['Image']);
+        $restartPolicy = $request->input('restart_policy', 'no');
+        $ports = $request->input('ports', []);
+        $volumes = $request->input('volumes', []);
+        $environment = $request->input('environment', []);
+        $envFile = $request->input('env_file');
+
+        $this->runDockerCommand(['stop', $id]);
+        $rmResult = $this->runDockerCommand(['rm', '-f', $id]);
+
+        if (!$rmResult['success']) {
+            return response()->json([
+                'error' => 'Failed to remove container',
+                'details' => $rmResult['error'],
+            ], 500);
+        }
+
+        $args = ['run', '-d', '--name', $name];
+
+        $restartMap = [
+            'no' => 'no',
+            'on-failure' => 'on-failure',
+            'always' => 'always',
+            'unless-stopped' => 'unless-stopped',
+        ];
+        $args[] = '--restart';
+        $args[] = $restartMap[$restartPolicy] ?? 'no';
+
+        foreach ($ports as $port) {
+            if (!empty($port['host']) && !empty($port['container'])) {
+                $args[] = '-p';
+                $args[] = "{$port['host']}:{$port['container']}";
+            }
+        }
+
+        foreach ($volumes as $volume) {
+            if (!empty($volume['container_path'])) {
+                $args[] = '-v';
+                if ($volume['type'] === 'bind' && !empty($volume['host_path'])) {
+                    $args[] = "{$volume['host_path']}:{$volume['container_path']}";
+                } elseif ($volume['type'] === 'volume' && !empty($volume['volume_name'])) {
+                    $args[] = "{$volume['volume_name']}:{$volume['container_path']}";
+                }
+            }
+        }
+
+        foreach ($environment as $env) {
+            if (!empty($env['key'])) {
+                $args[] = '-e';
+                $args[] = "{$env['key']}={$env['value']}";
+            }
+        }
+
+        if (!empty($envFile)) {
+            $args[] = '--env-file';
+            $args[] = $envFile;
+        }
+
+        $args[] = $image;
+
+        $result = $this->runDockerCommand($args);
+
+        if (!$result['success']) {
+            return response()->json([
+                'error' => 'Failed to create new container',
+                'details' => $result['error'],
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Container {$name} recreated successfully",
+        ]);
+    }
+
+    /**
+     * Get container config for editing.
+     */
+    public function getContainerConfig(string $id): JsonResponse
+    {
+        $result = $this->runDockerCommand(['inspect', '--format={{json .}}', $id]);
+
+        if (!$result['success']) {
+            return response()->json([
+                'error' => 'Failed to get container config',
+            ], 500);
+        }
+
+        $config = json_decode($result['output'], true);
+
+        $parsed = [
+            'id' => $config['Id'],
+            'name' => trim($config['Name'], '/'),
+            'image' => $config['Config']['Image'],
+            'restart_policy' => $config['HostConfig']['RestartPolicy']['Name'] ?? 'no',
+            'ports' => [],
+            'volumes' => [],
+            'environment' => [],
+        ];
+
+        if (!empty($config['HostConfig']['PortBindings'])) {
+            foreach ($config['HostConfig']['PortBindings'] as $containerPort => $bindings) {
+                if (!empty($bindings)) {
+                    foreach ($bindings as $binding) {
+                        $parsed['ports'][] = [
+                            'host' => $binding['HostPort'] ?? '',
+                            'container' => str_replace('/tcp', '', str_replace('/udp', '', $containerPort)),
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (!empty($config['HostConfig']['Binds'])) {
+            $binds = is_array($config['HostConfig']['Binds'])
+                ? $config['HostConfig']['Binds']
+                : [$config['HostConfig']['Binds']];
+
+            foreach ($binds as $bind) {
+                $parts = explode(':', $bind);
+                if (count($parts) >= 2) {
+                    $hostPath = $parts[0];
+                    $containerPath = $parts[1];
+                    $isVolume = strpos($hostPath, '/') !== 0 && strpos($hostPath, ':') === false;
+
+                    $parsed['volumes'][] = [
+                        'type' => $isVolume ? 'volume' : 'bind',
+                        'host_path' => $isVolume ? '' : $hostPath,
+                        'volume_name' => $isVolume ? $hostPath : '',
+                        'container_path' => $containerPath,
+                    ];
+                }
+            }
+        }
+
+        if (!empty($config['Config']['Env'])) {
+            foreach ($config['Config']['Env'] as $env) {
+                $parts = explode('=', $env, 2);
+                if (count($parts) === 2) {
+                    $parsed['environment'][] = [
+                        'key' => $parts[0],
+                        'value' => $parts[1],
+                    ];
+                }
+            }
+        }
+
+        return response()->json($parsed);
+    }
+
     // ==================== IMAGES ====================
 
     /**

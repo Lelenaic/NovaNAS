@@ -50,6 +50,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/system/network-config', [SystemController::class, 'getNetworkConfig']);
         Route::get('/api/system/interface-config/{interface}', [SystemController::class, 'getInterfaceConfig']);
         Route::post('/api/system/network-config', [SystemController::class, 'setNetworkConfig']);
+        Route::get('/api/storage/directories', [SystemController::class, 'listDirectory']);
 
         // Network controller routes
         Route::get('/api/network/interfaces', [NetworkController::class, 'index']);
@@ -164,6 +165,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/api/docker/containers/{id}', [DockerController::class, 'removeContainer']);
         Route::get('/api/docker/containers/{id}/logs', [DockerController::class, 'containerLogs']);
         Route::get('/api/docker/containers/{id}/stats', [DockerController::class, 'containerStats']);
+        Route::post('/api/docker/containers', [DockerController::class, 'createContainer']);
+        Route::get('/api/docker/containers/{id}/config', [DockerController::class, 'getContainerConfig']);
+        Route::post('/api/docker/containers/{id}/recreate', [DockerController::class, 'recreateContainer']);
 
         // Images
         Route::get('/api/docker/images', [DockerController::class, 'images']);
