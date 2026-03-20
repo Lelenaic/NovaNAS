@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 /**
@@ -26,6 +28,392 @@ class DockerController extends Controller
             'error' => $process->getErrorOutput(),
             'exitCode' => $process->getExitCode(),
         ];
+    }
+
+    /**
+     * Get the Docker config file path.
+     */
+    private function getDockerConfigPath(): string
+    {
+        // Get the username first
+        $whoamiProcess = Process::fromShellCommandLine('whoami');
+        $whoamiProcess->run();
+        $username = trim($whoamiProcess->getOutput()) ?: 'root';
+
+        // Get home directory from /etc/passwd - more reliable than tilde expansion
+        $passwdProcess = Process::fromShellCommandLine("getent passwd $username");
+        $passwdProcess->run();
+        $passwdEntry = $passwdProcess->getOutput();
+
+        $home = '/root'; // default
+        if ($passwdEntry && str_contains($passwdEntry, ':')) {
+            $parts = explode(':', $passwdEntry);
+            if (isset($parts[5]) && !empty($parts[5])) {
+                $home = $parts[5];
+            }
+        }
+
+        return $home . '/.docker/config.json';
+    }
+
+    /**
+     * Normalize registry address to a consistent format.
+     */
+    private function normalizeRegistryAddress(string $address): string
+    {
+        // Handle Docker Hub variants - including the v1 path variant
+        if (str_contains($address, 'index.docker.io') || str_contains($address, 'docker.io') || $address === 'https://docker.io') {
+            return 'docker.io';
+        }
+
+        // Remove protocol prefix
+        if (str_starts_with($address, 'https://')) {
+            return rtrim(str_replace('https://', '', $address), '/');
+        }
+        if (str_starts_with($address, 'http://')) {
+            return rtrim(str_replace('http://', '', $address), '/');
+        }
+
+        return rtrim($address, '/');
+    }
+
+    /**
+     * Check if this looks like a valid registry address (not a sub-path).
+     */
+    private function isValidRegistryAddress(string $address): bool
+    {
+        // These are not real registries - they're sub-paths or tokens
+        // Note: /v1/ and /v2/ are API paths, not the registry itself
+        // The actual Docker Hub registry is https://index.docker.io/v1/
+        // which should NOT be filtered out - it's the standard Docker Hub config key
+        $invalidPatterns = [
+            'access-token',
+            'refresh-token',
+            '/token',
+        ];
+
+        foreach ($invalidPatterns as $pattern) {
+            if (str_contains($address, $pattern)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Read and parse Docker config.json to get logged-in registries.
+     *
+     * @return array<string, array{address: string, username: string, isLoggedIn: bool, originalAddress: string}>
+     */
+    private function getLoggedInRegistries(): array
+    {
+        $configPath = $this->getDockerConfigPath();
+
+        if (!File::exists($configPath)) {
+            return [];
+        }
+
+        $content = File::get($configPath);
+        $config = json_decode($content, true);
+
+        if (!isset($config['auths']) || !is_array($config['auths'])) {
+            return [];
+        }
+
+        $registries = [];
+
+        foreach ($config['auths'] as $originalAddress => $authData) {
+            // Skip invalid registry addresses
+            if (!$this->isValidRegistryAddress($originalAddress)) {
+                continue;
+            }
+
+            // Normalize the address for display
+            $displayAddress = $this->normalizeRegistryAddress($originalAddress);
+
+            // Check if actually logged in (has non-empty auth)
+            $isLoggedIn = false;
+            $username = '';
+
+            if (isset($authData['auth']) && !empty($authData['auth'])) {
+                $isLoggedIn = true;
+
+                // Try to extract username from auth (base64 encoded "username:password" or just token)
+                $decoded = base64_decode($authData['auth'], true);
+                if ($decoded !== false) {
+                    if (str_contains($decoded, ':')) {
+                        // Has username:password format
+                        $parts = explode(':', $decoded, 2);
+                        $username = $parts[0];
+                    } else {
+                        // Just a token - can't extract username
+                        $username = '(token)';
+                    }
+                }
+            } elseif (isset($authData['username'])) {
+                $username = $authData['username'];
+                $isLoggedIn = true;
+            }
+
+            // Skip if not logged in
+            if (!$isLoggedIn) {
+                continue;
+            }
+
+            // If this is Docker Hub and we already have it, don't duplicate
+            if ($displayAddress === 'docker.io' && isset($registries['docker.io'])) {
+                continue;
+            }
+
+            $registries[$displayAddress] = [
+                'address' => $displayAddress,
+                'username' => $username,
+                'isLoggedIn' => true,
+                'originalAddress' => $originalAddress,
+            ];
+        }
+
+        return $registries;
+    }
+
+    /**
+     * List all registries with their login status.
+     */
+    public function listRegistries(): JsonResponse
+    {
+        $configPath = $this->getDockerConfigPath();
+
+        $loggedInRegistries = $this->getLoggedInRegistries();
+
+        // Always include Docker Hub
+        $registries = [];
+
+        if (isset($loggedInRegistries['docker.io'])) {
+            $registries[] = $loggedInRegistries['docker.io'];
+        } else {
+            $registries[] = [
+                'address' => 'docker.io',
+                'username' => '',
+                'isLoggedIn' => false,
+            ];
+        }
+
+        // Add other registries
+        foreach ($loggedInRegistries as $address => $registry) {
+            if ($address !== 'docker.io') {
+                $registries[] = $registry;
+            }
+        }
+
+        return response()->json([
+            'registries' => $registries,
+        ]);
+    }
+
+    /**
+     * Add a new registry with credentials and login.
+     */
+    public function addRegistry(Request $request): JsonResponse
+    {
+        $address = $request->input('address');
+        $username = $request->input('username');
+        $password = $request->input('password');
+
+        if (empty($address) || empty($username) || empty($password)) {
+            return response()->json([
+                'error' => 'Address, username, and password are required',
+            ], 422);
+        }
+
+        // Normalize address
+        $normalizedAddress = trim($address);
+        if ($normalizedAddress === 'docker.io' || $normalizedAddress === 'index.docker.io') {
+            $normalizedAddress = 'docker.io';
+        }
+
+        // Login to registry using docker login command with --password-stdin for non-interactive mode
+        $loginArgs = ['login', '--password-stdin'];
+
+        if ($normalizedAddress !== 'docker.io') {
+            $loginArgs[] = $normalizedAddress;
+        }
+
+        // Always specify -u username with --password-stdin
+        $loginArgs[] = '-u';
+        $loginArgs[] = $username;
+
+        $process = new Process(array_merge(['docker'], $loginArgs));
+        // Pass password via stdin using --password-stdin
+        $process->setInput($password);
+        $process->setTimeout(60);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            $error = $process->getErrorOutput();
+
+            // Provide a more helpful error message
+            if (str_contains($error, 'unauthorized') || str_contains($error, 'authentication')) {
+                return response()->json([
+                    'error' => 'Authentication failed. Please check your username and password.',
+                    'details' => $error,
+                ], 500);
+            }
+
+            return response()->json([
+                'error' => 'Failed to login to registry',
+                'details' => $error,
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully logged in to {$normalizedAddress}",
+        ]);
+    }
+
+    /**
+     * Login to an existing registry (requires re-entering credentials).
+     */
+    public function loginToRegistry(Request $request, string $address): JsonResponse
+    {
+        $username = $request->input('username');
+        $password = $request->input('password');
+
+        if (empty($username) || empty($password)) {
+            return response()->json([
+                'error' => 'Username and password are required',
+            ], 422);
+        }
+
+        $normalizedAddress = urldecode($address);
+
+        if ($normalizedAddress === 'docker.io') {
+            $normalizedAddress = 'docker.io';
+        }
+
+        // Login to registry using docker login command with --password-stdin for non-interactive mode
+        $loginArgs = ['login', '--password-stdin'];
+
+        if ($normalizedAddress !== 'docker.io') {
+            $loginArgs[] = $normalizedAddress;
+        }
+
+        // Always specify -u username with --password-stdin
+        $loginArgs[] = '-u';
+        $loginArgs[] = $username;
+
+        $process = new Process(array_merge(['docker'], $loginArgs));
+        // Pass password via stdin using --password-stdin
+        $process->setInput($password);
+        $process->setTimeout(60);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            $error = $process->getErrorOutput();
+
+            return response()->json([
+                'error' => 'Failed to login to registry',
+                'details' => $error,
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully logged in to {$normalizedAddress}",
+        ]);
+    }
+
+    /**
+     * Logout from a registry - directly modifies config to remove all related entries.
+     */
+    public function logoutFromRegistry(string $address): JsonResponse
+    {
+        $normalizedAddress = urldecode($address);
+
+        if ($normalizedAddress === 'docker.io') {
+            $normalizedAddress = 'docker.io';
+        }
+
+        // Get the config file path
+        $configPath = $this->getDockerConfigPath();
+
+        if (!File::exists($configPath)) {
+            return response()->json([
+                'error' => 'Docker config file not found',
+            ], 500);
+        }
+
+        // Read current config
+        $content = File::get($configPath);
+        $config = json_decode($content, true);
+
+        if (!isset($config['auths']) || !is_array($config['auths'])) {
+            return response()->json([
+                'error' => 'Invalid docker config',
+            ], 500);
+        }
+
+        // Find all keys to remove for this registry
+        $keysToRemove = [];
+
+        if ($normalizedAddress === 'docker.io') {
+            // For docker.io, remove all related entries
+            foreach (array_keys($config['auths']) as $key) {
+                if (str_contains($key, 'index.docker.io')) {
+                    $keysToRemove[] = $key;
+                }
+            }
+        } else {
+            // For other registries, look for exact match or with https:// prefix
+            $searchKeys = [
+                $normalizedAddress,
+                'https://' . $normalizedAddress,
+                'http://' . $normalizedAddress,
+            ];
+
+            foreach (array_keys($config['auths']) as $key) {
+                if (in_array($key, $searchKeys)) {
+                    $keysToRemove[] = $key;
+                }
+            }
+        }
+
+        // Remove the keys
+        foreach ($keysToRemove as $key) {
+            unset($config['auths'][$key]);
+        }
+
+        // Write back the config (JSON_UNESCAPED_SLASHES prevents escaping forward slashes)
+        $newContent = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        File::put($configPath, $newContent);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully logged out from {$normalizedAddress}",
+        ]);
+    }
+
+    /**
+     * Remove a registry (logout only, as we don't track configured registries separately).
+     */
+    public function removeRegistry(string $address): JsonResponse
+    {
+        $normalizedAddress = urldecode($address);
+
+        // Just logout - we read directly from docker config
+        $args = ['logout'];
+        if ($normalizedAddress !== 'docker.io') {
+            $args[] = $normalizedAddress;
+        }
+
+        $result = $this->runDockerCommand($args);
+
+        // Even if logout fails (not logged in), consider it success for removal
+        return response()->json([
+            'success' => true,
+            'message' => "Registry {$normalizedAddress} removed",
+        ]);
     }
 
     /**
@@ -267,6 +655,7 @@ class DockerController extends Controller
         $name = $request->input('name');
         $image = $request->input('image');
         $tag = $request->input('tag', 'latest');
+        $registry = $request->input('registry');
         $restartPolicy = $request->input('restart_policy', 'no');
         $ports = $request->input('ports', []);
         $volumes = $request->input('volumes', []);
@@ -279,7 +668,15 @@ class DockerController extends Controller
             ], 422);
         }
 
-        $imageName = $tag ? "{$image}:{$tag}" : $image;
+        // Build the full image name with registry
+        $imageName = $image;
+        if (!empty($registry)) {
+            // Prepend registry to image (e.g., registry.example.com/nginx)
+            $imageName = "{$registry}/{$image}";
+        }
+        if ($tag) {
+            $imageName = "{$imageName}:{$tag}";
+        }
 
         $args = ['run', '-d', '--name', $name];
 
@@ -357,6 +754,8 @@ class DockerController extends Controller
 
         $name = $request->input('name', $oldName);
         $image = $request->input('image', $containerConfig['Config']['Image']);
+        $tag = $request->input('tag', 'latest');
+        $registry = $request->input('registry');
         $restartPolicy = $request->input('restart_policy', 'no');
         $ports = $request->input('ports', []);
         $volumes = $request->input('volumes', []);
@@ -371,6 +770,16 @@ class DockerController extends Controller
                 'error' => 'Failed to remove container',
                 'details' => $rmResult['error'],
             ], 500);
+        }
+
+        // Build the full image name with registry
+        $imageName = $image;
+        if (!empty($registry)) {
+            // Prepend registry to image (e.g., registry.example.com/nginx)
+            $imageName = "{$registry}/{$image}";
+        }
+        if ($tag) {
+            $imageName = "{$imageName}:{$tag}";
         }
 
         $args = ['run', '-d', '--name', $name];
@@ -414,7 +823,7 @@ class DockerController extends Controller
             $args[] = $envFile;
         }
 
-        $args[] = $image;
+        $args[] = $imageName;
 
         $result = $this->runDockerCommand($args);
 

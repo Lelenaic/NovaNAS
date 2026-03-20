@@ -195,6 +195,13 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/docker/prune/volumes', [DockerController::class, 'pruneVolumes']);
         Route::post('/api/docker/prune/networks', [DockerController::class, 'pruneNetworks']);
 
+        // Registries
+        Route::get('/api/docker/registries', [DockerController::class, 'listRegistries']);
+        Route::post('/api/docker/registries', [DockerController::class, 'addRegistry']);
+        Route::post('/api/docker/registries/{address}/login', [DockerController::class, 'loginToRegistry']);
+        Route::post('/api/docker/registries/{address}/logout', [DockerController::class, 'logoutFromRegistry']);
+        Route::delete('/api/docker/registries/{address}', [DockerController::class, 'removeRegistry']);
+
         // Services routes
         Route::get('/api/services', [ServicesController::class, 'index']);
         Route::post('/api/services/toggle', [ServicesController::class, 'toggle']);

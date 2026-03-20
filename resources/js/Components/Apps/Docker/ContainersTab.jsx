@@ -32,6 +32,27 @@ export function ContainersTab() {
     // File selector for volumes/env file
     const [fileSelectorOpen, setFileSelectorOpen] = useState({ open: false, field: null, index: null });
 
+    // Registries for image pull
+    const [registries, setRegistries] = useState([]);
+    const [registriesLoading, setRegistriesLoading] = useState(false);
+
+    const fetchRegistries = async () => {
+        setRegistriesLoading(true);
+        try {
+            const response = await fetch('/api/docker/registries');
+            if (response.ok) {
+                const data = await response.json();
+                // Filter to only show logged-in registries
+                const loggedIn = data.filter(r => r.isLoggedIn);
+                setRegistries(loggedIn);
+            }
+        } catch (err) {
+            console.error('Failed to fetch registries:', err);
+        } finally {
+            setRegistriesLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchContainers();
     }, [showAll]);
@@ -102,6 +123,7 @@ export function ContainersTab() {
             name: '',
             image: '',
             tag: 'latest',
+            registry: '',
             restart_policy: 'no',
             ports: [{ host: '', container: '' }],
             volumes: [{ type: 'bind', host_path: '', volume_name: '', container_path: '' }],
@@ -111,6 +133,7 @@ export function ContainersTab() {
         setCreateModal({ open: true, container: null });
         setError(null);
         fetchVolumes();
+        fetchRegistries();
     };
 
     const fetchVolumes = async () => {
@@ -175,6 +198,7 @@ export function ContainersTab() {
                     name: config.name || '',
                     image: imageName,
                     tag: imageTag,
+                    registry: '',
                     restart_policy: config.restart_policy || 'no',
                     ports: config.ports && config.ports.length > 0
                         ? config.ports
@@ -206,6 +230,7 @@ export function ContainersTab() {
                 name: formData.name,
                 image: formData.image,
                 tag: formData.tag,
+                registry: formData.registry || null,
                 restart_policy: formData.restart_policy,
                 ports: formData.ports.filter(p => p.host && p.container),
                 volumes: formData.volumes.filter(v => v.container_path),
@@ -522,6 +547,20 @@ export function ContainersTab() {
                             onChange={(e) => updateFormField('name', e.target.value)}
                             required
                         />
+                        <Group grow>
+                            <Select
+                                label="Registry"
+                                placeholder="Select registry (optional)"
+                                description="Use a private registry"
+                                data={registries.map(r => ({ value: r.address, label: r.address }))}
+                                value={formData.registry}
+                                onChange={(value) => updateFormField('registry', value || '')}
+                                searchable
+                                clearable
+                                disabled={registriesLoading}
+                                rightSection={registriesLoading ? <Loader size={14} /> : null}
+                            />
+                        </Group>
                         <Group grow>
                             <TextInput
                                 label="Image"
