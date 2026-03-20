@@ -18,6 +18,7 @@ import {
     Card,
     SimpleGrid,
     Divider,
+    Tooltip,
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -389,20 +390,24 @@ function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggl
                     </Stack>
 
                     <Group justify="flex-end" gap="xs">
-                        <ActionIcon
-                            variant="subtle"
-                            color="blue"
-                            onClick={() => onEdit(share)}
-                        >
-                            <IconPencil size={16} />
-                        </ActionIcon>
-                        <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            onClick={() => onDelete(share)}
-                        >
-                            <IconTrash size={16} />
-                        </ActionIcon>
+                        <Tooltip label="Edit share">
+                            <ActionIcon
+                                variant="subtle"
+                                color="blue"
+                                onClick={() => onEdit(share)}
+                            >
+                                <IconPencil size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Delete share">
+                            <ActionIcon
+                                variant="subtle"
+                                color="red"
+                                onClick={() => onDelete(share)}
+                            >
+                                <IconTrash size={16} />
+                            </ActionIcon>
+                        </Tooltip>
                     </Group>
                 </>
             )}

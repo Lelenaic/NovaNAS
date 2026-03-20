@@ -376,13 +376,15 @@ export function UsersTab() {
                                         </Table.Td>
                                         <Table.Td>
                                             <Group gap="xs">
-                                                <ActionIcon
-                                                    variant="subtle"
-                                                    color="gray"
-                                                    onClick={() => openEdit(user)}
-                                                >
-                                                    <IconEdit size={16} />
-                                                </ActionIcon>
+                                                <Tooltip label="Edit user">
+                                                    <ActionIcon
+                                                        variant="subtle"
+                                                        color="gray"
+                                                        onClick={() => openEdit(user)}
+                                                    >
+                                                        <IconEdit size={16} />
+                                                    </ActionIcon>
+                                                </Tooltip>
                                                 {user.id === getFirstUserId() ? (
                                                     <Tooltip label="Cannot delete the default admin user">
                                                         <ActionIcon variant="subtle" color="gray" disabled>
@@ -390,13 +392,15 @@ export function UsersTab() {
                                                         </ActionIcon>
                                                     </Tooltip>
                                                 ) : (
-                                                    <ActionIcon
-                                                        variant="subtle"
-                                                        color="red"
-                                                        onClick={() => setDeleteConfirm(user.id)}
-                                                    >
-                                                        <IconTrash size={16} />
-                                                    </ActionIcon>
+                                                    <Tooltip label="Delete user">
+                                                        <ActionIcon
+                                                            variant="subtle"
+                                                            color="red"
+                                                            onClick={() => setDeleteConfirm(user.id)}
+                                                        >
+                                                            <IconTrash size={16} />
+                                                        </ActionIcon>
+                                                    </Tooltip>
                                                 )}
                                             </Group>
                                         </Table.Td>
@@ -477,13 +481,15 @@ export function UsersTab() {
                                             >
                                                 {copiedLink === invitation.id ? 'Copied!' : 'Copy Link'}
                                             </Button>
-                                            <ActionIcon
-                                                variant="subtle"
-                                                color="red"
-                                                onClick={() => handleRevokeInvitation(invitation.id)}
-                                            >
-                                                <IconX size={16} />
-                                            </ActionIcon>
+                                            <Tooltip label="Revoke invitation">
+                                                <ActionIcon
+                                                    variant="subtle"
+                                                    color="red"
+                                                    onClick={() => handleRevokeInvitation(invitation.id)}
+                                                >
+                                                    <IconX size={16} />
+                                                </ActionIcon>
+                                            </Tooltip>
                                         </Group>
                                     </Group>
                                 </Box>

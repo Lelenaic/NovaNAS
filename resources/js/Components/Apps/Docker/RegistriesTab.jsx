@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, PasswordInput, Alert, Table, ScrollArea } from '@mantine/core';
+import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, PasswordInput, Alert, Table, ScrollArea, Tooltip } from '@mantine/core';
 import { IconRefresh, IconTrash, IconPlus, IconLogin, IconLogout, IconKey, IconAlertCircle, IconCloud } from '@tabler/icons-react';
 
 export function RegistriesTab() {
@@ -279,15 +279,16 @@ export function RegistriesTab() {
                                             {getStatusBadge(registry.isLoggedIn)}
                                         </Table.Td>
                                         <Table.Td>
-                                            <ActionIcon
-                                                variant="light"
-                                                color="red"
-                                                onClick={() => handleLogout(registry.address)}
-                                                loading={actionLoading[registry.address] === 'logout'}
-                                                title="Logout and remove credentials"
-                                            >
-                                                <IconLogout size={16} />
-                                            </ActionIcon>
+                                            <Tooltip label="Logout and remove credentials">
+                                                <ActionIcon
+                                                    variant="light"
+                                                    color="red"
+                                                    onClick={() => handleLogout(registry.address)}
+                                                    loading={actionLoading[registry.address] === 'logout'}
+                                                >
+                                                    <IconLogout size={16} />
+                                                </ActionIcon>
+                                            </Tooltip>
                                         </Table.Td>
                                     </Table.Tr>
                                 ))}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, Switch, Alert, TextInput, Select, ScrollArea } from '@mantine/core';
+import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, Switch, Alert, TextInput, Select, ScrollArea, Tooltip } from '@mantine/core';
 import { IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash, IconBox, IconAlertCircle, IconPlus, IconEdit, IconFolder, IconX } from '@tabler/icons-react';
 import { FileSelector } from '../../FileSelector';
 
@@ -441,55 +441,60 @@ export function ContainersTab() {
                                 </Text>
                             </Box>
                             <Group gap="xs">
-                                <ActionIcon
-                                    variant="light"
-                                    color="blue"
-                                    onClick={() => openEditModal(container)}
-                                    title="Edit/Recreate"
-                                >
-                                    <IconEdit size={16} />
-                                </ActionIcon>
-                                {container.State === 'running' ? (
-                                    <>
-                                        <ActionIcon
-                                            variant="light"
-                                            color="yellow"
-                                            onClick={() => handleAction(container.ID, 'stop')}
-                                            loading={actionLoading[container.ID] === 'stop'}
-                                            title="Stop"
-                                        >
-                                            <IconPlayerStop size={16} />
-                                        </ActionIcon>
-                                        <ActionIcon
-                                            variant="light"
-                                            color="blue"
-                                            onClick={() => handleAction(container.ID, 'restart')}
-                                            loading={actionLoading[container.ID] === 'restart'}
-                                            title="Restart"
-                                        >
-                                            <IconRefresh size={16} />
-                                        </ActionIcon>
-                                    </>
-                                ) : (
+                                <Tooltip label="Edit/Recreate">
                                     <ActionIcon
                                         variant="light"
-                                        color="green"
-                                        onClick={() => handleAction(container.ID, 'start')}
-                                        loading={actionLoading[container.ID] === 'start'}
-                                        title="Start"
+                                        color="blue"
+                                        onClick={() => openEditModal(container)}
                                     >
-                                        <IconPlayerPlay size={16} />
+                                        <IconEdit size={16} />
                                     </ActionIcon>
+                                </Tooltip>
+                                {container.State === 'running' ? (
+                                    <>
+                                        <Tooltip label="Stop">
+                                            <ActionIcon
+                                                variant="light"
+                                                color="yellow"
+                                                onClick={() => handleAction(container.ID, 'stop')}
+                                                loading={actionLoading[container.ID] === 'stop'}
+                                            >
+                                                <IconPlayerStop size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                        <Tooltip label="Restart">
+                                            <ActionIcon
+                                                variant="light"
+                                                color="blue"
+                                                onClick={() => handleAction(container.ID, 'restart')}
+                                                loading={actionLoading[container.ID] === 'restart'}
+                                            >
+                                                <IconRefresh size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                    </>
+                                ) : (
+                                    <Tooltip label="Start">
+                                        <ActionIcon
+                                            variant="light"
+                                            color="green"
+                                            onClick={() => handleAction(container.ID, 'start')}
+                                            loading={actionLoading[container.ID] === 'start'}
+                                        >
+                                            <IconPlayerPlay size={16} />
+                                        </ActionIcon>
+                                    </Tooltip>
                                 )}
-                                <ActionIcon
-                                    variant="light"
-                                    color="red"
-                                    onClick={() => setDeleteModal({ open: true, container })}
-                                    loading={actionLoading[container.ID] === 'deleting'}
-                                    title="Delete"
-                                >
-                                    <IconTrash size={16} />
-                                </ActionIcon>
+                                <Tooltip label="Delete">
+                                    <ActionIcon
+                                        variant="light"
+                                        color="red"
+                                        onClick={() => setDeleteModal({ open: true, container })}
+                                        loading={actionLoading[container.ID] === 'deleting'}
+                                    >
+                                        <IconTrash size={16} />
+                                    </ActionIcon>
+                                </Tooltip>
                             </Group>
                         </Group>
                     </Card>

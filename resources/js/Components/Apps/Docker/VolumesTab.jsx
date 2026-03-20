@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, Select, Alert } from '@mantine/core';
+import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, Select, Alert, Tooltip } from '@mantine/core';
 import { IconTrash, IconHierarchy2, IconPlus, IconRefresh, IconAlertCircle } from '@tabler/icons-react';
 
 export function VolumesTab() {
@@ -142,15 +142,16 @@ export function VolumesTab() {
                                     Mountpoint: {volume.Mountpoint || 'N/A'}
                                 </Text>
                             </Box>
-                            <ActionIcon
-                                variant="light"
-                                color="red"
-                                onClick={() => setDeleteModal({ open: true, volume })}
-                                loading={actionLoading[volume.Name] === 'deleting'}
-                                title="Delete volume"
-                            >
-                                <IconTrash size={16} />
-                            </ActionIcon>
+                            <Tooltip label="Delete volume">
+                                <ActionIcon
+                                    variant="light"
+                                    color="red"
+                                    onClick={() => setDeleteModal({ open: true, volume })}
+                                    loading={actionLoading[volume.Name] === 'deleting'}
+                                >
+                                    <IconTrash size={16} />
+                                </ActionIcon>
+                            </Tooltip>
                         </Group>
                     </Card>
                 ))

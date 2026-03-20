@@ -16,6 +16,7 @@ import {
     ActionIcon,
     Table,
     useMantineTheme,
+    Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -381,20 +382,24 @@ export function UpnpTab() {
                                 </Table.Td>
                                 <Table.Td>
                                     <Group gap="xs">
-                                        <ActionIcon
-                                            variant="subtle"
-                                            color="gray"
-                                            onClick={() => openEditModal(rule)}
-                                        >
-                                            <IconEdit size={16} />
-                                        </ActionIcon>
-                                        <ActionIcon
-                                            variant="subtle"
-                                            color="red"
-                                            onClick={() => setDeleteConfirm(rule.id)}
-                                        >
-                                            <IconTrash size={16} />
-                                        </ActionIcon>
+                                        <Tooltip label="Edit rule">
+                                            <ActionIcon
+                                                variant="subtle"
+                                                color="gray"
+                                                onClick={() => openEditModal(rule)}
+                                            >
+                                                <IconEdit size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                        <Tooltip label="Delete rule">
+                                            <ActionIcon
+                                                variant="subtle"
+                                                color="red"
+                                                onClick={() => setDeleteConfirm(rule.id)}
+                                            >
+                                                <IconTrash size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
                                     </Group>
                                 </Table.Td>
                             </Table.Tr>

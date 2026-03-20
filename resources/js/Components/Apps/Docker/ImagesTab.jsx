@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, Alert } from '@mantine/core';
+import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, Alert, Tooltip } from '@mantine/core';
 import { IconTrash, IconPhoto, IconDownload, IconRefresh, IconAlertCircle } from '@tabler/icons-react';
 
 export function ImagesTab() {
@@ -159,15 +159,16 @@ export function ImagesTab() {
                                         Size: {size} | Created: {image.CreatedAt}
                                     </Text>
                                 </Box>
-                                <ActionIcon
-                                    variant="light"
-                                    color="red"
-                                    onClick={() => setDeleteModal({ open: true, image })}
-                                    loading={actionLoading[imageId] === 'deleting'}
-                                    title="Delete image"
-                                >
-                                    <IconTrash size={16} />
-                                </ActionIcon>
+                                <Tooltip label="Delete image">
+                                    <ActionIcon
+                                        variant="light"
+                                        color="red"
+                                        onClick={() => setDeleteModal({ open: true, image })}
+                                        loading={actionLoading[imageId] === 'deleting'}
+                                    >
+                                        <IconTrash size={16} />
+                                    </ActionIcon>
+                                </Tooltip>
                             </Group>
                         </Card>
                     );
