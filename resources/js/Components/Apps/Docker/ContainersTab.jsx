@@ -490,7 +490,6 @@ export function ContainersTab() {
                                         variant="light"
                                         color="red"
                                         onClick={() => setDeleteModal({ open: true, container })}
-                                        loading={actionLoading[container.ID] === 'deleting'}
                                     >
                                         <IconTrash size={16} />
                                     </ActionIcon>
@@ -522,7 +521,7 @@ export function ContainersTab() {
                     <Button variant="default" onClick={() => setDeleteModal({ open: false, container: null })}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={handleDelete}>
+                    <Button color="red" onClick={handleDelete} loading={actionLoading[deleteModal.container?.ID || ''] === 'deleting'}>
                         Delete
                     </Button>
                 </Group>

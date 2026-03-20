@@ -256,13 +256,9 @@ class StorageController extends Controller
      */
     public function toggleHomes(Request $request): JsonResponse
     {
-        \Illuminate\Support\Facades\Log::info('[StorageController] toggleHomes called');
-
         $validated = $request->validate([
             'enabled' => 'required|boolean',
         ]);
-
-        \Illuminate\Support\Facades\Log::info('[StorageController] validated enabled: ' . ($validated['enabled'] ? 'true' : 'false'));
 
         try {
             $this->sambaService->setHomesEnabled($validated['enabled']);
@@ -271,7 +267,6 @@ class StorageController extends Controller
                 'message' => 'Homes share ' . ($validated['enabled'] ? 'enabled' : 'disabled') . ' successfully',
             ]);
         } catch (\RuntimeException $e) {
-            \Illuminate\Support\Facades\Log::error('[StorageController] toggleHomes error: ' . $e->getMessage());
             return response()->json([
                 'error' => $e->getMessage(),
             ], 422);

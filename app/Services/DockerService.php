@@ -58,11 +58,19 @@ class DockerService
      */
     public function getDaemonConfig(): array
     {
-        if (!File::exists(self::DAEMON_JSON_PATH)) {
+        // Check if file exists using sudo (webserver user may not have access to /etc/docker)
+        $checkResult = Process::run('sudo test -f ' . self::DAEMON_JSON_PATH);
+        if (!$checkResult->successful()) {
             return [];
         }
 
-        $content = File::get(self::DAEMON_JSON_PATH);
+        // Read file using sudo
+        $result = Process::run('sudo cat ' . self::DAEMON_JSON_PATH);
+        if (!$result->successful()) {
+            return [];
+        }
+
+        $content = $result->output();
         $config = json_decode($content, true);
 
         return is_array($config) ? $config : [];
@@ -77,15 +85,21 @@ class DockerService
     {
         $directory = dirname(self::DAEMON_JSON_PATH);
 
-        if (!File::exists($directory)) {
-            File::makeDirectory($directory, 0755, true);
+        // Create directory if it doesn't exist (using sudo since /etc/docker may need root)
+        $checkDirResult = Process::run('sudo test -d ' . $directory);
+        if (!$checkDirResult->successful()) {
+            Process::run('sudo mkdir -p ' . $directory);
         }
 
+        // Get current config using sudo (reading system file)
         $currentConfig = $this->getDaemonConfig();
         $mergedConfig = array_merge($currentConfig, $config);
         $jsonContent = json_encode($mergedConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        File::put(self::DAEMON_JSON_PATH, $jsonContent . "\n");
+        // Write to temp file first, then move with sudo
+        $tempFile = storage_path('app/daemon.json.tmp');
+        file_put_contents($tempFile, $jsonContent . "\n");
+        Process::run('sudo mv ' . $tempFile . ' ' . self::DAEMON_JSON_PATH);
     }
 
     /**
@@ -171,17 +185,21 @@ class DockerService
     {
         $currentDataDir = $this->getDataDirectory();
 
-        // Validate new directory
-        if (!$this->dataDirectoryExists(dirname($newDataDir))) {
+        // Validate new directory exists (check using sudo since webserver user may not have access)
+        $checkParentResult = Process::run('sudo test -d ' . dirname($newDataDir));
+        if (!$checkParentResult->successful()) {
             return [
                 'success' => false,
                 'message' => 'Parent directory does not exist: ' . dirname($newDataDir),
             ];
         }
 
-        if (!empty(glob($currentDataDir . '/*'))) {
-            // Docker directory is not empty, check if we can move it
-            if (!$this->canWriteToDirectory(dirname($newDataDir))) {
+        // Check if Docker directory has content
+        $checkContentResult = Process::run('sudo test -d ' . $currentDataDir . ' && sudo ls -A ' . $currentDataDir);
+        if ($checkContentResult->successful() && !empty(trim($checkContentResult->output()))) {
+            // Docker directory is not empty, check if we can write to target
+            $checkWriteResult = Process::run('sudo test -w ' . dirname($newDataDir));
+            if (!$checkWriteResult->successful()) {
                 return [
                     'success' => false,
                     'message' => 'Cannot write to target directory: ' . dirname($newDataDir),
@@ -189,9 +207,9 @@ class DockerService
             }
         }
 
-        // Step 1: Stop Docker service
+        // Step 1: Stop Docker service (using sudo since webserver user can't manage services)
         if ($this->isRunning()) {
-            $stopResult = Process::run('systemctl stop docker');
+            $stopResult = Process::run('sudo systemctl stop docker');
             if (!$stopResult->successful()) {
                 return [
                     'success' => false,
@@ -201,18 +219,26 @@ class DockerService
         }
 
         try {
-            // Step 2: Update daemon.json
+            // Step 2: Update daemon.json using sudo
             $this->updateDaemonConfig(['data-root' => $newDataDir]);
 
             // Step 3: Move data directory if it exists
-            if ($this->dataDirectoryExists($currentDataDir)) {
-                // Create parent directory if needed
-                if (!$this->dataDirectoryExists(dirname($newDataDir))) {
-                    File::makeDirectory(dirname($newDataDir), 0755, true);
+            $checkCurrentResult = Process::run('sudo test -d ' . $currentDataDir);
+            if ($checkCurrentResult->successful()) {
+                // Create parent directory if needed (using sudo)
+                $mkdirResult = Process::run('sudo mkdir -p ' . dirname($newDataDir));
+                if (!$mkdirResult->successful()) {
+                    // Rollback daemon.json on failure
+                    $this->updateDaemonConfig(['data-root' => $currentDataDir]);
+
+                    return [
+                        'success' => false,
+                        'message' => 'Failed to create parent directory: ' . $mkdirResult->errorOutput(),
+                    ];
                 }
 
-                // Move the directory
-                $moveResult = Process::run("mv {$currentDataDir} {$newDataDir}");
+                // Move the directory using sudo mv
+                $moveResult = Process::run('sudo mv ' . $currentDataDir . ' ' . $newDataDir);
                 if (!$moveResult->successful()) {
                     // Rollback daemon.json on failure
                     $this->updateDaemonConfig(['data-root' => $currentDataDir]);
@@ -224,8 +250,8 @@ class DockerService
                 }
             }
 
-            // Step 4: Start Docker service
-            $startResult = Process::run('systemctl start docker');
+            // Step 4: Start Docker service using sudo
+            $startResult = Process::run('sudo systemctl start docker');
             if (!$startResult->successful()) {
                 return [
                     'success' => false,

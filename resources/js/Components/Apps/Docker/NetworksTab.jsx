@@ -181,7 +181,6 @@ export function NetworksTab() {
                                         variant="light"
                                         color="red"
                                         onClick={() => setDeleteModal({ open: true, network })}
-                                        loading={actionLoading[network.ID] === 'deleting'}
                                         disabled={isSystemNetwork}
                                     >
                                         <IconTrash size={16} />
@@ -263,7 +262,7 @@ export function NetworksTab() {
                     <Button variant="default" onClick={() => setDeleteModal({ open: false, network: null })}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={handleDelete}>
+                    <Button color="red" onClick={handleDelete} loading={actionLoading[deleteModal.network?.ID || ''] === 'deleting'}>
                         Delete
                     </Button>
                 </Group>

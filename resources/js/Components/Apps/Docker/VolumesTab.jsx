@@ -147,7 +147,6 @@ export function VolumesTab() {
                                     variant="light"
                                     color="red"
                                     onClick={() => setDeleteModal({ open: true, volume })}
-                                    loading={actionLoading[volume.Name] === 'deleting'}
                                 >
                                     <IconTrash size={16} />
                                 </ActionIcon>
@@ -212,7 +211,7 @@ export function VolumesTab() {
                     <Button variant="default" onClick={() => setDeleteModal({ open: false, volume: null })}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={handleDelete}>
+                    <Button color="red" onClick={handleDelete} loading={actionLoading[deleteModal.volume?.Name || ''] === 'deleting'}>
                         Delete
                     </Button>
                 </Group>

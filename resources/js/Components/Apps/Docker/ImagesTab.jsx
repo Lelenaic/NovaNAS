@@ -164,7 +164,6 @@ export function ImagesTab() {
                                         variant="light"
                                         color="red"
                                         onClick={() => setDeleteModal({ open: true, image })}
-                                        loading={actionLoading[imageId] === 'deleting'}
                                     >
                                         <IconTrash size={16} />
                                     </ActionIcon>
@@ -226,7 +225,7 @@ export function ImagesTab() {
                     <Button variant="default" onClick={() => setDeleteModal({ open: false, image: null })}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={handleDelete}>
+                    <Button color="red" onClick={handleDelete} loading={actionLoading[deleteModal.image?.ID || ''] === 'deleting'}>
                         Delete
                     </Button>
                 </Group>
