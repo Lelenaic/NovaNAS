@@ -10,6 +10,7 @@ import {
     IconWifi,
     IconMail,
     IconServer,
+    IconCpu,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -18,6 +19,7 @@ import { UpnpTab } from './Settings/UpnpTab';
 import { UsersTab } from './Settings/UsersTab';
 import { EmailTab } from './Settings/EmailTab';
 import { ServicesTab } from './Settings/ServicesTab';
+import { GPUTab } from './Settings/GPUTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
@@ -25,6 +27,7 @@ const tabs = [
     { id: 'upnp', label: 'UPNP', icon: IconWifi },
     { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
     { id: 'services', label: 'Services', icon: IconServer },
+    { id: 'gpus', label: 'GPUs', icon: IconCpu },
     { id: 'account', label: 'Users', icon: IconUsers },
     { id: 'security', label: 'Security', icon: IconShield },
     { id: 'email', label: 'Email', icon: IconMail },
@@ -47,6 +50,8 @@ export function SettingsAppContent() {
                 return <DynDnsTab />;
             case 'services':
                 return <ServicesTab />;
+            case 'gpus':
+                return <GPUTab />;
             case 'appearance':
                 return <Text c="dimmed">Appearance settings will appear here.</Text>;
             case 'account':

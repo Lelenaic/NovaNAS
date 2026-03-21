@@ -18,6 +18,7 @@ use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\DockerController;
 use App\Http\Controllers\DockerSettingsController;
 use App\Http\Controllers\ServicesController;
+use App\Http\Controllers\GPUController;
 
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
@@ -205,6 +206,12 @@ Route::group(['middleware' => 'auth'], function () {
         // Services routes
         Route::get('/api/services', [ServicesController::class, 'index']);
         Route::post('/api/services/toggle', [ServicesController::class, 'toggle']);
+
+        // GPU routes
+        Route::get('/api/gpus', [GPUController::class, 'index']);
+        Route::get('/api/gpus/status', [GPUController::class, 'status']);
+        Route::get('/api/gpus/providers', [GPUController::class, 'providers']);
+        Route::get('/api/gpus/{provider}/{index}', [GPUController::class, 'show']);
     });
 
     // API routes - exclude Inertia middleware
