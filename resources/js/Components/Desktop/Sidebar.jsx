@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton } from '@mantine/core';
-import { IconClock, IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv } from '@tabler/icons-react';
+import { IconClock, IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck } from '@tabler/icons-react';
 
 // Custom hook to fetch system info - shared by both widgets
 function useSystemInfo() {
@@ -212,6 +212,124 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
     );
 }
 
+function StoragePoolsWidget({ systemInfo, loading }) {
+    const theme = useMantineTheme();
+    const [expanded, setExpanded] = useState(true);
+    const [copiedIndex, setCopiedIndex] = useState(null);
+
+    const getPoolColor = (percentage) => {
+        if (percentage > 90) return 'red';
+        if (percentage > 70) return 'orange';
+        return 'blue';
+    };
+
+    const handleCopy = async (text, index) => {
+        try {
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            }
+            setCopiedIndex(index);
+            setTimeout(() => setCopiedIndex(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    const pools = systemInfo?.storage_pools || [];
+    const hasMultiplePools = pools.length > 1;
+
+    return (
+        <Box
+            style={{
+                backgroundColor: theme.colors.dark[7],
+                borderRadius: '8px',
+                padding: '16px',
+            }}
+        >
+            <Stack gap="sm">
+                <Box style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconDisc size={16} color={theme.colors.blue[5]} />
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                        Storage Pools
+                    </Text>
+                </Box>
+
+                {loading ? (
+                    <Skeleton height={60} />
+                ) : pools.length > 0 ? (
+                    <>
+                        {hasMultiplePools && (
+                            <UnstyledButton
+                                onClick={() => setExpanded(!expanded)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}
+                            >
+                                {expanded ? (
+                                    <IconChevronDown size={14} color={theme.colors.gray[5]} />
+                                ) : (
+                                    <IconChevronRight size={14} color={theme.colors.gray[5]} />
+                                )}
+                                <Text size="xs" c="dimmed">
+                                    {pools.length} Pool{pools.length > 1 ? 's' : ''}
+                                </Text>
+                            </UnstyledButton>
+                        )}
+                        <Collapse in={expanded || !hasMultiplePools}>
+                            <Stack gap="md">
+                                {pools.map((pool, index) => (
+                                    <Box key={index}>
+                                        <Text size="xs" c="white" fw={500} mb={4}>
+                                            {pool.name}
+                                        </Text>
+                                        {pool.mountpoint && (
+                                            <Group gap="xs" mb={4}>
+                                                <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+                                                    {pool.mountpoint}
+                                                </Text>
+                                                <UnstyledButton
+                                                    onClick={() => handleCopy(pool.mountpoint, index)}
+                                                    style={{ display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    {copiedIndex === index ? (
+                                                        <IconCheck size={14} color={theme.colors.green[5]} />
+                                                    ) : (
+                                                        <IconCopy size={14} color={theme.colors.gray[5]} />
+                                                    )}
+                                                </UnstyledButton>
+                                            </Group>
+                                        )}
+                                        <GaugeWidget
+                                            icon={IconDisc}
+                                            label="Usage"
+                                            value={pool.percentage}
+                                            color={getPoolColor(pool.percentage)}
+                                            supplementaryText={`${formatBytes(pool.size - pool.free)} / ${formatBytes(pool.size)}`}
+                                        />
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </Collapse>
+                    </>
+                ) : (
+                    <Text c="dimmed" size="sm">No storage pools detected</Text>
+                )}
+            </Stack>
+        </Box>
+    );
+}
+
 function GPUsWidget({ systemInfo, loading }) {
     const theme = useMantineTheme();
     const [expanded, setExpanded] = useState(true);
@@ -335,6 +453,9 @@ export function Sidebar() {
 
                 {/* System Resources Widget */}
                 <SystemResourcesWidget systemInfo={systemInfo} loading={loading} />
+
+                {/* Storage Pools Widget */}
+                <StoragePoolsWidget systemInfo={systemInfo} loading={loading} />
 
                 {/* GPUs Widget */}
                 <GPUsWidget systemInfo={systemInfo} loading={loading} />

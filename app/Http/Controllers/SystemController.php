@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\File;
 use App\Services\GPU\GPUManager;
+use App\Services\Storage\StorageService;
 
 class SystemController extends Controller
 {
     public function __construct(
-        protected GPUManager $gpuManager
+        protected GPUManager $gpuManager,
+        protected StorageService $storageService
     ) {}
 
     /**
@@ -26,6 +28,7 @@ class SystemController extends Controller
         $cpuUsage = $this->getCpuUsage();
         $memoryUsage = $this->getMemoryUsage();
         $gpus = $this->getGpuUsage();
+        $storagePools = $this->getStoragePools();
 
         return response()->json([
             'datetime' => $dateTime,
@@ -36,7 +39,27 @@ class SystemController extends Controller
             'cpu_usage' => $cpuUsage,
             'memory_usage' => $memoryUsage,
             'gpus' => $gpus,
+            'storage_pools' => $storagePools,
         ]);
+    }
+
+    /**
+     * Get storage pools information.
+     *
+     * @return array<int, array{name: string, size: int, allocated: int, free: int, health: string, mountpoint: string|null, percentage: float}>
+     */
+    protected function getStoragePools(): array
+    {
+        $pools = $this->storageService->listPools();
+
+        // Add percentage used for each pool
+        foreach ($pools as &$pool) {
+            $pool['percentage'] = $pool['size'] > 0
+                ? round((($pool['size'] - $pool['free']) / $pool['size']) * 100, 1)
+                : 0;
+        }
+
+        return $pools;
     }
 
     /**
