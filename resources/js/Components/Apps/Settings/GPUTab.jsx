@@ -4,7 +4,6 @@ import {
     Title,
     Text,
     Group,
-    Stack,
     Badge,
     Loader,
     Alert,
@@ -21,7 +20,6 @@ import {
     IconThermometer,
     IconBolt,
     IconDeviceDesktop,
-    IconClock,
     IconRefresh,
 } from '@tabler/icons-react';
 
