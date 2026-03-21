@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group } from '@mantine/core';
-import { IconClock, IconCpu, IconDeviceDesktop, IconChartBar } from '@tabler/icons-react';
+import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton } from '@mantine/core';
+import { IconClock, IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv } from '@tabler/icons-react';
 
 // Custom hook to fetch system info - shared by both widgets
 function useSystemInfo() {
@@ -212,6 +212,109 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
     );
 }
 
+function GPUsWidget({ systemInfo, loading }) {
+    const theme = useMantineTheme();
+    const [expanded, setExpanded] = useState(true);
+
+    const getGpuColor = (percentage) => {
+        if (percentage > 80) return 'red';
+        if (percentage > 60) return 'orange';
+        return 'grape';
+    };
+
+    const getUtilizationColor = (percentage) => {
+        if (percentage > 80) return 'red';
+        if (percentage > 60) return 'orange';
+        return 'cyan';
+    };
+
+    const getTemperatureColor = (temp) => {
+        if (temp > 80) return 'red';
+        if (temp > 60) return 'orange';
+        return 'green';
+    };
+
+    const gpus = systemInfo?.gpus || [];
+    const hasMultipleGpus = gpus.length > 1;
+
+    return (
+        <Box
+            style={{
+                backgroundColor: theme.colors.dark[7],
+                borderRadius: '8px',
+                padding: '16px',
+            }}
+        >
+            <Stack gap="sm">
+                <Box style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconDeviceTv size={16} color={theme.colors.grape[5]} />
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                        GPUs
+                    </Text>
+                </Box>
+
+                {loading ? (
+                    <Skeleton height={60} />
+                ) : gpus.length > 0 ? (
+                    <>
+                        {hasMultipleGpus && (
+                            <UnstyledButton
+                                onClick={() => setExpanded(!expanded)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}
+                            >
+                                {expanded ? (
+                                    <IconChevronDown size={14} color={theme.colors.gray[5]} />
+                                ) : (
+                                    <IconChevronRight size={14} color={theme.colors.gray[5]} />
+                                )}
+                                <Text size="xs" c="dimmed">
+                                    {gpus.length} GPU{gpus.length > 1 ? 's' : ''}
+                                </Text>
+                            </UnstyledButton>
+                        )}
+                        <Collapse in={expanded || !hasMultipleGpus}>
+                            <Stack gap="md">
+                                {gpus.map((gpu, index) => (
+                                    <Box key={index}>
+                                        <Text size="xs" c="white" fw={500} mb={4}>
+                                            {gpu.name}
+                                        </Text>
+                                        <Box mt={8}>
+                                            <GaugeWidget
+                                                icon={IconCpu}
+                                                label="GPU"
+                                                value={gpu.utilization_gpu}
+                                                color={getUtilizationColor(gpu.utilization_gpu)}
+                                            />
+                                        </Box>
+                                        <GaugeWidget
+                                            icon={IconDeviceDesktop}
+                                            label="VRAM"
+                                            value={gpu.memory_percentage}
+                                            color={getGpuColor(gpu.memory_percentage)}
+                                            supplementaryText={`${formatBytes(gpu.memory_used)} / ${formatBytes(gpu.memory_total)}`}
+                                        />
+                                        {gpu.temperature !== null && (
+                                            <Group justify="space-between" mt={4}>
+                                                <Text size="xs" c="dimmed">Temperature</Text>
+                                                <Text size="xs" c={getTemperatureColor(gpu.temperature)} fw={500}>
+                                                    {gpu.temperature}°C
+                                                </Text>
+                                            </Group>
+                                        )}
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </Collapse>
+                    </>
+                ) : (
+                    <Text c="dimmed" size="sm">No GPUs detected</Text>
+                )}
+            </Stack>
+        </Box>
+    );
+}
+
 export function Sidebar() {
     const theme = useMantineTheme();
     const { systemInfo, loading } = useSystemInfo();
@@ -232,6 +335,9 @@ export function Sidebar() {
 
                 {/* System Resources Widget */}
                 <SystemResourcesWidget systemInfo={systemInfo} loading={loading} />
+
+                {/* GPUs Widget */}
+                <GPUsWidget systemInfo={systemInfo} loading={loading} />
             </Stack>
         </Box>
     );

@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\File;
+use App\Services\GPU\GPUManager;
 
 class SystemController extends Controller
 {
+    public function __construct(
+        protected GPUManager $gpuManager
+    ) {}
+
     /**
      * Get system information including date/time from the OS.
      */
@@ -20,6 +25,7 @@ class SystemController extends Controller
         $loadAverage = $this->getLoadAverage();
         $cpuUsage = $this->getCpuUsage();
         $memoryUsage = $this->getMemoryUsage();
+        $gpus = $this->getGpuUsage();
 
         return response()->json([
             'datetime' => $dateTime,
@@ -29,7 +35,40 @@ class SystemController extends Controller
             'load_average' => $loadAverage,
             'cpu_usage' => $cpuUsage,
             'memory_usage' => $memoryUsage,
+            'gpus' => $gpus,
         ]);
+    }
+
+    /**
+     * Get GPU usage information.
+     *
+     * @return array<int, array{name: string, memory_total: int, memory_used: int, memory_free: int, memory_percentage: float, utilization_gpu: int, temperature: int|null}>
+     */
+    protected function getGpuUsage(): array
+    {
+        $gpus = $this->gpuManager->getAllGpus();
+        $result = [];
+
+        foreach ($gpus as $provider => $providerData) {
+            foreach ($providerData['gpus'] as $gpu) {
+                $memoryPercentage = 0.0;
+                if ($gpu['memory_total'] > 0) {
+                    $memoryPercentage = round(($gpu['memory_used'] / $gpu['memory_total']) * 100, 1);
+                }
+
+                $result[] = [
+                    'name' => $gpu['name'],
+                    'memory_total' => $gpu['memory_total'],
+                    'memory_used' => $gpu['memory_used'],
+                    'memory_free' => $gpu['memory_free'],
+                    'memory_percentage' => $memoryPercentage,
+                    'utilization_gpu' => $gpu['utilization_gpu'],
+                    'temperature' => $gpu['temperature'],
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**
