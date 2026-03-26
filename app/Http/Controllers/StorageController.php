@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use App\Services\Storage\StorageService;
-use App\Services\SettingsService;
-use App\Services\SambaService;
 use App\Services\LinuxUserService;
 use App\Services\NetworkService;
+use App\Services\SambaService;
+use App\Services\SettingsService;
+use App\Services\Storage\StorageService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StorageController extends Controller
 {
@@ -49,11 +49,18 @@ class StorageController extends Controller
     }
 
     /**
-     * List all storage pools (ZFS).
+     * List all storage pools from all backends (ZFS, EXT4, etc.).
      */
     public function pools(): JsonResponse
     {
-        $pools = $this->storageService->listPools();
+        $allPools = $this->storageService->listAllPools();
+
+        $pools = [];
+        foreach ($allPools as $type => $typePools) {
+            foreach ($typePools as $pool) {
+                $pools[] = array_merge($pool, ['type' => $type]);
+            }
+        }
 
         return response()->json([
             'pools' => $pools,
@@ -264,7 +271,7 @@ class StorageController extends Controller
             $this->sambaService->setHomesEnabled($validated['enabled']);
 
             return response()->json([
-                'message' => 'Homes share ' . ($validated['enabled'] ? 'enabled' : 'disabled') . ' successfully',
+                'message' => 'Homes share '.($validated['enabled'] ? 'enabled' : 'disabled').' successfully',
             ]);
         } catch (\RuntimeException $e) {
             return response()->json([

@@ -18,7 +18,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
-- laravel/pint (PINT) - v1
 - @inertiajs/react - v2
 - phpunit/phpunit (PHPUNIT) - v11
 - tailwindcss - v4.1

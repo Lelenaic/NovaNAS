@@ -37,7 +37,7 @@ class ZfsStorage implements StorageInterface
      */
     public function listPools(): array
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             return [];
         }
 
@@ -68,6 +68,7 @@ class ZfsStorage implements StorageInterface
                     'free' => (int) $parts[3],
                     'health' => $parts[4],
                     'mountpoint' => $mountpoint,
+                    'isSystem' => false,
                 ];
             }
         }
@@ -99,8 +100,7 @@ class ZfsStorage implements StorageInterface
     /**
      * Get detailed information about a specific ZFS pool.
      *
-     * @param string $pool The pool name
-     * @return array|null
+     * @param  string  $pool  The pool name
      */
     public function getPoolInfo(string $pool): ?array
     {

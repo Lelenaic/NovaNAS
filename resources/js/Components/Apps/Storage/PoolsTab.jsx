@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Progress, ActionIcon, Tooltip } from '@mantine/core';
-import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck } from '@tabler/icons-react';
+import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck, IconDatabase, IconEngine } from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
 
 function formatBytes(bytes) {
@@ -27,11 +27,34 @@ function getHealthColor(health) {
     }
 }
 
+function getFsLabel(type) {
+    switch (type) {
+        case 'zfs':
+            return 'ZFS Pool';
+        case 'ext4':
+            return 'EXT4 Volume';
+        default:
+            return 'Storage Volume';
+    }
+}
+
+function getFsIcon(type) {
+    switch (type) {
+        case 'zfs':
+            return IconStack2;
+        case 'ext4':
+            return IconDatabase;
+        default:
+            return IconDatabase;
+    }
+}
+
 function PoolCard({ pool }) {
     const theme = useMantineTheme();
     const healthColor = getHealthColor(pool.health);
     const usedPercentage = pool.size > 0 ? Math.round((pool.allocated / pool.size) * 100) : 0;
     const [copied, setCopied] = useState(false);
+    const FsIcon = getFsIcon(pool.type);
 
     const handleCopy = () => {
         if (!pool.mountpoint) return;
@@ -80,11 +103,23 @@ function PoolCard({ pool }) {
                         variant="light"
                         color={healthColor}
                     >
-                        <IconStack2 size={24} />
+                        <FsIcon size={24} />
                     </ThemeIcon>
                     <Box>
-                        <Text size="lg" fw={700}>{pool.name}</Text>
-                        <Text size="xs" c="dimmed">ZFS Pool</Text>
+                        <Group gap="xs">
+                            <Text size="lg" fw={700}>{pool.name}</Text>
+                            {pool.isSystem && (
+                                <Badge
+                                    size="sm"
+                                    color="green"
+                                    variant="light"
+                                    leftSection={<IconEngine size={12} />}
+                                >
+                                    System
+                                </Badge>
+                            )}
+                        </Group>
+                        <Text size="xs" c="dimmed">{getFsLabel(pool.type)}</Text>
                     </Box>
                 </Group>
                 <Badge
@@ -191,6 +226,10 @@ export function PoolsTab() {
     const degradedPools = pools.filter(p => p.health?.toUpperCase() === 'DEGRADED').length;
     const failedPools = pools.filter(p => ['FAULTED', 'UNAVAIL'].includes(p.health?.toUpperCase())).length;
 
+    // Group pools by type
+    const zfsPools = pools.filter(p => p.type === 'zfs');
+    const ext4Pools = pools.filter(p => p.type === 'ext4');
+
     return (
         <Box style={{ position: 'relative' }}>
             <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2 }} />
@@ -261,7 +300,7 @@ export function PoolsTab() {
             </Box>
 
             {/* Pool List */}
-            <Text size="lg" fw={600} mb="md">ZFS Pools</Text>
+            <Text size="lg" fw={600} mb="md">Storage Pools</Text>
 
             {error && (
                 <Text c="red" mb="md">{error}</Text>
@@ -278,19 +317,37 @@ export function PoolsTab() {
                     }}
                 >
                     <ThemeIcon size={64} radius="xl" variant="light" color="gray" mx="auto" mb="md">
-                        <IconStack2 size={32} />
+                        <IconDatabase size={32} />
                     </ThemeIcon>
-                    <Text size="lg" fw={500} c="dimmed">No ZFS pools found</Text>
+                    <Text size="lg" fw={500} c="dimmed">No storage pools found</Text>
                     <Text size="sm" c="dimmed" mt="xs">
-                        Install ZFS and create a pool to see it here
+                        Create a ZFS pool or mount an EXT4 filesystem to see it here
                     </Text>
                 </Box>
             )}
 
-            {!loading && !error && pools.length > 0 && (
-                <Box>
-                    {pools.map((pool) => (
-                        <PoolCard key={pool.name} pool={pool} />
+            {!loading && !error && zfsPools.length > 0 && (
+                <Box mb="xl">
+                    <Group gap="xs" mb="md">
+                        <IconStack2 size={18} />
+                        <Text size="md" fw={600}>ZFS Pools</Text>
+                        <Badge size="sm" variant="light" color="blue">{zfsPools.length}</Badge>
+                    </Group>
+                    {zfsPools.map((pool) => (
+                        <PoolCard key={`zfs-${pool.name}`} pool={pool} />
+                    ))}
+                </Box>
+            )}
+
+            {!loading && !error && ext4Pools.length > 0 && (
+                <Box mb="xl">
+                    <Group gap="xs" mb="md">
+                        <IconDatabase size={18} />
+                        <Text size="md" fw={600}>EXT4 Volumes</Text>
+                        <Badge size="sm" variant="light" color="teal">{ext4Pools.length}</Badge>
+                    </Group>
+                    {ext4Pools.map((pool) => (
+                        <PoolCard key={`ext4-${pool.name}`} pool={pool} />
                     ))}
                 </Box>
             )}

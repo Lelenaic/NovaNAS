@@ -28,7 +28,8 @@ class StorageService
     public function __construct()
     {
         // Register available storage backends
-        $this->registerBackend('zfs', new ZfsStorage());
+        $this->registerBackend('zfs', new ZfsStorage);
+        $this->registerBackend('ext4', new Ext4Storage);
     }
 
     /**
@@ -120,7 +121,7 @@ class StorageService
 
         $data = json_decode($result->output(), true);
 
-        if (!$data || !isset($data['blockdevices'])) {
+        if (! $data || ! isset($data['blockdevices'])) {
             return [];
         }
 
@@ -201,7 +202,7 @@ class StorageService
     /**
      * Get the capacity information for a specific disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     total: int,
      *     used: int,
@@ -266,10 +267,34 @@ class StorageService
     }
 
     /**
+     * List all storage pools from all available backends.
+     *
+     * @return array<string, array<int, array{
+     *     name: string,
+     *     size: int,
+     *     allocated: int,
+     *     free: int,
+     *     health: string,
+     *     mountpoint: string|null
+     * }>>
+     */
+    public function listAllPools(): array
+    {
+        $allPools = [];
+
+        foreach ($this->backends as $name => $backend) {
+            if ($backend->isAvailable()) {
+                $allPools[$name] = $backend->listPools();
+            }
+        }
+
+        return $allPools;
+    }
+
+    /**
      * Get detailed information about a specific pool.
      *
-     * @param string $pool The pool name
-     * @return array|null
+     * @param  string  $pool  The pool name
      */
     public function getPoolInfo(string $pool): ?array
     {
