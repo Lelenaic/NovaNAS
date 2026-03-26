@@ -1,24 +1,24 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\SystemController;
-use App\Http\Controllers\WizardController;
 use App\Http\Controllers\DesktopIconController;
-use App\Http\Controllers\NetworkController;
-use App\Http\Controllers\DynDnsController;
-use App\Http\Controllers\UpnpController;
-use App\Http\Controllers\FirewallController;
-use App\Http\Controllers\StorageController;
-use App\Http\Controllers\SmartController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\EmailSettingsController;
-use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\DockerController;
 use App\Http\Controllers\DockerSettingsController;
-use App\Http\Controllers\ServicesController;
+use App\Http\Controllers\DynDnsController;
+use App\Http\Controllers\EmailSettingsController;
+use App\Http\Controllers\FirewallController;
+use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\GPUController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\ServicesController;
+use App\Http\Controllers\SmartController;
+use App\Http\Controllers\StorageController;
+use App\Http\Controllers\SystemController;
+use App\Http\Controllers\UpnpController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WizardController;
+use Illuminate\Support\Facades\Route;
 
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
@@ -40,7 +40,6 @@ Route::post('/set-password', [UserController::class, 'setPassword']);
 
 // Invitation route (clean URL structure)
 Route::get('/invitation/{token}', [UserController::class, 'showSetPassword']);
-
 
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [HomeController::class, 'index']);
@@ -133,7 +132,11 @@ Route::group(['middleware' => 'auth'], function () {
         // User invitation routes
         Route::get('/api/users/pending', [UserController::class, 'pending']);
         Route::post('/api/users/invite', [UserController::class, 'invite']);
+        Route::post('/api/users/invitations/{user}/send-email', [UserController::class, 'sendInvitationEmail']);
         Route::delete('/api/users/invitations/{user}', [UserController::class, 'revokeInvitation']);
+
+        // SMTP status check
+        Route::get('/api/email/status', [UserController::class, 'smtpStatus']);
 
         // Available Linux users for linking
         Route::get('/api/users/linux/available', [UserController::class, 'availableLinuxUsers']);

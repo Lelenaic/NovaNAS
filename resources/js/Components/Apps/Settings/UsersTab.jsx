@@ -48,7 +48,10 @@ export function UsersTab() {
     });
     const [inviteError, setInviteError] = useState(null);
     const [inviteLoading, setInviteLoading] = useState(false);
+    const [createLoading, setCreateLoading] = useState(false);
     const [copiedLink, setCopiedLink] = useState(null);
+    const [createSuccess, setCreateSuccess] = useState(false);
+    const [smtpConfigured, setSmtpConfigured] = useState(false);
 
     // Edit User Modal
     const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
@@ -67,6 +70,7 @@ export function UsersTab() {
     useEffect(() => {
         fetchUsers();
         fetchInvitations();
+        fetchSmtpStatus();
     }, []);
 
     const fetchUsers = async () => {
@@ -92,10 +96,71 @@ export function UsersTab() {
         }
     };
 
+    const fetchSmtpStatus = async () => {
+        try {
+            const response = await fetch('/api/email/status');
+            const data = await response.json();
+            setSmtpConfigured(data.configured || false);
+        } catch (err) {
+            console.error('Failed to load SMTP status:', err);
+        }
+    };
+
     const handleInviteUser = async (e) => {
         e.preventDefault();
         setInviteError(null);
         setInviteLoading(true);
+
+        try {
+            // First create the pending user invitation
+            const response = await fetch('/api/users/invite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(inviteForm),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    const firstErrorKey = Object.keys(data.errors)[0];
+                    const firstError = data.errors[firstErrorKey];
+                    throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+                }
+                throw new Error(data.message || data.error || 'Failed to invite user');
+            }
+
+            // Then send the invitation email
+            const emailResponse = await fetch(`/api/users/invitations/${data.invitation.id}/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const emailData = await emailResponse.json();
+
+            if (!emailResponse.ok) {
+                throw new Error(emailData.error || 'Invitation created but failed to send email');
+            }
+
+            await fetchInvitations();
+            closeInviteModal();
+            resetInviteForm();
+        } catch (err) {
+            setInviteError(err.message);
+        } finally {
+            setInviteLoading(false);
+        }
+    };
+
+    const handleCreateUser = async (e) => {
+        e.preventDefault();
+        setInviteError(null);
+        setCreateLoading(true);
+        setCreateSuccess(false);
 
         try {
             const response = await fetch('/api/users/invite', {
@@ -109,23 +174,31 @@ export function UsersTab() {
             const data = await response.json();
 
             if (!response.ok) {
-                // Check for validation errors first (data.errors)
                 if (data.errors) {
                     const firstErrorKey = Object.keys(data.errors)[0];
                     const firstError = data.errors[firstErrorKey];
                     throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
                 }
-                // Then check for data.message
-                throw new Error(data.message || data.error || 'Failed to invite user');
+                throw new Error(data.message || data.error || 'Failed to create user');
             }
 
+            // Copy invitation link to clipboard
+            const invitationUrl = data.invitation.invitation_url || `${window.location.origin}/invitation/${data.invitation.invitation_token}`;
+            copyToClipboard(invitationUrl, data.invitation.id);
+
+            setCreateSuccess(true);
             await fetchInvitations();
-            closeInviteModal();
-            resetInviteForm();
+
+            // Close modal after a brief delay so user sees the success feedback
+            setTimeout(() => {
+                closeInviteModal();
+                resetInviteForm();
+                setCreateSuccess(false);
+            }, 1500);
         } catch (err) {
             setInviteError(err.message);
         } finally {
-            setInviteLoading(false);
+            setCreateLoading(false);
         }
     };
 
@@ -213,6 +286,7 @@ export function UsersTab() {
         });
         setInviteError(null);
         setCopiedLink(null);
+        setCreateSuccess(false);
     };
 
     const copyToClipboard = (text, id) => {
@@ -545,9 +619,33 @@ export function UsersTab() {
                             <Button variant="subtle" onClick={closeInviteModal}>
                                 Cancel
                             </Button>
-                            <Button type="submit" loading={inviteLoading} leftSection={<IconSend size={16} />}>
-                                Send Invitation
-                            </Button>
+                            <Tooltip
+                                label="SMTP is not configured. Configure email settings to enable sending invitations."
+                                disabled={smtpConfigured}
+                            >
+                                <Button
+                                    type="submit"
+                                    loading={inviteLoading}
+                                    disabled={!smtpConfigured}
+                                    leftSection={<IconSend size={16} />}
+                                >
+                                    Send Invitation
+                                </Button>
+                            </Tooltip>
+                            <Tooltip label="Create user and copy invitation link to clipboard">
+                                <Button
+                                    variant="light"
+                                    loading={createLoading}
+                                    color={createSuccess ? 'green' : undefined}
+                                    leftSection={createSuccess ? <IconCheck size={16} /> : <IconUserPlus size={16} />}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleCreateUser(e);
+                                    }}
+                                >
+                                    {createSuccess ? 'Link Copied!' : 'Create'}
+                                </Button>
+                            </Tooltip>
                         </Group>
                     </Stack>
                 </form>

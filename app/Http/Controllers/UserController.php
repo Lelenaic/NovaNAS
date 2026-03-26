@@ -7,13 +7,15 @@ use App\Http\Requests\SetPasswordRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Mail\InvitationMail;
 use App\Models\User;
+use App\Services\EmailService;
 use App\Services\LinuxUserService;
 use App\Services\SambaService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -23,8 +25,7 @@ class UserController extends Controller
         public LinuxUserService $linuxUserService,
         public SettingsService $settingsService,
         public SambaService $sambaService
-    ) {
-    }
+    ) {}
 
     /**
      * List all active users.
@@ -102,7 +103,7 @@ class UserController extends Controller
 
         // Get the home directory base path
         $homeBase = $this->settingsService->get('storage.user_files_home', '/home');
-        $homeDir = $homeBase . '/' . $validated['username'];
+        $homeDir = $homeBase.'/'.$validated['username'];
 
         // Generate a random temporary password
         $tempPassword = Str::random(16);
@@ -116,7 +117,7 @@ class UserController extends Controller
             );
         } catch (\RuntimeException $e) {
             return response()->json([
-                'error' => 'Failed to create Linux user: ' . $e->getMessage(),
+                'error' => 'Failed to create Linux user: '.$e->getMessage(),
             ], 500);
         }
 
@@ -180,7 +181,7 @@ class UserController extends Controller
 
         // Get the home directory base path
         $homeBase = $this->settingsService->get('storage.user_files_home', '/home');
-        $homeDir = $homeBase . '/' . $username;
+        $homeDir = $homeBase.'/'.$username;
 
         // Create the Linux user (or link to existing)
         $tempPassword = Str::random(16);
@@ -188,7 +189,7 @@ class UserController extends Controller
             $this->linuxUserService->createUser($username, $homeDir, $tempPassword);
         } catch (\RuntimeException $e) {
             return response()->json([
-                'error' => 'Failed to create Linux user: ' . $e->getMessage(),
+                'error' => 'Failed to create Linux user: '.$e->getMessage(),
             ], 500);
         }
 
@@ -295,7 +296,7 @@ class UserController extends Controller
      */
     public function revokeInvitation(User $user): JsonResponse
     {
-        if (!$user->isPending()) {
+        if (! $user->isPending()) {
             return response()->json([
                 'error' => 'This user is not a pending invitation.',
             ], 422);
@@ -321,17 +322,68 @@ class UserController extends Controller
     }
 
     /**
+     * Send invitation email for a pending user.
+     */
+    public function sendInvitationEmail(User $user, EmailService $emailService): JsonResponse
+    {
+        if (! $user->isPending()) {
+            return response()->json([
+                'error' => 'This user is not a pending invitation.',
+            ], 422);
+        }
+
+        if (! $emailService->isConfigured()) {
+            return response()->json([
+                'error' => 'SMTP is not configured. Please configure email settings first.',
+            ], 422);
+        }
+
+        // Generate the invitation URL
+        $appUrl = config('app.url', 'http://localhost');
+        $invitationUrl = "{$appUrl}/invitation/{$user->invitation_token}";
+
+        // Get the current admin user's name
+        $invitedByName = auth()->user()?->name ?? config('app.name', 'NovaNAS');
+
+        try {
+            $emailService->configureMailer();
+
+            Mail::to($user->email)->send(new InvitationMail($user, $invitationUrl, $invitedByName));
+
+            return response()->json([
+                'message' => 'Invitation email sent successfully.',
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return response()->json([
+                'error' => 'Failed to send invitation email: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check SMTP configuration status.
+     */
+    public function smtpStatus(EmailService $emailService): JsonResponse
+    {
+        return response()->json([
+            'configured' => $emailService->isConfigured(),
+        ]);
+    }
+
+    /**
      * Show the set password page for invited users.
      */
     public function showSetPassword(string $token): \Inertia\Response
     {
         $user = User::where('invitation_token', $token)->first();
 
-        if (!$user) {
+        if (! $user) {
             abort(404, 'Invalid invitation token.');
         }
 
-        if (!$user->canSetPassword()) {
+        if (! $user->canSetPassword()) {
             abort(400, 'This invitation has expired or is invalid.');
         }
 
@@ -350,11 +402,11 @@ class UserController extends Controller
 
         $user = User::where('invitation_token', $validated['token'])->first();
 
-        if (!$user) {
+        if (! $user) {
             abort(404, 'Invalid invitation token.');
         }
 
-        if (!$user->canSetPassword()) {
+        if (! $user->canSetPassword()) {
             abort(400, 'This invitation has expired or is invalid.');
         }
 
@@ -398,7 +450,7 @@ class UserController extends Controller
         ]);
 
         // Update password if provided (model handles password hashing and Samba sync)
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->update([
                 'password' => $validated['password'],
                 'password_set_at' => now(),
@@ -446,7 +498,7 @@ class UserController extends Controller
             ->toArray();
 
         $availableUsers = array_filter($users, function ($user) use ($linkedUsernames) {
-            return !in_array($user['value'], $linkedUsernames);
+            return ! in_array($user['value'], $linkedUsernames);
         });
 
         return response()->json(['users' => array_values($availableUsers)]);
