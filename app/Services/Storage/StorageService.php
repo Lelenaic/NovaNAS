@@ -326,4 +326,28 @@ class StorageService
 
         return null;
     }
+
+    /**
+     * Create a new storage pool by delegating to the appropriate backend.
+     *
+     * @param  string  $type  Backend type ('zfs', 'ext4', etc.)
+     * @param  array<string, mixed>  $config  Pool creation configuration
+     * @return array{success: bool, message: string, pool: string}
+     *
+     * @throws \RuntimeException if backend not found or not available
+     */
+    public function createPool(string $type, array $config): array
+    {
+        $backend = $this->backend($type);
+
+        if ($backend === null) {
+            throw new \RuntimeException("Storage backend '{$type}' not found.");
+        }
+
+        if (! $backend->isAvailable()) {
+            throw new \RuntimeException("Storage backend '{$type}' is not available on this system.");
+        }
+
+        return $backend->createPool($config);
+    }
 }

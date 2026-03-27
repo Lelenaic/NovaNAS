@@ -97,6 +97,8 @@ Route::group(['middleware' => 'auth'], function () {
         // Storage routes
         Route::get('/api/storage/disks', [StorageController::class, 'disks']);
         Route::get('/api/storage/disks/{device}/capacity', [StorageController::class, 'capacity']);
+        Route::get('/api/storage/backends', [StorageController::class, 'backends']);
+        Route::post('/api/storage/pools', [StorageController::class, 'createPool']);
         Route::get('/api/storage/pools', [StorageController::class, 'pools']);
         Route::get('/api/storage/pools/{pool}', [StorageController::class, 'pool']);
         Route::get('/api/storage/pools/{pool}/directories', [StorageController::class, 'poolDirectories']);

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Progress, ActionIcon, Tooltip } from '@mantine/core';
-import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck, IconDatabase, IconEngine } from '@tabler/icons-react';
+import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Progress, ActionIcon, Tooltip, Button } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck, IconDatabase, IconEngine, IconPlus } from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
+import { CreatePoolWizard } from './CreatePoolWizard';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
@@ -194,6 +196,7 @@ export function PoolsTab() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const theme = useMantineTheme();
+    const [wizardOpened, { open: openWizard, close: closeWizard }] = useDisclosure(false);
 
     const fetchPools = async () => {
         setLoading(true);
@@ -300,7 +303,18 @@ export function PoolsTab() {
             </Box>
 
             {/* Pool List */}
-            <Text size="lg" fw={600} mb="md">Storage Pools</Text>
+            <Group justify="space-between" align="center" mb="md">
+                <Text size="lg" fw={600}>Storage Pools</Text>
+                <Button
+                    variant="light"
+                    color="green"
+                    size="sm"
+                    leftSection={<IconPlus size={16} />}
+                    onClick={openWizard}
+                >
+                    New Pool
+                </Button>
+            </Group>
 
             {error && (
                 <Text c="red" mb="md">{error}</Text>
@@ -320,9 +334,17 @@ export function PoolsTab() {
                         <IconDatabase size={32} />
                     </ThemeIcon>
                     <Text size="lg" fw={500} c="dimmed">No storage pools found</Text>
-                    <Text size="sm" c="dimmed" mt="xs">
+                    <Text size="sm" c="dimmed" mt="xs" mb="md">
                         Create a ZFS pool or mount an EXT4 filesystem to see it here
                     </Text>
+                    <Button
+                        variant="light"
+                        color="green"
+                        leftSection={<IconPlus size={16} />}
+                        onClick={openWizard}
+                    >
+                        Create your first pool
+                    </Button>
                 </Box>
             )}
 
@@ -351,6 +373,12 @@ export function PoolsTab() {
                     ))}
                 </Box>
             )}
+
+            <CreatePoolWizard
+                opened={wizardOpened}
+                onClose={closeWizard}
+                onSuccess={fetchPools}
+            />
         </Box>
     );
 }

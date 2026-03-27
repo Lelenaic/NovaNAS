@@ -49,6 +49,59 @@ class StorageController extends Controller
     }
 
     /**
+     * Get available storage backends and their availability.
+     */
+    public function backends(): JsonResponse
+    {
+        $backends = $this->storageService->getAvailableBackends();
+
+        return response()->json([
+            'backends' => $backends,
+        ]);
+    }
+
+    /**
+     * Create a new storage pool.
+     */
+    public function createPool(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:zfs,ext4',
+            'name' => 'required_if:type,zfs|nullable|string|max:255|regex:/^[a-zA-Z0-9_-]+$/',
+            'disks' => 'required|array|min:1',
+            'disks.*' => 'string',
+            'vdev_type' => 'required_if:type,zfs|nullable|string|in:stripe,mirror,raidz,raidz2',
+            'mountpoint' => 'required|string|max:4096',
+            'device' => 'required_if:type,ext4|nullable|string',
+            'persist_fstab' => 'nullable|boolean',
+        ]);
+
+        $config = [
+            'name' => $validated['name'] ?? null,
+            'disks' => $validated['disks'],
+            'vdev_type' => $validated['vdev_type'] ?? 'stripe',
+            'mountpoint' => $validated['mountpoint'],
+            'device' => $validated['device'] ?? null,
+            'persist_fstab' => $validated['persist_fstab'] ?? true,
+        ];
+
+        // For EXT4, the single selected disk becomes the device
+        if ($validated['type'] === 'ext4') {
+            $config['device'] = $validated['device'] ?? ($validated['disks'][0] ?? '');
+        }
+
+        try {
+            $result = $this->storageService->createPool($validated['type'], $config);
+
+            return response()->json($result);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * List all storage pools from all backends (ZFS, EXT4, etc.).
      */
     public function pools(): JsonResponse
@@ -56,14 +109,30 @@ class StorageController extends Controller
         $allPools = $this->storageService->listAllPools();
 
         $pools = [];
+        $usedDisks = [];
+
         foreach ($allPools as $type => $typePools) {
             foreach ($typePools as $pool) {
                 $pools[] = array_merge($pool, ['type' => $type]);
+
+                // Track disks used by existing pools
+                if ($type === 'ext4' && isset($pool['device'])) {
+                    $deviceName = str_replace('/dev/', '', $pool['device']);
+                    $usedDisks[] = $deviceName;
+                }
+
+                if ($type === 'zfs') {
+                    $zfsUsed = $this->storageService->zfs()?->getPoolDisks($pool['name']);
+                    if ($zfsUsed) {
+                        $usedDisks = array_merge($usedDisks, $zfsUsed);
+                    }
+                }
             }
         }
 
         return response()->json([
             'pools' => $pools,
+            'used_disks' => array_unique($usedDisks),
         ]);
     }
 

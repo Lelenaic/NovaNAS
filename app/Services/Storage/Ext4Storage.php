@@ -131,6 +131,88 @@ class Ext4Storage implements StorageInterface
     }
 
     /**
+     * Create a new EXT4 volume (format + mount).
+     *
+     * @param  array{
+     *     device: string,
+     *     mountpoint: string,
+     *     persist_fstab?: bool
+     * }  $config
+     * @return array{success: bool, message: string, pool: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function createPool(array $config): array
+    {
+        $device = $config['device'] ?? '';
+        $mountpoint = $config['mountpoint'] ?? '';
+        $persistFstab = (bool) ($config['persist_fstab'] ?? true);
+
+        if (empty($device)) {
+            throw new \RuntimeException('Device is required.');
+        }
+
+        if (empty($mountpoint)) {
+            throw new \RuntimeException('Mount point is required.');
+        }
+
+        if (! str_starts_with($device, '/dev/')) {
+            $device = '/dev/'.$device;
+        }
+
+        // Create mountpoint directory
+        $result = Process::run('mkdir -p '.escapeshellarg($mountpoint));
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to create mount directory: '.$result->errorOutput());
+        }
+
+        // Format the device with ext4
+        $result = Process::run('mkfs.ext4 -F '.escapeshellarg($device).' 2>&1');
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to format device: '.$result->output());
+        }
+
+        // Mount the device
+        $result = Process::run('mount '.escapeshellarg($device).' '.escapeshellarg($mountpoint));
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to mount device: '.$result->errorOutput());
+        }
+
+        // Persist to /etc/fstab
+        if ($persistFstab) {
+            $uuid = $this->getDeviceUuid($device);
+            $entry = $uuid
+                ? "UUID={$uuid} {$mountpoint} ext4 defaults 0 2"
+                : "{$device} {$mountpoint} ext4 defaults 0 2";
+
+            $escapedEntry = escapeshellarg($entry);
+            Process::run("echo {$escapedEntry} >> /etc/fstab");
+        }
+
+        return [
+            'success' => true,
+            'message' => "EXT4 volume on '{$device}' created and mounted at '{$mountpoint}'.",
+            'pool' => basename($mountpoint),
+        ];
+    }
+
+    /**
+     * Get the UUID of a block device.
+     */
+    protected function getDeviceUuid(string $device): ?string
+    {
+        $result = Process::run('blkid -s UUID -o value '.escapeshellarg($device));
+
+        if ($result->successful()) {
+            $uuid = trim($result->output());
+
+            return $uuid !== '' ? $uuid : null;
+        }
+
+        return null;
+    }
+
+    /**
      * Get the health status of a volume.
      */
     public function getHealth(string $pool): ?string

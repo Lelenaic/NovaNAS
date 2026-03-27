@@ -226,6 +226,140 @@ class ZfsStorage implements StorageInterface
     }
 
     /**
+     * Get the list of physical disk names used by a ZFS pool.
+     *
+     * Uses the pool GUID from `zpool list` and cross-references with partition
+     * UUIDs from lsblk to identify which physical disks belong to the pool.
+     *
+     * @return array<int, string>
+     */
+    public function getPoolDisks(string $pool): array
+    {
+        // Get pool GUID
+        $result = Process::run('zpool list -Hp -o guid '.escapeshellarg($pool));
+        if ($result->failed()) {
+            return [];
+        }
+        $poolGuid = trim($result->output());
+        if (empty($poolGuid)) {
+            return [];
+        }
+
+        // Get all block devices with their fstype and UUID
+        $result = Process::run('lsblk -o NAME,FSTYPE,UUID --json');
+        if ($result->failed()) {
+            return [];
+        }
+
+        $data = json_decode($result->output(), true);
+        if (! $data || ! isset($data['blockdevices'])) {
+            return [];
+        }
+
+        $disks = [];
+
+        foreach ($data['blockdevices'] as $device) {
+            $diskName = $device['name'];
+
+            // Check if the disk itself is a zfs_member with matching UUID
+            if (($device['fstype'] ?? '') === 'zfs_member' && ($device['uuid'] ?? '') === $poolGuid) {
+                $disks[] = $diskName;
+
+                continue;
+            }
+
+            // Check partitions (children) for zfs_member with matching UUID
+            if (isset($device['children'])) {
+                foreach ($device['children'] as $part) {
+                    if (($part['fstype'] ?? '') === 'zfs_member' && ($part['uuid'] ?? '') === $poolGuid) {
+                        $disks[] = $diskName;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return array_unique($disks);
+    }
+
+    /**
+     * Create a new ZFS pool.
+     *
+     * Supported vdev types: stripe, mirror, raidz, raidz2.
+     *
+     * @param  array{
+     *     name: string,
+     *     disks: string[],
+     *     vdev_type: string,
+     *     mountpoint?: string
+     * }  $config
+     * @return array{success: bool, message: string, pool: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function createPool(array $config): array
+    {
+        $name = $config['name'] ?? '';
+        $disks = $config['disks'] ?? [];
+        $vdevType = $config['vdev_type'] ?? 'stripe';
+        $mountpoint = $config['mountpoint'] ?? null;
+
+        if (empty($name)) {
+            throw new \RuntimeException('Pool name is required.');
+        }
+
+        if (empty($disks)) {
+            throw new \RuntimeException('At least one disk is required.');
+        }
+
+        $minDisks = match ($vdevType) {
+            'stripe' => 1,
+            'mirror' => 2,
+            'raidz' => 3,
+            'raidz2' => 4,
+            default => throw new \RuntimeException("Unknown vdev type: {$vdevType}"),
+        };
+
+        if (count($disks) < $minDisks) {
+            throw new \RuntimeException(
+                "{$vdevType} requires at least {$minDisks} disk(s), but only ".count($disks).' provided.'
+            );
+        }
+
+        $diskPaths = array_map(fn ($d) => '/dev/'.$d, $disks);
+
+        $parts = ['zpool', 'create'];
+
+        if ($mountpoint) {
+            $parts[] = '-m';
+            $parts[] = escapeshellarg($mountpoint);
+        }
+
+        $parts[] = escapeshellarg($name);
+
+        if ($vdevType !== 'stripe') {
+            $parts[] = $vdevType;
+        }
+
+        foreach ($diskPaths as $disk) {
+            $parts[] = escapeshellarg($disk);
+        }
+
+        $cmd = implode(' ', $parts);
+        $result = Process::run($cmd);
+
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to create ZFS pool: '.$result->errorOutput());
+        }
+
+        return [
+            'success' => true,
+            'message' => "ZFS pool '{$name}' created successfully.",
+            'pool' => $name,
+        ];
+    }
+
+    /**
      * Get I/O statistics for a pool.
      *
      * @return array{

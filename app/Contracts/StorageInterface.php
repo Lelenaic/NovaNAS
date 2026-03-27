@@ -38,8 +38,7 @@ interface StorageInterface
     /**
      * Get detailed information about a specific pool/volume.
      *
-     * @param string $pool The pool/volume name
-     * @return array|null
+     * @param  string  $pool  The pool/volume name
      */
     public function getPoolInfo(string $pool): ?array;
 
@@ -59,4 +58,21 @@ interface StorageInterface
      * @return array<string, string>
      */
     public function getProperties(string $poolOrDataset): array;
+
+    /**
+     * Create a new storage pool or volume.
+     *
+     * The configuration array is filesystem-specific but typically contains:
+     * - name: string (pool/volume name)
+     * - disks: string[] (device paths, e.g. ['/dev/sdb', '/dev/sdc'])
+     * - mountpoint: string (where to mount)
+     *
+     * Additional keys may be present depending on the filesystem type.
+     *
+     * @param  array<string, mixed>  $config  Pool creation configuration
+     * @return array{success: bool, message: string, pool: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function createPool(array $config): array;
 }
