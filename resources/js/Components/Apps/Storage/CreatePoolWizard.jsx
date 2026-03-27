@@ -33,6 +33,7 @@ import {
     IconLayersDifference,
     IconLayersIntersect,
     IconLock,
+    IconBolt,
 } from '@tabler/icons-react';
 
 const STEPS = [
@@ -332,10 +333,10 @@ function DiskSelection({ selectedDisks, onToggleDisk, disks, loading, fsType, us
                                 size={40}
                                 radius="md"
                                 variant="light"
-                                color={disk.rotational ? 'gray' : 'cyan'}
+                                color={disk.isFlash ? 'teal' : disk.rotational ? 'gray' : 'cyan'}
                                 mb="sm"
                             >
-                                <IconDisc size={20} />
+                                {disk.isFlash ? <IconBolt size={20} /> : <IconDisc size={20} />}
                             </ThemeIcon>
 
                             <Text size="sm" fw={700}>
@@ -349,9 +350,9 @@ function DiskSelection({ selectedDisks, onToggleDisk, disks, loading, fsType, us
                                 <Badge
                                     size="xs"
                                     variant="light"
-                                    color={disk.rotational ? 'gray' : 'cyan'}
+                                    color={disk.isFlash ? 'teal' : disk.rotational ? 'gray' : 'cyan'}
                                 >
-                                    {disk.rotational ? 'HDD' : 'SSD'}
+                                    {disk.isFlash ? 'Flash' : disk.rotational ? 'HDD' : 'SSD'}
                                 </Badge>
                                 {disk.isSystem && (
                                     <Badge size="xs" variant="light" color="red">

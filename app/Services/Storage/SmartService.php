@@ -2,8 +2,8 @@
 
 namespace App\Services\Storage;
 
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 /**
  * SMART service for disk health monitoring using smartmontools.
@@ -16,7 +16,7 @@ class SmartService
     /**
      * Get the SMART health status of a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     passed: bool,
      *     status: string,
@@ -28,7 +28,7 @@ class SmartService
         $result = Process::run('sudo smartctl -H /dev/'.$device);
 
         if ($result->failed()) {
-            Log::warning('SMART health check failed for /dev/'.$device.': '.$result->errorOutput);
+            Log::warning('SMART health check failed for /dev/'.$device.': '.$result->errorOutput());
 
             return null;
         }
@@ -47,7 +47,7 @@ class SmartService
     /**
      * Get the SMART test results (selftest log) for a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array<int, array{
      *     id: int,
      *     test_type: string,
@@ -62,7 +62,7 @@ class SmartService
         $result = Process::run('sudo smartctl -l selftest /dev/'.$device);
 
         if ($result->failed()) {
-            Log::warning('SMART selftest log failed for /dev/'.$device.': '.$result->errorOutput);
+            Log::warning('SMART selftest log failed for /dev/'.$device.': '.$result->errorOutput());
 
             return null;
         }
@@ -73,8 +73,7 @@ class SmartService
     /**
      * Check if a SMART test is currently running on a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
-     * @return bool
+     * @param  string  $device  The device name (e.g., 'sda')
      */
     public function isTestRunning(string $device): bool
     {
@@ -93,15 +92,14 @@ class SmartService
     /**
      * Start a SMART short test on a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
-     * @return bool
+     * @param  string  $device  The device name (e.g., 'sda')
      */
     public function startShortTest(string $device): bool
     {
         $result = Process::run('sudo smartctl -t short /dev/'.$device);
 
         if ($result->failed()) {
-            Log::error('Failed to start SMART short test on /dev/'.$device.': '.$result->errorOutput);
+            Log::error('Failed to start SMART short test on /dev/'.$device.': '.$result->errorOutput());
 
             return false;
         }
@@ -114,15 +112,14 @@ class SmartService
     /**
      * Start a SMART long test on a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
-     * @return bool
+     * @param  string  $device  The device name (e.g., 'sda')
      */
     public function startLongTest(string $device): bool
     {
         $result = Process::run('sudo smartctl -t long /dev/'.$device);
 
         if ($result->failed()) {
-            Log::error('Failed to start SMART long test on /dev/'.$device.': '.$result->errorOutput);
+            Log::error('Failed to start SMART long test on /dev/'.$device.': '.$result->errorOutput());
 
             return false;
         }
@@ -135,7 +132,7 @@ class SmartService
     /**
      * Get SMART capabilities for a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     smart_supported: bool,
      *     smart_enabled: bool,
@@ -168,12 +165,12 @@ class SmartService
     /**
      * Run SMART tests on all available disks.
      *
-     * @param string $testType 'short' or 'long'
+     * @param  string  $testType  'short' or 'long'
      * @return array<string, bool>
      */
     public function runTestsOnAllDisks(string $testType = 'short'): array
     {
-        $storageService = new StorageService();
+        $storageService = new StorageService;
         $disks = $storageService->listDisks();
         $results = [];
 
@@ -185,8 +182,9 @@ class SmartService
 
             // Check if SMART is supported
             $capabilities = $this->getCapabilities($disk['name']);
-            if (!$capabilities || !$capabilities['smart_supported']) {
+            if (! $capabilities || ! $capabilities['smart_supported']) {
                 $results[$disk['name']] = false;
+
                 continue;
             }
 
@@ -211,7 +209,7 @@ class SmartService
      */
     public function getAllDisksHealth(): array
     {
-        $storageService = new StorageService();
+        $storageService = new StorageService;
         $disks = $storageService->listDisks();
         $results = [];
 
@@ -241,7 +239,7 @@ class SmartService
     /**
      * Get detailed SMART information for a disk using smartctl -ax.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     device_info: array{
      *         model: string,
@@ -279,7 +277,7 @@ class SmartService
         $result = Process::run('sudo smartctl -ax /dev/'.$device);
 
         if ($result->failed()) {
-            Log::warning('SMART detailed info failed for /dev/'.$device.': '.$result->errorOutput);
+            Log::warning('SMART detailed info failed for /dev/'.$device.': '.$result->errorOutput());
 
             return null;
         }
@@ -324,7 +322,7 @@ class SmartService
     /**
      * Get the last SMART test time for a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     hours_ago: int,
      *     timestamp: string
@@ -340,7 +338,7 @@ class SmartService
         }
 
         // Parse current power on hours (e.g., "  9 Power_On_Hours          0x0032   096   096   000    Old_age   Always       -       15189")
-        if (!preg_match('/(\d+)\s*$/', $powerResult->output(), $powerMatches)) {
+        if (! preg_match('/(\d+)\s*$/', $powerResult->output(), $powerMatches)) {
             return null;
         }
 
@@ -377,7 +375,7 @@ class SmartService
     /**
      * Get the next scheduled SMART test time for a disk.
      *
-     * @param string $device The device name (e.g., 'sda')
+     * @param  string  $device  The device name (e.g., 'sda')
      * @return array{
      *     days_until: int,
      *     hours_until: int,
@@ -389,7 +387,7 @@ class SmartService
     {
         $lastTest = $this->getLastTestTime($device);
 
-        if (!$lastTest) {
+        if (! $lastTest) {
             return null;
         }
 
@@ -484,6 +482,7 @@ class SmartService
             // Start of SMART Attributes section
             if (preg_match('/ID# ATTRIBUTE_NAME/', $line)) {
                 $inAttributesSection = true;
+
                 continue;
             }
 

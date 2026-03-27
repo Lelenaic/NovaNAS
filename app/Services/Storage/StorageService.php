@@ -108,12 +108,15 @@ class StorageService
      *     serial: string|null,
      *     rotational: bool,
      *     readonly: bool,
-     *     removable: bool
+     *     removable: bool,
+     *     transport: string|null,
+     *     isFlash: bool,
+     *     isSystem: bool
      * }>
      */
     public function listDisks(): array
     {
-        $result = Process::run('lsblk -b -o NAME,TYPE,SIZE,VENDOR,MODEL,SERIAL,ROTA,RO,RM,MOUNTPOINT --json');
+        $result = Process::run('lsblk -b -o NAME,TYPE,SIZE,VENDOR,MODEL,SERIAL,ROTA,RO,RM,TRAN,MOUNTPOINT --json');
 
         if ($result->failed()) {
             return [];
@@ -136,16 +139,26 @@ class StorageService
                 continue;
             }
 
+            $isUsb = ($device['tran'] ?? '') === 'usb';
+            $isRotational = (bool) ($device['rota'] ?? false);
+            $size = (int) ($device['size'] ?? 0);
+
+            // USB flash drives can't rely on rotational flag (kernel reports true for USB sticks).
+            // Non-rotational USB = external SSD. Rotational USB under 1TB = flash drive.
+            $isFlash = $isUsb && (! $isRotational || $size < 1_000_000_000_000);
+
             $disks[] = [
                 'name' => $device['name'],
                 'type' => $device['type'],
-                'size' => (int) ($device['size'] ?? 0),
+                'size' => $size,
                 'vendor' => $device['vendor'] ?? null,
                 'model' => $device['model'] ?? null,
                 'serial' => $device['serial'] ?? null,
-                'rotational' => (bool) ($device['rota'] ?? false),
+                'rotational' => $isRotational,
                 'readonly' => (bool) ($device['ro'] ?? false),
                 'removable' => (bool) ($device['rm'] ?? false),
+                'transport' => $device['tran'] ?? null,
+                'isFlash' => $isFlash,
                 'isSystem' => $this->isSystemDisk($device['name'], $systemDisk),
             ];
         }

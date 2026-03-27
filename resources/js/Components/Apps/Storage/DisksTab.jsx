@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Table } from '@mantine/core';
-import { IconRefresh, IconDisc, IconUsb, IconLock, IconEngine } from '@tabler/icons-react';
+import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Table, Tooltip } from '@mantine/core';
+import { IconRefresh, IconDisc, IconLock, IconEngine, IconPlugConnected, IconBolt } from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
 
 function formatBytes(bytes) {
@@ -13,9 +13,15 @@ function formatBytes(bytes) {
 
 function DiskCard({ disk }) {
     const theme = useMantineTheme();
-    const isHDD = disk.rotational;
-    const isRemovable = disk.removable;
+    const isFlash = disk.isFlash;
+    const isHDD = !isFlash && disk.rotational;
+    const isSSD = !isFlash && !disk.rotational;
+    const isUsb = disk.transport === 'usb';
     const isReadonly = disk.readonly;
+
+    const typeLabel = isFlash ? 'Flash' : isHDD ? 'HDD' : 'SSD';
+    const typeColor = isFlash ? 'teal' : isHDD ? 'orange' : 'blue';
+    const TypeIcon = isFlash ? IconBolt : IconDisc;
 
     return (
         <Box
@@ -36,9 +42,9 @@ function DiskCard({ disk }) {
                 size={56}
                 radius="md"
                 variant="light"
-                color={isHDD ? 'orange' : 'blue'}
+                color={typeColor}
             >
-                <IconDisc size={28} />
+                <TypeIcon size={28} />
             </ThemeIcon>
 
             {/* Device Info */}
@@ -58,11 +64,21 @@ function DiskCard({ disk }) {
                 <Group gap="xs">
                     <Badge
                         size="lg"
-                        color={isHDD ? 'orange' : 'blue'}
+                        color={typeColor}
                         variant="light"
                     >
-                        {isHDD ? 'HDD' : 'SSD'}
+                        {typeLabel}
                     </Badge>
+                    {isUsb && (
+                        <Badge
+                            size="sm"
+                            color="violet"
+                            variant="light"
+                            leftSection={<IconPlugConnected size={12} />}
+                        >
+                            USB
+                        </Badge>
+                    )}
                     {disk.isSystem && (
                         <Badge
                             size="sm"
@@ -78,8 +94,10 @@ function DiskCard({ disk }) {
             </Box>
 
             {/* Serial */}
-            <Box style={{ flex: 1 }}>
-                <Text size="sm" fw={500}>{disk.serial || '-'}</Text>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+                <Tooltip label={disk.serial || '-'} disabled={!disk.serial} position="top" withArrow>
+                    <Text size="sm" fw={500} truncate="end" style={{ maxWidth: '100%' }}>{disk.serial || '-'}</Text>
+                </Tooltip>
                 <Text size="xs" c="dimmed">Serial Number</Text>
             </Box>
 
@@ -88,11 +106,6 @@ function DiskCard({ disk }) {
                 {isReadonly && (
                     <Badge size="sm" color="red" variant="light" leftSection={<IconLock size={12} />}>
                         Locked
-                    </Badge>
-                )}
-                {isRemovable && (
-                    <Badge size="sm" color="gray" variant="light" leftSection={<IconUsb size={12} />}>
-                        Removable
                     </Badge>
                 )}
             </Group>
@@ -131,8 +144,9 @@ export function DisksTab() {
 
     // Calculate total storage
     const totalStorage = disks.reduce((sum, disk) => sum + disk.size, 0);
-    const hddCount = disks.filter(d => d.rotational).length;
-    const ssdCount = disks.filter(d => !d.rotational).length;
+    const hddCount = disks.filter(d => !d.isFlash && d.rotational).length;
+    const ssdCount = disks.filter(d => !d.isFlash && !d.rotational).length;
+    const flashCount = disks.filter(d => d.isFlash).length;
 
     return (
         <Box style={{ position: 'relative' }}>
@@ -162,6 +176,12 @@ export function DisksTab() {
                             <Text size="xs" c="dimmed" mb={4}>SSDs</Text>
                             <Badge size="lg" color="blue" variant="light">{ssdCount}</Badge>
                         </Box>
+                        {flashCount > 0 && (
+                            <Box>
+                                <Text size="xs" c="dimmed" mb={4}>Flash</Text>
+                                <Badge size="lg" color="teal" variant="light">{flashCount}</Badge>
+                            </Box>
+                        )}
                         <Box>
                             <Text size="xs" c="dimmed" mb={4}>Total Disks</Text>
                             <Badge size="lg" color="gray" variant="light">{disks.length}</Badge>
