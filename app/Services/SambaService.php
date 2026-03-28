@@ -160,7 +160,7 @@ class SambaService
                 'type' => 'homes',
                 'comment' => 'Home Directories',
                 'path' => null,
-                'writable' => null,
+                'writable' => 'yes',
                 'guest' => null,
                 'valid users' => '%S',
                 'create mask' => null,

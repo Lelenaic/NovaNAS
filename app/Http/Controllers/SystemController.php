@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\File;
 use App\Services\GPU\GPUManager;
 use App\Services\Storage\StorageService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 class SystemController extends Controller
 {
@@ -252,7 +254,7 @@ class SystemController extends Controller
         // Get list of network interfaces using ip command
         $output = shell_exec('ip -br addr show 2>/dev/null');
 
-        if (!$output) {
+        if (! $output) {
             return response()->json(['interfaces' => []]);
         }
 
@@ -274,7 +276,7 @@ class SystemController extends Controller
             }
 
             // Skip if not a physical-looking interface (enp, ens, eth, etc.)
-            if (!preg_match('/^(en|eth|ens|eno|enp)/', $name)) {
+            if (! preg_match('/^(en|eth|ens|eno|enp)/', $name)) {
                 continue;
             }
 
@@ -295,7 +297,7 @@ class SystemController extends Controller
                     if (str_contains($ip, ':')) {
                         // IPv6 - extract just the address part (without prefix)
                         $ipv6Addr = explode('/', $ip)[0];
-                        if (!str_starts_with($ipv6Addr, 'fe80')) {
+                        if (! str_starts_with($ipv6Addr, 'fe80')) {
                             $ipv6[] = $ipv6Addr;
                         }
                     } else {
@@ -330,7 +332,7 @@ class SystemController extends Controller
      */
     public function getInterfaceConfig(string $interface): JsonResponse
     {
-        $configFile = '/etc/network/interfaces.d/' . $interface;
+        $configFile = '/etc/network/interfaces.d/'.$interface;
 
         $method = 'dhcp'; // Default to DHCP
         $ip = '';
@@ -392,9 +394,10 @@ class SystemController extends Controller
             }
 
             // Check for interface declaration
-            if (preg_match('/^iface\s+' . preg_quote($interface, '/') . '\s+inet\s+(\w+)/', $line, $matches)) {
+            if (preg_match('/^iface\s+'.preg_quote($interface, '/').'\s+inet\s+(\w+)/', $line, $matches)) {
                 $inInterface = true;
                 $result['method'] = $matches[1];
+
                 continue;
             }
 
@@ -475,12 +478,12 @@ class SystemController extends Controller
         }
 
         // Validate IP address format
-        if (!empty($ip) && !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        if (! empty($ip) && ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             return response()->json(['success' => false, 'error' => 'Invalid IP address format'], 422);
         }
 
         // Validate gateway format
-        if (!empty($gateway) && !filter_var($gateway, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        if (! empty($gateway) && ! filter_var($gateway, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             return response()->json(['success' => false, 'error' => 'Invalid gateway format'], 422);
         }
 
@@ -489,21 +492,21 @@ class SystemController extends Controller
 
         // Write to interfaces.d directory
         $interfacesDir = '/etc/network/interfaces.d';
-        if (!File::exists($interfacesDir)) {
+        if (! File::exists($interfacesDir)) {
             return response()->json(['success' => false, 'error' => 'Directory /etc/network/interfaces.d not found'], 500);
         }
 
-        $targetFile = $interfacesDir . '/' . $interface;
+        $targetFile = $interfacesDir.'/'.$interface;
 
         // Write configuration to temp file first
-        $tempFile = '/tmp/interfaces-' . $interface;
+        $tempFile = '/tmp/interfaces-'.$interface;
         File::put($tempFile, $interfaceConfig);
 
         // Copy to interfaces.d with sudo
         $copyResult = shell_exec("sudo cp {$tempFile} {$targetFile} 2>&1");
 
         if ($copyResult !== null && str_contains($copyResult, 'error')) {
-            return response()->json(['success' => false, 'error' => 'Failed to copy config: ' . $copyResult], 500);
+            return response()->json(['success' => false, 'error' => 'Failed to copy config: '.$copyResult], 500);
         }
 
         // Bring interface down and up to apply changes
@@ -517,7 +520,7 @@ class SystemController extends Controller
         @unlink($tempFile);
 
         if ($upResult !== null && str_contains($upResult, 'error')) {
-            return response()->json(['success' => false, 'error' => 'Failed to apply configuration: ' . $upResult], 500);
+            return response()->json(['success' => false, 'error' => 'Failed to apply configuration: '.$upResult], 500);
         }
 
         return response()->json(['success' => true, 'message' => 'Network configuration applied successfully']);
@@ -567,18 +570,18 @@ class SystemController extends Controller
             }
         }
 
-        if (!$isAllowed) {
+        if (! $isAllowed) {
             return response()->json(['error' => 'Access denied to this path'], 403);
         }
 
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return response()->json(['error' => 'Path is not a directory'], 400);
         }
 
         $items = [];
         $handle = opendir($path);
 
-        if (!$handle) {
+        if (! $handle) {
             return response()->json(['error' => 'Cannot open directory'], 500);
         }
 
@@ -587,7 +590,7 @@ class SystemController extends Controller
                 continue;
             }
 
-            $fullPath = $path === '/' ? '/' . $entry : $path . '/' . $entry;
+            $fullPath = $path === '/' ? '/'.$entry : $path.'/'.$entry;
             $isDirectory = is_dir($fullPath);
 
             $items[] = [
@@ -603,9 +606,50 @@ class SystemController extends Controller
             if ($a['type'] !== $b['type']) {
                 return $a['type'] === 'directory' ? -1 : 1;
             }
+
             return strcasecmp($a['name'], $b['name']);
         });
 
         return response()->json($items);
+    }
+
+    public function createDirectory(Request $request): JsonResponse
+    {
+        $request->validate([
+            'path' => 'required|string',
+        ]);
+
+        $path = $request->input('path');
+
+        // Security: Only allow creation within specific paths
+        $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
+        $isAllowed = false;
+
+        foreach ($allowedPaths as $allowed) {
+            if (str_starts_with($path, $allowed)) {
+                $isAllowed = true;
+                break;
+            }
+        }
+
+        if (! $isAllowed) {
+            return response()->json(['error' => 'Access denied to this path'], 403);
+        }
+
+        if (! preg_match('/^\/[a-zA-Z0-9_\-\.\/]+$/', $path)) {
+            return response()->json(['error' => 'Invalid path format'], 400);
+        }
+
+        if (is_dir($path)) {
+            return response()->json(['error' => 'Directory already exists'], 409);
+        }
+
+        $result = Process::run('sudo mkdir -p '.escapeshellarg($path));
+
+        if (! $result->successful()) {
+            return response()->json(['error' => 'Failed to create directory: '.$result->errorOutput()], 500);
+        }
+
+        return response()->json(['message' => 'Directory created successfully', 'path' => $path]);
     }
 }

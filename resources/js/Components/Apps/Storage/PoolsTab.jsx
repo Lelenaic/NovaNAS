@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Progress, ActionIcon, Tooltip, Button } from '@mantine/core';
+import { Box, Text, Badge, Group, LoadingOverlay, ThemeIcon, Progress, ActionIcon, Tooltip, Button, Modal, Alert, TextInput, Loader } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck, IconDatabase, IconEngine, IconPlus } from '@tabler/icons-react';
+import { IconRefresh, IconStack2, IconCheckupList, IconAlertTriangle, IconCopy, IconCheck, IconDatabase, IconEngine, IconPlus, IconTrash, IconArrowBarDown, IconArrowBarUp } from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
 import { CreatePoolWizard } from './CreatePoolWizard';
+import { FileSelector } from '../../FileSelector';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
@@ -24,6 +25,8 @@ function getHealthColor(health) {
             return 'red';
         case 'OFFLINE':
             return 'gray';
+        case 'UNMOUNTED':
+            return 'orange';
         default:
             return 'blue';
     }
@@ -51,7 +54,7 @@ function getFsIcon(type) {
     }
 }
 
-function PoolCard({ pool }) {
+function PoolCard({ pool, onMount, onUnmount, onDelete }) {
     const theme = useMantineTheme();
     const healthColor = getHealthColor(pool.health);
     const usedPercentage = pool.size > 0 ? Math.round((pool.allocated / pool.size) * 100) : 0;
@@ -187,6 +190,42 @@ function PoolCard({ pool }) {
                     </Group>
                 </Box>
             </Group>
+
+            {/* Action Buttons */}
+            {!pool.isSystem && (
+                <Group justify="flex-end" mt="md" pt="sm" style={{ borderTop: `1px solid ${theme.colors.dark[4]}` }}>
+                    {pool.mountpoint ? (
+                        <Button
+                            variant="light"
+                            color="yellow"
+                            size="xs"
+                            leftSection={<IconArrowBarDown size={14} />}
+                            onClick={() => onUnmount(pool)}
+                        >
+                            Unmount
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="light"
+                            color="green"
+                            size="xs"
+                            leftSection={<IconArrowBarUp size={14} />}
+                            onClick={() => onMount(pool)}
+                        >
+                            Mount
+                        </Button>
+                    )}
+                    <Button
+                        variant="light"
+                        color="red"
+                        size="xs"
+                        leftSection={<IconTrash size={14} />}
+                        onClick={() => onDelete(pool)}
+                    >
+                        Delete
+                    </Button>
+                </Group>
+            )}
         </Box>
     );
 }
@@ -197,6 +236,16 @@ export function PoolsTab() {
     const [error, setError] = useState(null);
     const theme = useMantineTheme();
     const [wizardOpened, { open: openWizard, close: closeWizard }] = useDisclosure(false);
+    const [unmountModal, { open: openUnmountModal, close: closeUnmountModal }] = useDisclosure(false);
+    const [deleteModal, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+    const [mountModal, { open: openMountModal, close: closeMountModal }] = useDisclosure(false);
+    const [fileSelectorOpened, { open: openFileSelector, close: closeFileSelector }] = useDisclosure(false);
+    const [selectedPool, setSelectedPool] = useState(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [mountPath, setMountPath] = useState('');
+    const [mountEmptyError, setMountEmptyError] = useState('');
+    const [mountCheckingEmpty, setMountCheckingEmpty] = useState(false);
+    const [mountIsValid, setMountIsValid] = useState(false);
 
     const fetchPools = async () => {
         setLoading(true);
@@ -220,6 +269,158 @@ export function PoolsTab() {
     useEffect(() => {
         fetchPools();
     }, []);
+
+    const handleUnmountClick = (pool) => {
+        setSelectedPool(pool);
+        openUnmountModal();
+    };
+
+    const handleDeleteClick = (pool) => {
+        setSelectedPool(pool);
+        openDeleteModal();
+    };
+
+    const handleMountClick = (pool) => {
+        setSelectedPool(pool);
+        setMountPath('');
+        setMountEmptyError('');
+        setMountIsValid(false);
+        openMountModal();
+    };
+
+    const checkMountDirectoryEmpty = async (path) => {
+        if (!path) {
+            setMountIsValid(false);
+            return;
+        }
+        setMountCheckingEmpty(true);
+        setMountEmptyError('');
+        setMountIsValid(false);
+        try {
+            const response = await fetch(`/api/storage/directories?path=${encodeURIComponent(path)}`, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    setMountEmptyError('The selected directory is not empty. Please choose an empty directory.');
+                    setMountIsValid(false);
+                } else {
+                    setMountIsValid(true);
+                }
+            } else {
+                setMountEmptyError('Could not verify directory contents.');
+                setMountIsValid(false);
+            }
+        } catch {
+            setMountEmptyError('Could not verify directory contents.');
+            setMountIsValid(false);
+        } finally {
+            setMountCheckingEmpty(false);
+        }
+    };
+
+    const handleMountPathChange = (e) => {
+        const path = e.target.value;
+        setMountPath(path);
+        setMountEmptyError('');
+        setMountIsValid(false);
+    };
+
+    const handleMountPathBlur = () => {
+        if (mountPath) {
+            checkMountDirectoryEmpty(mountPath);
+        }
+    };
+
+    const handleMountConfirm = async () => {
+        if (!selectedPool || !mountPath) return;
+        setActionLoading(true);
+        try {
+            const response = await fetch(`/api/storage/pools/mount`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({ type: selectedPool.type, pool: selectedPool.name, mountpoint: mountPath }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                closeMountModal();
+                setSelectedPool(null);
+                setMountPath('');
+                fetchPools();
+            } else {
+                setError(data.error || 'Failed to mount pool');
+            }
+        } catch (err) {
+            setError('Failed to mount pool');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleMountPathSelect = (path) => {
+        setMountPath(path);
+        checkMountDirectoryEmpty(path);
+    };
+
+    const handleUnmountConfirm = async () => {
+        if (!selectedPool) return;
+        setActionLoading(true);
+        try {
+            const response = await fetch(`/api/storage/pools/unmount`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({ type: selectedPool.type, pool: selectedPool.name }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                closeUnmountModal();
+                setSelectedPool(null);
+                fetchPools();
+            } else {
+                setError(data.error || 'Failed to unmount pool');
+            }
+        } catch (err) {
+            setError('Failed to unmount pool');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!selectedPool) return;
+        setActionLoading(true);
+        try {
+            const response = await fetch(`/api/storage/pools/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({ type: selectedPool.type, pool: selectedPool.name }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                closeDeleteModal();
+                setSelectedPool(null);
+                fetchPools();
+            } else {
+                setError(data.error || 'Failed to delete pool');
+            }
+        } catch (err) {
+            setError('Failed to delete pool');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     // Calculate stats
     const totalCapacity = pools.reduce((sum, pool) => sum + pool.size, 0);
@@ -356,7 +557,7 @@ export function PoolsTab() {
                         <Badge size="sm" variant="light" color="blue">{zfsPools.length}</Badge>
                     </Group>
                     {zfsPools.map((pool) => (
-                        <PoolCard key={`zfs-${pool.name}`} pool={pool} />
+                        <PoolCard key={`zfs-${pool.name}`} pool={pool} onMount={handleMountClick} onUnmount={handleUnmountClick} onDelete={handleDeleteClick} />
                     ))}
                 </Box>
             )}
@@ -369,7 +570,7 @@ export function PoolsTab() {
                         <Badge size="sm" variant="light" color="teal">{ext4Pools.length}</Badge>
                     </Group>
                     {ext4Pools.map((pool) => (
-                        <PoolCard key={`ext4-${pool.name}`} pool={pool} />
+                        <PoolCard key={`ext4-${pool.name}`} pool={pool} onMount={handleMountClick} onUnmount={handleUnmountClick} onDelete={handleDeleteClick} />
                     ))}
                 </Box>
             )}
@@ -379,6 +580,100 @@ export function PoolsTab() {
                 onClose={closeWizard}
                 onSuccess={fetchPools}
             />
+
+            {/* Mount Modal */}
+            <Modal
+                opened={mountModal}
+                onClose={() => { closeMountModal(); setSelectedPool(null); setMountPath(''); setMountEmptyError(''); setMountIsValid(false); }}
+                title="Mount Volume"
+                centered
+            >
+                <Text size="sm" mb="md">
+                    Mount {selectedPool?.type === 'zfs' ? 'ZFS pool' : 'EXT4 volume'} <strong>{selectedPool?.name}</strong> at the specified path.
+                    {selectedPool?.type === 'ext4' && ' The path will also be added to /etc/fstab for automatic mounting on boot.'}
+                </Text>
+                <Text size="xs" c="dimmed" mb="sm">
+                    The directory must be empty.
+                </Text>
+                <Group gap="xs" mb="md">
+                    <TextInput
+                        placeholder="/media/..."
+                        value={mountPath}
+                        onChange={handleMountPathChange}
+                        onBlur={handleMountPathBlur}
+                        style={{ flex: 1 }}
+                        size="md"
+                        error={mountEmptyError || undefined}
+                        rightSection={mountCheckingEmpty ? <Loader size="xs" /> : undefined}
+                    />
+                    <Button
+                        variant="light"
+                        size="md"
+                        onClick={openFileSelector}
+                    >
+                        Browse
+                    </Button>
+                </Group>
+                <Group justify="flex-end">
+                    <Button variant="default" onClick={() => { closeMountModal(); setSelectedPool(null); setMountPath(''); setMountEmptyError(''); setMountIsValid(false); }}>Cancel</Button>
+                    <Button color="green" loading={actionLoading} onClick={handleMountConfirm} disabled={!mountPath || !mountIsValid || mountCheckingEmpty}>Mount</Button>
+                </Group>
+            </Modal>
+
+            <FileSelector
+                opened={fileSelectorOpened}
+                onClose={closeFileSelector}
+                onSelect={handleMountPathSelect}
+                title="Select Mount Point"
+                selectLabel="Select Folder"
+                initialPath={mountPath || '/media'}
+                allowFiles={false}
+                showFiles={false}
+            />
+
+            {/* Unmount Confirmation Modal */}
+            <Modal
+                opened={unmountModal}
+                onClose={() => { closeUnmountModal(); setSelectedPool(null); }}
+                title="Unmount Pool"
+                centered
+            >
+                <Alert color="yellow" mb="md" icon={<IconAlertTriangle size={16} />}>
+                    {selectedPool?.type === 'zfs'
+                        ? `This will unmount the ZFS pool "${selectedPool?.name}" by setting its mountpoint to none.`
+                        : `This will unmount the EXT4 volume "${selectedPool?.name}", remove its entry from /etc/fstab, and remove the mount directory. The automount on reboot will be disabled.`
+                    }
+                </Alert>
+                <Text size="sm" mb="md">
+                    The pool and its data will remain intact. You can remount it later.
+                </Text>
+                <Group justify="flex-end">
+                    <Button variant="default" onClick={() => { closeUnmountModal(); setSelectedPool(null); }}>Cancel</Button>
+                    <Button color="yellow" loading={actionLoading} onClick={handleUnmountConfirm}>Unmount</Button>
+                </Group>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                opened={deleteModal}
+                onClose={() => { closeDeleteModal(); setSelectedPool(null); }}
+                title="Delete Pool"
+                centered
+            >
+                <Alert color="red" mb="md" icon={<IconAlertTriangle size={16} />}>
+                    <Text fw={700} size="sm">This action is destructive and irreversible!</Text>
+                </Alert>
+                <Text size="sm" mb="md">
+                    {selectedPool?.type === 'zfs'
+                        ? `This will permanently destroy the ZFS pool "${selectedPool?.name}" and ALL data stored on it.`
+                        : `This will unmount the EXT4 volume "${selectedPool?.name}", remove its /etc/fstab entry, and wipe the filesystem. ALL data will be permanently lost.`
+                    }
+                </Text>
+                <Group justify="flex-end">
+                    <Button variant="default" onClick={() => { closeDeleteModal(); setSelectedPool(null); }}>Cancel</Button>
+                    <Button color="red" loading={actionLoading} onClick={handleDeleteConfirm}>Delete Permanently</Button>
+                </Group>
+            </Modal>
         </Box>
     );
 }

@@ -51,6 +51,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/system/interface-config/{interface}', [SystemController::class, 'getInterfaceConfig']);
         Route::post('/api/system/network-config', [SystemController::class, 'setNetworkConfig']);
         Route::get('/api/storage/directories', [SystemController::class, 'listDirectory']);
+        Route::post('/api/storage/directories', [SystemController::class, 'createDirectory']);
 
         // Network controller routes
         Route::get('/api/network/interfaces', [NetworkController::class, 'index']);
@@ -102,6 +103,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/storage/pools', [StorageController::class, 'pools']);
         Route::get('/api/storage/pools/{pool}', [StorageController::class, 'pool']);
         Route::get('/api/storage/pools/{pool}/directories', [StorageController::class, 'poolDirectories']);
+        Route::post('/api/storage/pools/unmount', [StorageController::class, 'unmountPool']);
+        Route::post('/api/storage/pools/mount', [StorageController::class, 'mountPool']);
+        Route::delete('/api/storage/pools/delete', [StorageController::class, 'deletePool']);
         Route::get('/api/storage/settings', [StorageController::class, 'getSettings']);
         Route::post('/api/storage/settings', [StorageController::class, 'updateSettings']);
 

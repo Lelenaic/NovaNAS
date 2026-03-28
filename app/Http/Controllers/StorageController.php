@@ -153,6 +153,70 @@ class StorageController extends Controller
     }
 
     /**
+     * Unmount a pool and remove its /etc/fstab automount entry.
+     */
+    public function unmountPool(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:zfs,ext4',
+            'pool' => 'required|string',
+        ]);
+
+        try {
+            $result = $this->storageService->unmountPool($validated['type'], $validated['pool']);
+
+            return response()->json($result);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Permanently delete a pool (data loss).
+     */
+    public function deletePool(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:zfs,ext4',
+            'pool' => 'required|string',
+        ]);
+
+        try {
+            $result = $this->storageService->deletePool($validated['type'], $validated['pool']);
+
+            return response()->json($result);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Mount a pool or volume at a specified mountpoint.
+     */
+    public function mountPool(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:zfs,ext4',
+            'pool' => 'required|string',
+            'mountpoint' => 'required|string|max:4096',
+        ]);
+
+        try {
+            $result = $this->storageService->mountPool($validated['type'], $validated['pool'], $validated['mountpoint']);
+
+            return response()->json($result);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Get settings by keys.
      */
     public function getSettings(Request $request): JsonResponse

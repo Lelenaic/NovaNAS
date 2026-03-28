@@ -328,7 +328,7 @@ class ZfsStorage implements StorageInterface
 
         $diskPaths = array_map(fn ($d) => '/dev/'.$d, $disks);
 
-        $parts = ['zpool', 'create'];
+        $parts = ['sudo', 'zpool', 'create'];
 
         if ($mountpoint) {
             $parts[] = '-m';
@@ -395,6 +395,98 @@ class ZfsStorage implements StorageInterface
             'writeOps' => (int) $parts[2],
             'readBytes' => (int) $parts[3],
             'writeBytes' => (int) $parts[4],
+        ];
+    }
+
+    /**
+     * Unmount a ZFS pool and disable its mountpoint.
+     *
+     * @param  string  $pool  The pool name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function unmount(string $pool): array
+    {
+        if (! $this->isAvailable()) {
+            throw new \RuntimeException('ZFS is not available on this system.');
+        }
+
+        $info = $this->getPoolInfo($pool);
+        if ($info === null) {
+            throw new \RuntimeException("ZFS pool '{$pool}' not found.");
+        }
+
+        // Set mountpoint to 'none' which effectively unmounts the pool
+        $result = Process::run('sudo zfs set mountpoint=none '.escapeshellarg($pool));
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to unmount ZFS pool: '.$result->errorOutput());
+        }
+
+        return [
+            'success' => true,
+            'message' => "ZFS pool '{$pool}' has been unmounted.",
+        ];
+    }
+
+    /**
+     * Mount a ZFS pool at the specified path.
+     *
+     * @param  string  $pool  The pool name
+     * @param  string  $mountpoint  Where to mount
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function mount(string $pool, string $mountpoint): array
+    {
+        if (! $this->isAvailable()) {
+            throw new \RuntimeException('ZFS is not available on this system.');
+        }
+
+        $info = $this->getPoolInfo($pool);
+        if ($info === null) {
+            throw new \RuntimeException("ZFS pool '{$pool}' not found.");
+        }
+
+        $result = Process::run('sudo zfs set mountpoint='.escapeshellarg($mountpoint).' '.escapeshellarg($pool));
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to mount ZFS pool: '.$result->errorOutput());
+        }
+
+        return [
+            'success' => true,
+            'message' => "ZFS pool '{$pool}' has been mounted at '{$mountpoint}'.",
+        ];
+    }
+
+    /**
+     * Permanently destroy a ZFS pool and all its data.
+     *
+     * @param  string  $pool  The pool name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function deletePool(string $pool): array
+    {
+        if (! $this->isAvailable()) {
+            throw new \RuntimeException('ZFS is not available on this system.');
+        }
+
+        $info = $this->getPoolInfo($pool);
+        if ($info === null) {
+            throw new \RuntimeException("ZFS pool '{$pool}' not found.");
+        }
+
+        $result = Process::run('sudo zpool destroy '.escapeshellarg($pool));
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to destroy ZFS pool: '.$result->errorOutput());
+        }
+
+        return [
+            'success' => true,
+            'message' => "ZFS pool '{$pool}' has been permanently destroyed.",
         ];
     }
 }

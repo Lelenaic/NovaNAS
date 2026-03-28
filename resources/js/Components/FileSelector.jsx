@@ -12,12 +12,13 @@ import {
     Breadcrumbs,
     Anchor,
     UnstyledButton,
-    Switch,
 } from '@mantine/core';
 import {
     IconFolder,
     IconFile,
-    IconRefresh,
+    IconFolderPlus,
+    IconCheck,
+    IconX,
 } from '@tabler/icons-react';
 
 export function FileSelector({
@@ -29,7 +30,7 @@ export function FileSelector({
     initialPath = '/',
     allowFiles = true,
     filters,
-    showFiles: initialShowFiles = true,
+    showFiles = true,
 }) {
     const [currentPath, setCurrentPath] = useState(initialPath);
     const [loading, setLoading] = useState(false);
@@ -37,7 +38,10 @@ export function FileSelector({
     const [contents, setContents] = useState([]);
     const [customPath, setCustomPath] = useState(initialPath);
     const [selectedPath, setSelectedPath] = useState(null);
-    const [showFiles, setShowFiles] = useState(initialShowFiles);
+    const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [creatingFolder, setCreatingFolder] = useState(false);
+    const [newFolderError, setNewFolderError] = useState(null);
 
     const COMMON_PATHS = [
         '/media',
@@ -54,10 +58,12 @@ export function FileSelector({
             setCurrentPath(initialPath);
             setCustomPath(initialPath);
             setSelectedPath(null);
-            setShowFiles(initialShowFiles);
+            setShowNewFolderInput(false);
+            setNewFolderName('');
+            setNewFolderError(null);
             fetchDirectory(initialPath);
         }
-    }, [opened, initialPath, initialShowFiles]);
+    }, [opened, initialPath]);
 
     const fetchDirectory = async (path) => {
         setLoading(true);
@@ -107,6 +113,43 @@ export function FileSelector({
         const pathToUse = selectedPath || currentPath;
         onSelect(pathToUse);
         onClose();
+    };
+
+    const handleCreateFolder = async () => {
+        const name = newFolderName.trim();
+        if (!name) return;
+
+        setCreatingFolder(true);
+        setNewFolderError(null);
+
+        const newPath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+
+        try {
+            const response = await fetch('/api/storage/directories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({ path: newPath }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setNewFolderError(data.error || 'Failed to create folder');
+                return;
+            }
+
+            setShowNewFolderInput(false);
+            setNewFolderName('');
+            setSelectedPath(newPath);
+            fetchDirectory(currentPath);
+        } catch {
+            setNewFolderError('An unexpected error occurred');
+        } finally {
+            setCreatingFolder(false);
+        }
     };
 
     const pathParts = currentPath.split('/').filter(Boolean);
@@ -244,17 +287,68 @@ export function FileSelector({
                 </Box>
 
                 <Box>
-                    <Switch
-                        label="Show files"
-                        checked={showFiles}
-                        onChange={(e) => setShowFiles(e.currentTarget.checked)}
-                    />
-                </Box>
-
-                <Box>
-                    <Text size="sm" c="dimmed">
-                        Selected: <Text span fw={500}>{selectedPath || currentPath}</Text>
-                    </Text>
+                    {showNewFolderInput ? (
+                        <Stack gap="xs">
+                            <Group gap="xs">
+                                <TextInput
+                                    placeholder="Folder name"
+                                    value={newFolderName}
+                                    onChange={(e) => setNewFolderName(e.target.value)}
+                                    style={{ flex: 1 }}
+                                    size="sm"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleCreateFolder();
+                                        } else if (e.key === 'Escape') {
+                                            setShowNewFolderInput(false);
+                                            setNewFolderName('');
+                                            setNewFolderError(null);
+                                        }
+                                    }}
+                                    disabled={creatingFolder}
+                                />
+                                <ActionIcon
+                                    variant="light"
+                                    color="green"
+                                    size="md"
+                                    onClick={handleCreateFolder}
+                                    loading={creatingFolder}
+                                >
+                                    <IconCheck size={16} />
+                                </ActionIcon>
+                                <ActionIcon
+                                    variant="light"
+                                    color="gray"
+                                    size="md"
+                                    onClick={() => {
+                                        setShowNewFolderInput(false);
+                                        setNewFolderName('');
+                                        setNewFolderError(null);
+                                    }}
+                                >
+                                    <IconX size={16} />
+                                </ActionIcon>
+                            </Group>
+                            {newFolderError && (
+                                <Text size="xs" c="red">{newFolderError}</Text>
+                            )}
+                        </Stack>
+                    ) : (
+                        <Group justify="space-between">
+                            <Button
+                                variant="light"
+                                size="xs"
+                                leftSection={<IconFolderPlus size={14} />}
+                                onClick={() => setShowNewFolderInput(true)}
+                            >
+                                New folder
+                            </Button>
+                            <Text size="sm" c="dimmed">
+                                Selected: <Text span fw={500}>{selectedPath || currentPath}</Text>
+                            </Text>
+                        </Group>
+                    )}
                 </Box>
 
                 <Group justify="flex-end">

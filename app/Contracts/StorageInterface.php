@@ -75,4 +75,45 @@ interface StorageInterface
      * @throws \RuntimeException on failure
      */
     public function createPool(array $config): array;
+
+    /**
+     * Unmount a pool or volume and remove its /etc/fstab automount entry.
+     *
+     * For ZFS, this unmounts the pool/dataset mountpoint.
+     * For EXT4, this unmounts the device and removes the fstab line.
+     *
+     * @param  string  $pool  The pool/volume name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function unmount(string $pool): array;
+
+    /**
+     * Mount a pool or volume at the specified mountpoint.
+     *
+     * For ZFS, this sets the pool's mountpoint property.
+     * For EXT4, this creates the directory and mounts the device, optionally
+     * adding an entry to /etc/fstab.
+     *
+     * @param  string  $pool  The pool/volume name or device path
+     * @param  string  $mountpoint  Where to mount
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function mount(string $pool, string $mountpoint): array;
+
+    /**
+     * Permanently delete a pool or volume (destroys all data).
+     *
+     * For ZFS, this runs `zpool destroy`.
+     * For EXT4, this unmounts and wipes the filesystem.
+     *
+     * @param  string  $pool  The pool/volume name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException on failure
+     */
+    public function deletePool(string $pool): array;
 }

@@ -8,15 +8,12 @@ import {
     Button,
     Badge,
     TextInput,
-    Switch,
     Alert,
     Progress,
     ThemeIcon,
     Loader,
-    Tooltip,
-    NumberInput,
-    Select,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { useMantineTheme } from '@mantine/core';
 import {
     IconStack2,
@@ -26,7 +23,6 @@ import {
     IconAlertTriangle,
     IconArrowRight,
     IconArrowLeft,
-    IconChevronRight,
     IconInfoCircle,
     IconServer,
     IconShieldCheck,
@@ -34,7 +30,9 @@ import {
     IconLayersIntersect,
     IconLock,
     IconBolt,
+    IconFolder,
 } from '@tabler/icons-react';
+import { FileSelector } from '../../FileSelector';
 
 const STEPS = [
     { id: 1, label: 'Filesystem' },
@@ -392,6 +390,10 @@ const VDEV_OPTIONS = [
 ];
 
 function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme }) {
+    const [fileSelectorOpened, { open: openFileSelector, close: closeFileSelector }] = useDisclosure(false);
+    const [checkingEmpty, setCheckingEmpty] = useState(false);
+    const [emptyError, setEmptyError] = useState(config.mountpointEmptyError || '');
+
     const vdevMinDisks = {
         stripe: 1,
         mirror: 2,
@@ -402,6 +404,39 @@ function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme }) 
     const currentVdev = config.vdevType || 'stripe';
     const minRequired = vdevMinDisks[currentVdev] || 1;
     const hasEnoughDisks = selectedDisks.length >= minRequired;
+
+    const checkDirectoryEmpty = async (path) => {
+        setCheckingEmpty(true);
+        setEmptyError('');
+        try {
+            const response = await fetch(`/api/storage/directories?path=${encodeURIComponent(path)}`, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    setEmptyError('The selected directory is not empty. Please choose an empty directory.');
+                    setConfig({ ...config, mountpoint: path, mountpointIsEmpty: false });
+                    return;
+                }
+                setConfig({ ...config, mountpoint: path, mountpointIsEmpty: true });
+            } else {
+                setEmptyError('Could not verify directory contents.');
+                setConfig({ ...config, mountpoint: path, mountpointIsEmpty: false });
+            }
+        } catch {
+            setEmptyError('Could not verify directory contents.');
+            setConfig({ ...config, mountpoint: path, mountpointIsEmpty: false });
+        } finally {
+            setCheckingEmpty(false);
+        }
+    };
+
+    const handleMountPointSelect = (path) => {
+        checkDirectoryEmpty(path);
+    };
 
     return (
         <Box>
@@ -495,26 +530,44 @@ function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme }) 
                     </>
                 )}
 
-                <TextInput
-                    label="Mount Point"
-                    placeholder={fsType === 'zfs' ? '/mnt/tank' : '/mnt/data'}
-                    value={config.mountpoint || ''}
-                    onChange={(e) => setConfig({ ...config, mountpoint: e.target.value })}
-                    description="Where the pool will be mounted on the filesystem"
-                    size="md"
-                    leftSection={<IconDatabase size={16} />}
-                />
-
-                {fsType === 'ext4' && (
-                    <Switch
-                        label="Persist to /etc/fstab"
-                        description="Add an entry to /etc/fstab so the volume mounts automatically on boot"
-                        checked={config.persistFstab !== false}
-                        onChange={(e) => setConfig({ ...config, persistFstab: e.currentTarget.checked })}
-                        size="md"
-                    />
-                )}
+                <Box>
+                    <Text size="sm" fw={500} mb="xs">Mount Point</Text>
+                    <Text size="xs" c="dimmed" mb="sm">
+                        Where the pool will be mounted on the filesystem. The directory must be empty.
+                    </Text>
+                    <Group gap="xs">
+                        <TextInput
+                            placeholder="/media/..."
+                            value={config.mountpoint || ''}
+                            readOnly
+                            style={{ flex: 1 }}
+                            size="md"
+                            leftSection={<IconDatabase size={16} />}
+                            rightSection={checkingEmpty ? <Loader size="xs" /> : undefined}
+                            error={emptyError || undefined}
+                        />
+                        <Button
+                            variant="light"
+                            size="md"
+                            onClick={openFileSelector}
+                            leftSection={<IconFolder size={16} />}
+                        >
+                            Browse
+                        </Button>
+                    </Group>
+                </Box>
             </Stack>
+
+            <FileSelector
+                opened={fileSelectorOpened}
+                onClose={closeFileSelector}
+                onSelect={handleMountPointSelect}
+                title="Select Mount Point"
+                selectLabel="Select Folder"
+                initialPath={config.mountpoint || '/media'}
+                allowFiles={false}
+                showFiles={false}
+            />
         </Box>
     );
 }
@@ -542,9 +595,6 @@ function ReviewStep({ config, fsType, selectedDisks, disks, theme }) {
         { label: 'Disks', value: selectedDisks.map(d => `/dev/${d}`).join(', '), icon: IconDisc },
         { label: 'Mount Point', value: config.mountpoint, icon: IconDatabase },
         { label: 'Effective Capacity', value: formatBytes(effectiveSize), icon: IconInfoCircle },
-        ...(fsType === 'ext4' ? [
-            { label: 'Persist fstab', value: config.persistFstab !== false ? 'Yes' : 'No', icon: IconCheck },
-        ] : []),
     ];
 
     return (
@@ -612,7 +662,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
         name: '',
         vdevType: 'stripe',
         mountpoint: '',
-        persistFstab: true,
+        mountpointIsEmpty: false,
     });
     const [disks, setDisks] = useState([]);
     const [usedDisks, setUsedDisks] = useState([]);
@@ -626,7 +676,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
             setStep(1);
             setFsType(null);
             setSelectedDisks([]);
-            setConfig({ name: '', vdevType: 'stripe', mountpoint: '', persistFstab: true });
+            setConfig({ name: '', vdevType: 'stripe', mountpoint: '', mountpointIsEmpty: false });
             setError(null);
             fetchBackends();
         }
@@ -703,7 +753,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
                     const vdevMin = { stripe: 1, mirror: 2, raidz: 3, raidz2: 4 };
                     if (selectedDisks.length < (vdevMin[config.vdevType] || 1)) return false;
                 }
-                return config.mountpoint?.trim()?.length > 0;
+                return config.mountpoint?.trim()?.length > 0 && config.mountpointIsEmpty === true;
             }
             case 4:
                 return true;
@@ -745,7 +795,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
             payload.vdev_type = config.vdevType;
         } else {
             payload.device = selectedDisks[0];
-            payload.persist_fstab = config.persistFstab;
+            payload.persist_fstab = true;
         }
 
         try {

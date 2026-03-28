@@ -363,4 +363,77 @@ class StorageService
 
         return $backend->createPool($config);
     }
+
+    /**
+     * Unmount a pool by delegating to the appropriate backend.
+     *
+     * @param  string  $type  Backend type ('zfs', 'ext4', etc.)
+     * @param  string  $pool  The pool/volume name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException if backend not found or not available
+     */
+    public function unmountPool(string $type, string $pool): array
+    {
+        $backend = $this->backend($type);
+
+        if ($backend === null) {
+            throw new \RuntimeException("Storage backend '{$type}' not found.");
+        }
+
+        if (! $backend->isAvailable()) {
+            throw new \RuntimeException("Storage backend '{$type}' is not available on this system.");
+        }
+
+        return $backend->unmount($pool);
+    }
+
+    /**
+     * Mount a pool by delegating to the appropriate backend.
+     *
+     * @param  string  $type  Backend type ('zfs', 'ext4', etc.)
+     * @param  string  $pool  The pool/volume name
+     * @param  string  $mountpoint  Where to mount
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException if backend not found or not available
+     */
+    public function mountPool(string $type, string $pool, string $mountpoint): array
+    {
+        $backend = $this->backend($type);
+
+        if ($backend === null) {
+            throw new \RuntimeException("Storage backend '{$type}' not found.");
+        }
+
+        if (! $backend->isAvailable()) {
+            throw new \RuntimeException("Storage backend '{$type}' is not available on this system.");
+        }
+
+        return $backend->mount($pool, $mountpoint);
+    }
+
+    /**
+     * Delete a pool by delegating to the appropriate backend.
+     *
+     * @param  string  $type  Backend type ('zfs', 'ext4', etc.)
+     * @param  string  $pool  The pool/volume name
+     * @return array{success: bool, message: string}
+     *
+     * @throws \RuntimeException if backend not found or not available
+     */
+    public function deletePool(string $type, string $pool): array
+    {
+        $backend = $this->backend($type);
+
+        if ($backend === null) {
+            throw new \RuntimeException("Storage backend '{$type}' not found.");
+        }
+
+        if (! $backend->isAvailable()) {
+            throw new \RuntimeException("Storage backend '{$type}' is not available on this system.");
+        }
+
+        return $backend->deletePool($pool);
+    }
 }
