@@ -61,6 +61,59 @@ class StorageController extends Controller
     }
 
     /**
+     * Validate a ZFS pool name for uniqueness and naming rules.
+     */
+    public function validatePoolName(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $name = $validated['name'];
+
+        // ZFS pool naming rules:
+        // - Must start with a letter
+        // - Can only contain alphanumeric characters, underscore, hyphen, and colon
+        // - Cannot exceed 255 characters
+        // - Cannot be "log", "mirror", "raidz", "raidz2", "raidz3", "spare", or "special" (reserved names)
+        // - Cannot contain consecutive slashes or start/end with slash
+        // - Each component (separated by slash) must follow the same rules
+        $reservedNames = ['log', 'mirror', 'raidz', 'raidz2', 'raidz3', 'spare', 'special', 'dedup', 'cache'];
+
+        if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_\-:]*$/', $name)) {
+            return response()->json([
+                'valid' => false,
+                'error' => 'Pool name must start with a letter and can only contain letters, numbers, underscores, hyphens, and colons.',
+            ], 422);
+        }
+
+        if (in_array(strtolower($name), $reservedNames, true)) {
+            return response()->json([
+                'valid' => false,
+                'error' => "The name '{$name}' is reserved by ZFS and cannot be used.",
+            ], 422);
+        }
+
+        // Check uniqueness against existing ZFS pools
+        $existingPools = $this->storageService->listAllPools();
+
+        foreach ($existingPools as $type => $typePools) {
+            foreach ($typePools as $pool) {
+                if (strtolower($pool['name']) === strtolower($name)) {
+                    return response()->json([
+                        'valid' => false,
+                        'error' => "A pool named '{$name}' already exists. Please choose a different name.",
+                    ], 422);
+                }
+            }
+        }
+
+        return response()->json([
+            'valid' => true,
+        ]);
+    }
+
+    /**
      * Create a new storage pool.
      */
     public function createPool(Request $request): JsonResponse

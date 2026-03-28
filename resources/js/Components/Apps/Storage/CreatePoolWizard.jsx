@@ -383,13 +383,13 @@ function DiskSelection({ selectedDisks, onToggleDisk, disks, loading, fsType, us
 }
 
 const VDEV_OPTIONS = [
-    { value: 'stripe', label: 'Stripe (No RAID)', description: 'No redundancy, maximum capacity' },
+    { value: 'stripe', label: 'Stripe (RAID 0)', description: 'No redundancy, maximum capacity' },
     { value: 'mirror', label: 'Mirror (RAID 1)', description: 'Full disk duplication, 2+ disks' },
     { value: 'raidz', label: 'RAIDZ (RAID 5)', description: 'Single parity, 3+ disks' },
     { value: 'raidz2', label: 'RAIDZ2 (RAID 6)', description: 'Double parity, 4+ disks' },
 ];
 
-function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme }) {
+function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme, nameError, onNameChange }) {
     const [fileSelectorOpened, { open: openFileSelector, close: closeFileSelector }] = useDisclosure(false);
     const [checkingEmpty, setCheckingEmpty] = useState(false);
     const [emptyError, setEmptyError] = useState(config.mountpointEmptyError || '');
@@ -454,10 +454,14 @@ function ConfigurationStep({ config, setConfig, fsType, selectedDisks, theme }) 
                             label="Pool Name"
                             placeholder="e.g. tank, data, media"
                             value={config.name || ''}
-                            onChange={(e) => setConfig({ ...config, name: e.target.value })}
+                            onChange={(e) => {
+                                setConfig({ ...config, name: e.target.value });
+                                onNameChange?.();
+                            }}
                             description="A unique name for your ZFS pool"
                             size="md"
                             leftSection={<IconServer size={16} />}
+                            error={nameError || undefined}
                         />
 
                         <Box>
@@ -670,6 +674,8 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
     const [backends, setBackends] = useState({});
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState(null);
+    const [nameValidating, setNameValidating] = useState(false);
+    const [nameError, setNameError] = useState(null);
 
     useEffect(() => {
         if (opened) {
@@ -678,6 +684,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
             setSelectedDisks([]);
             setConfig({ name: '', vdevType: 'stripe', mountpoint: '', mountpointIsEmpty: false });
             setError(null);
+            setNameError(null);
             fetchBackends();
         }
     }, [opened]);
@@ -748,6 +755,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
             case 2:
                 return selectedDisks.length > 0;
             case 3: {
+                if (nameValidating) return false;
                 if (fsType === 'zfs') {
                     if (!config.name?.trim()) return false;
                     const vdevMin = { stripe: 1, mirror: 2, raidz: 3, raidz2: 4 };
@@ -762,14 +770,55 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
         }
     };
 
-    const handleNext = () => {
+    const validatePoolName = async () => {
+        if (fsType !== 'zfs') return true;
+
+        const name = config.name?.trim();
+        if (!name) {
+            setNameError('Pool name is required.');
+            return false;
+        }
+
+        setNameValidating(true);
+        setNameError(null);
+
+        try {
+            const response = await fetch('/api/storage/pools/validate-name', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+                body: JSON.stringify({ name }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.valid) {
+                setNameError(data.error || 'Invalid pool name.');
+                return false;
+            }
+
+            return true;
+        } catch (err) {
+            setNameError('Could not validate pool name. Please try again.');
+            return false;
+        } finally {
+            setNameValidating(false);
+        }
+    };
+
+    const handleNext = async () => {
         if (step === 1 && fsType) {
             fetchDisks();
             setStep(2);
         } else if (step === 2) {
             setStep(3);
         } else if (step === 3) {
-            setStep(4);
+            const isValid = await validatePoolName();
+            if (isValid) {
+                setStep(4);
+            }
         }
     };
 
@@ -888,6 +937,8 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
                         fsType={fsType}
                         selectedDisks={selectedDisks}
                         theme={theme}
+                        nameError={nameError}
+                        onNameChange={() => setNameError(null)}
                     />
                 )}
 
@@ -930,6 +981,7 @@ export function CreatePoolWizard({ opened, onClose, onSuccess }) {
                     <Button
                         onClick={handleNext}
                         disabled={!canProceed()}
+                        loading={nameValidating}
                         rightSection={<IconArrowRight size={16} />}
                         color="blue"
                     >

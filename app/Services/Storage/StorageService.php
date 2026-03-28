@@ -257,7 +257,11 @@ class StorageService
     }
 
     /**
-     * List all storage pools using the default pool backend.
+     * List all storage pools from all available backends.
+     *
+     * Aggregates pools from ZFS, EXT4, and any other registered backend.
+     * Each pool includes a 'type' field indicating its backend ('zfs', 'ext4', etc.)
+     * and an 'isSystem' flag for system volumes.
      *
      * @return array<int, array{
      *     name: string,
@@ -265,18 +269,26 @@ class StorageService
      *     allocated: int,
      *     free: int,
      *     health: string,
-     *     mountpoint: string|null
+     *     mountpoint: string|null,
+     *     isSystem: bool,
+     *     type: string
      * }>
      */
     public function listPools(): array
     {
-        $backend = $this->getPoolBackend();
+        $allPools = [];
 
-        if ($backend === null) {
-            return [];
+        foreach ($this->backends as $type => $backend) {
+            if ($backend->isAvailable()) {
+                foreach ($backend->listPools() as $pool) {
+                    $pool['type'] = $type;
+                    $pool['isSystem'] = $pool['isSystem'] ?? false;
+                    $allPools[] = $pool;
+                }
+            }
         }
 
-        return $backend->listPools();
+        return $allPools;
     }
 
     /**

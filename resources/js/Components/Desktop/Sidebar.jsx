@@ -263,7 +263,7 @@ function StoragePoolsWidget({ systemInfo, loading }) {
                 <Box style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <IconDisc size={16} color={theme.colors.blue[5]} />
                     <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                        Storage Pools
+                        Storage
                     </Text>
                 </Box>
 
@@ -282,7 +282,7 @@ function StoragePoolsWidget({ systemInfo, loading }) {
                                     <IconChevronRight size={14} color={theme.colors.gray[5]} />
                                 )}
                                 <Text size="xs" c="dimmed">
-                                    {pools.length} Pool{pools.length > 1 ? 's' : ''}
+                                    {pools.length} Volume{pools.length > 1 ? 's' : ''}
                                 </Text>
                             </UnstyledButton>
                         )}
@@ -290,9 +290,43 @@ function StoragePoolsWidget({ systemInfo, loading }) {
                             <Stack gap="md">
                                 {pools.map((pool, index) => (
                                     <Box key={index}>
-                                        <Text size="xs" c="white" fw={500} mb={4}>
-                                            {pool.name}
-                                        </Text>
+                                        <Group gap="xs" mb={4}>
+                                            <Text size="xs" c="white" fw={500}>
+                                                {pool.name}
+                                            </Text>
+                                            {pool.type && (
+                                                <Text
+                                                    size="xs"
+                                                    c={pool.type === 'zfs' ? 'blue' : 'orange'}
+                                                    fw={600}
+                                                    style={{
+                                                        backgroundColor: pool.type === 'zfs'
+                                                            ? 'rgba(34, 139, 230, 0.15)'
+                                                            : 'rgba(253, 126, 20, 0.15)',
+                                                        padding: '1px 6px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '10px',
+                                                    }}
+                                                >
+                                                    {pool.type.toUpperCase()}
+                                                </Text>
+                                            )}
+                                            {pool.isSystem && (
+                                                <Text
+                                                    size="xs"
+                                                    c="teal"
+                                                    fw={600}
+                                                    style={{
+                                                        backgroundColor: 'rgba(32, 201, 151, 0.15)',
+                                                        padding: '1px 6px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '10px',
+                                                    }}
+                                                >
+                                                    SYSTEM
+                                                </Text>
+                                            )}
+                                        </Group>
                                         {pool.mountpoint && (
                                             <Group gap="xs" mb={4}>
                                                 <Text size="xs" c="dimmed" style={{ flex: 1 }}>
@@ -323,7 +357,7 @@ function StoragePoolsWidget({ systemInfo, loading }) {
                         </Collapse>
                     </>
                 ) : (
-                    <Text c="dimmed" size="sm">No storage pools detected</Text>
+                    <Text c="dimmed" size="sm">No storage volumes detected</Text>
                 )}
             </Stack>
         </Box>
