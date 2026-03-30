@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AclService;
 use App\Services\LinuxUserService;
 use App\Services\NetworkService;
 use App\Services\SambaService;
@@ -17,7 +18,8 @@ class StorageController extends Controller
         protected SettingsService $settingsService,
         protected SambaService $sambaService,
         protected LinuxUserService $linuxUserService,
-        protected NetworkService $networkService
+        protected NetworkService $networkService,
+        protected AclService $aclService
     ) {}
 
     /**
@@ -327,6 +329,15 @@ class StorageController extends Controller
             return $share['type'] === 'custom' || $share['name'] === 'homes';
         });
 
+        // Augment custom shares with filesystem ACL permissions
+        $shares = array_map(function ($share) {
+            if ($share['type'] === 'custom' && ! empty($share['path'])) {
+                $share['user_permissions'] = $this->aclService->getPermissions($share['path']);
+            }
+
+            return $share;
+        }, $shares);
+
         // Get the default IP address for network paths
         $ipAddress = $this->networkService->getDefaultIPAddress();
 
@@ -345,19 +356,25 @@ class StorageController extends Controller
             'name' => 'required|string|max:80|regex:/^[a-zA-Z0-9_-]+$/',
             'comment' => 'nullable|string|max:255',
             'path' => 'required|string|max:4096',
-            'writable' => 'nullable|in:yes,no',
             'guest' => 'nullable|in:yes,no,only',
-            'valid_users' => 'nullable|string|max:1000',
+            'user_permissions' => 'nullable|array',
+            'user_permissions.*' => 'nullable|in:none,read,readwrite',
         ]);
+
+        $userPermissions = $this->filterUserPermissions($validated['user_permissions'] ?? []);
 
         try {
             $this->sambaService->createShare($validated['name'], [
                 'comment' => $validated['comment'] ?? null,
                 'path' => $validated['path'],
-                'writable' => $validated['writable'] ?? 'yes',
                 'guest' => $validated['guest'] ?? 'no',
-                'valid users' => $validated['valid_users'] ?? null,
+                'user_permissions' => $userPermissions,
             ]);
+
+            // Apply filesystem ACLs
+            if (! empty($userPermissions)) {
+                $this->aclService->applyPermissions($validated['path'], $userPermissions);
+            }
 
             return response()->json([
                 'message' => 'Share created successfully',
@@ -378,9 +395,9 @@ class StorageController extends Controller
             'name' => 'nullable|string|max:80|regex:/^[a-zA-Z0-9_-]+$/',
             'comment' => 'nullable|string|max:255',
             'path' => 'nullable|string|max:4096',
-            'writable' => 'nullable|in:yes,no',
             'guest' => 'nullable|in:yes,no,only',
-            'valid_users' => 'nullable|string|max:1000',
+            'user_permissions' => 'nullable|array',
+            'user_permissions.*' => 'nullable|in:none,read,readwrite',
         ]);
 
         // Check if name is being changed to a name that's already used
@@ -394,15 +411,22 @@ class StorageController extends Controller
             }
         }
 
+        $userPermissions = $this->filterUserPermissions($validated['user_permissions'] ?? []);
+
         try {
             $this->sambaService->updateShare($name, [
                 'name' => $validated['name'] ?? null,
                 'comment' => $validated['comment'] ?? null,
                 'path' => $validated['path'] ?? null,
-                'writable' => $validated['writable'] ?? null,
                 'guest' => $validated['guest'] ?? null,
-                'valid users' => $validated['valid_users'] ?? null,
+                'user_permissions' => $userPermissions,
             ]);
+
+            // Apply filesystem ACLs
+            $sharePath = $validated['path'] ?? $this->sambaService->getShare($newName ?? $name)['path'] ?? null;
+            if ($sharePath && ! empty($userPermissions)) {
+                $this->aclService->applyPermissions($sharePath, $userPermissions);
+            }
 
             return response()->json([
                 'message' => 'Share updated successfully',
@@ -464,5 +488,18 @@ class StorageController extends Controller
                 'error' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Filter user_permissions array to only include entries with a non-none level.
+     *
+     * @param  array<string, string>  $permissions
+     * @return array<string, string>
+     */
+    protected function filterUserPermissions(array $permissions): array
+    {
+        return array_filter($permissions, function (string $level) {
+            return $level !== 'none' && ! empty($level);
+        }, ARRAY_FILTER_USE_BOTH);
     }
 }

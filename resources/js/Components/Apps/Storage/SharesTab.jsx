@@ -13,12 +13,13 @@ import {
     Switch,
     TextInput,
     Select,
-    MultiSelect,
     Alert,
     Card,
     SimpleGrid,
     Divider,
     Tooltip,
+    Table,
+    Checkbox,
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -40,9 +41,8 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
     const [name, setName] = useState('');
     const [comment, setComment] = useState('');
     const [path, setPath] = useState('');
-    const [writable, setWritable] = useState('yes');
     const [guest, setGuest] = useState('no');
-    const [validUsers, setValidUsers] = useState([]);
+    const [userPermissions, setUserPermissions] = useState({});
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -50,19 +50,31 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
             setName(initialData.name || '');
             setComment(initialData.comment || '');
             setPath(initialData.path || '');
-            setWritable(initialData.writable || 'yes');
             setGuest(initialData.guest || 'no');
-            setValidUsers(initialData['valid users'] ? initialData['valid users'].split(',').map(u => u.trim()) : []);
+            setUserPermissions(initialData.user_permissions || {});
         } else {
             setName('');
             setComment('');
             setPath('');
-            setWritable('yes');
             setGuest('no');
-            setValidUsers([]);
+            setUserPermissions({});
         }
         setError(null);
     }, [initialData, opened]);
+
+    const handleReadChange = (username, checked) => {
+        setUserPermissions(prev => ({
+            ...prev,
+            [username]: checked ? 'read' : 'none',
+        }));
+    };
+
+    const handleReadWriteChange = (username, checked) => {
+        setUserPermissions(prev => ({
+            ...prev,
+            [username]: checked ? 'readwrite' : 'none',
+        }));
+    };
 
     const handleSave = () => {
         if (!name.trim()) {
@@ -70,7 +82,6 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
             return;
         }
 
-        // Check for duplicate name (excluding current share if editing)
         if (existingShares) {
             const isDuplicate = existingShares.some(share =>
                 share.name.toLowerCase() === name.trim().toLowerCase() &&
@@ -87,20 +98,20 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
             return;
         }
 
+        const activePermissions = Object.values(userPermissions).filter(p => p !== 'none');
+        if (activePermissions.length === 0) {
+            setError('At least one user must have Read or Read/Write permission');
+            return;
+        }
+
         onSave({
             name: name.trim(),
             comment: comment.trim() || null,
             path: path.trim() || null,
-            writable,
             guest,
-            valid_users: validUsers.length > 0 ? validUsers.join(', ') : null,
+            user_permissions: Object.keys(userPermissions).length > 0 ? userPermissions : null,
         });
     };
-
-    const userOptions = users.map((u) => ({
-        value: u.value,
-        label: u.label,
-    }));
 
     return (
         <Modal
@@ -143,16 +154,6 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
                 />
 
                 <Select
-                    label="Writable"
-                    value={writable}
-                    onChange={setWritable}
-                    data={[
-                        { value: 'yes', label: 'Yes - Allow writes' },
-                        { value: 'no', label: 'No - Read only' },
-                    ]}
-                />
-
-                <Select
                     label="Guest Access"
                     value={guest}
                     onChange={setGuest}
@@ -163,16 +164,37 @@ function ShareModal({ opened, onClose, onSave, initialData, users, existingShare
                     ]}
                 />
 
-                <MultiSelect
-                    label="Valid Users"
-                    placeholder="Select users who can access this share"
-                    data={userOptions}
-                    value={validUsers}
-                    onChange={setValidUsers}
-                    searchable
-                    clearable
-                    description="Leave empty to allow all users"
-                />
+                <Box>
+                    <Text size="sm" fw={500} mb="xs">User Permissions <span style={{ color: 'var(--mantine-color-red-6)' }}>*</span></Text>
+                    <Table striped highlightOnHover withTableBorder withColumnBorders>
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>User</Table.Th>
+                                <Table.Th style={{ textAlign: 'center', width: 100 }}>Read</Table.Th>
+                                <Table.Th style={{ textAlign: 'center', width: 120 }}>Read/Write</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {users.map((user) => (
+                                <Table.Tr key={user.value}>
+                                    <Table.Td>{user.label}</Table.Td>
+                                    <Table.Td style={{ textAlign: 'center' }}>
+                                        <Checkbox
+                                            checked={userPermissions[user.value] === 'read'}
+                                            onChange={(e) => handleReadChange(user.value, e.currentTarget.checked)}
+                                        />
+                                    </Table.Td>
+                                    <Table.Td style={{ textAlign: 'center' }}>
+                                        <Checkbox
+                                            checked={userPermissions[user.value] === 'readwrite'}
+                                            onChange={(e) => handleReadWriteChange(user.value, e.currentTarget.checked)}
+                                        />
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </Box>
 
                 <Group justify="flex-end" mt="md">
                     <Button variant="subtle" onClick={onClose}>
@@ -323,17 +345,24 @@ function ShareCard({ share, onEdit, onDelete, onToggleHomes, users, loadingToggl
                             <Text size="xs" ff="monospace">{share.path || '-'}</Text>
                         </Group>
                         <Group gap="xs">
-                            <Text size="xs" c="dimmed" w={80}>Writable:</Text>
-                            <Text size="xs">{share.writable === 'yes' ? 'Yes' : 'No'}</Text>
-                        </Group>
-                        <Group gap="xs">
                             <Text size="xs" c="dimmed" w={80}>Guest:</Text>
                             <Text size="xs">{share.guest || 'no'}</Text>
                         </Group>
-                        {share['valid users'] && (
+                        {share.user_permissions && Object.keys(share.user_permissions).length > 0 && (
                             <Group gap="xs">
-                                <Text size="xs" c="dimmed" w={80}>Users:</Text>
-                                <Text size="xs">{share['valid users']}</Text>
+                                <Text size="xs" c="dimmed" w={80}>Permissions:</Text>
+                                <Group gap={4}>
+                                    {Object.entries(share.user_permissions).map(([username, level]) => (
+                                        <Badge
+                                            key={username}
+                                            size="sm"
+                                            variant="light"
+                                            color={level === 'readwrite' ? 'green' : 'blue'}
+                                        >
+                                            {username}: {level === 'readwrite' ? 'R/W' : 'R'}
+                                        </Badge>
+                                    ))}
+                                </Group>
                             </Group>
                         )}
 
@@ -615,7 +644,7 @@ export function SharesTab() {
                     <Box>
                         <Text size="xl" fw={700}>Samba Shares</Text>
                         <Text size="sm" c="dimmed">
-                            Manage network shares for Windows/SMB access
+                            Manage network shares with Samba access
                         </Text>
                     </Box>
                 </Group>
@@ -642,7 +671,7 @@ export function SharesTab() {
                 <Box>
                     <Text size="xl" fw={700}>Samba Shares</Text>
                     <Text size="sm" c="dimmed">
-                        Manage network shares for Windows/SMB access
+                        Manage network shares with Samba access
                     </Text>
                 </Box>
                 <Button
