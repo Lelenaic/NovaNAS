@@ -133,7 +133,7 @@ function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {
                         const AppComponent = APP_COMPONENTS[win.appId];
                         return (
                             <DraggableWindow key={win.id} windowState={win}>
-                                {AppComponent ? <AppComponent /> : <SampleAppContent title={win.title} emoji={win.icon} />}
+                                <AppComponent />
                             </DraggableWindow>
                         );
                     })}
