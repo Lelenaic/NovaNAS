@@ -18,6 +18,8 @@ export function ContainersTab() {
         image: '',
         tag: 'latest',
         restart_policy: 'no',
+        auto_update: false,
+        labels: [],
         ports: [{ host: '', container: '' }],
         volumes: [{ type: 'bind', host_path: '', volume_name: '', container_path: '' }],
         environment: [{ key: '', value: '' }],
@@ -125,6 +127,8 @@ export function ContainersTab() {
             tag: 'latest',
             registry: '',
             restart_policy: 'no',
+            auto_update: false,
+            labels: [],
             ports: [{ host: '', container: '' }],
             volumes: [{ type: 'bind', host_path: '', volume_name: '', container_path: '' }],
             environment: [{ key: '', value: '' }],
@@ -194,12 +198,17 @@ export function ContainersTab() {
                 const imageName = imageParts[0];
                 const imageTag = imageParts[1] || 'latest';
 
+                const labels = config.labels || [];
+                const auto_update = labels.includes('com.centurylinklabs.watchtower.enable=true');
+
                 setFormData({
                     name: config.name || '',
                     image: imageName,
                     tag: imageTag,
                     registry: '',
                     restart_policy: config.restart_policy || 'no',
+                    auto_update: auto_update,
+                    labels: labels,
                     ports: config.ports && config.ports.length > 0
                         ? config.ports
                         : [{ host: '', container: '' }],
@@ -226,12 +235,15 @@ export function ContainersTab() {
         setError(null);
 
         try {
+            const labels = formData.auto_update ? ['com.centurylinklabs.watchtower.enable=true'] : [];
+
             const payload = {
                 name: formData.name,
                 image: formData.image,
                 tag: formData.tag,
                 registry: formData.registry || null,
                 restart_policy: formData.restart_policy,
+                labels: labels,
                 ports: formData.ports.filter(p => p.host && p.container),
                 volumes: formData.volumes.filter(v => v.container_path),
                 environment: formData.environment.filter(e => e.key),
@@ -590,6 +602,12 @@ export function ContainersTab() {
                             ]}
                             value={formData.restart_policy}
                             onChange={(value) => updateFormField('restart_policy', value)}
+                        />
+                        <Switch
+                            label="Auto Update"
+                            description="Enable automatic updates via Watchtower"
+                            checked={formData.auto_update}
+                            onChange={(e) => updateFormField('auto_update', e.currentTarget.checked)}
                         />
 
                         {/* Ports */}

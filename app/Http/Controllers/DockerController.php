@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 /**
@@ -48,12 +47,12 @@ class DockerController extends Controller
         $home = '/root'; // default
         if ($passwdEntry && str_contains($passwdEntry, ':')) {
             $parts = explode(':', $passwdEntry);
-            if (isset($parts[5]) && !empty($parts[5])) {
+            if (isset($parts[5]) && ! empty($parts[5])) {
                 $home = $parts[5];
             }
         }
 
-        return $home . '/.docker/config.json';
+        return $home.'/.docker/config.json';
     }
 
     /**
@@ -110,14 +109,14 @@ class DockerController extends Controller
     {
         $configPath = $this->getDockerConfigPath();
 
-        if (!File::exists($configPath)) {
+        if (! File::exists($configPath)) {
             return [];
         }
 
         $content = File::get($configPath);
         $config = json_decode($content, true);
 
-        if (!isset($config['auths']) || !is_array($config['auths'])) {
+        if (! isset($config['auths']) || ! is_array($config['auths'])) {
             return [];
         }
 
@@ -125,7 +124,7 @@ class DockerController extends Controller
 
         foreach ($config['auths'] as $originalAddress => $authData) {
             // Skip invalid registry addresses
-            if (!$this->isValidRegistryAddress($originalAddress)) {
+            if (! $this->isValidRegistryAddress($originalAddress)) {
                 continue;
             }
 
@@ -136,7 +135,7 @@ class DockerController extends Controller
             $isLoggedIn = false;
             $username = '';
 
-            if (isset($authData['auth']) && !empty($authData['auth'])) {
+            if (isset($authData['auth']) && ! empty($authData['auth'])) {
                 $isLoggedIn = true;
 
                 // Try to extract username from auth (base64 encoded "username:password" or just token)
@@ -157,7 +156,7 @@ class DockerController extends Controller
             }
 
             // Skip if not logged in
-            if (!$isLoggedIn) {
+            if (! $isLoggedIn) {
                 continue;
             }
 
@@ -249,7 +248,7 @@ class DockerController extends Controller
         $process->setTimeout(60);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             $error = $process->getErrorOutput();
 
             // Provide a more helpful error message
@@ -309,7 +308,7 @@ class DockerController extends Controller
         $process->setTimeout(60);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             $error = $process->getErrorOutput();
 
             return response()->json([
@@ -338,7 +337,7 @@ class DockerController extends Controller
         // Get the config file path
         $configPath = $this->getDockerConfigPath();
 
-        if (!File::exists($configPath)) {
+        if (! File::exists($configPath)) {
             return response()->json([
                 'error' => 'Docker config file not found',
             ], 500);
@@ -348,7 +347,7 @@ class DockerController extends Controller
         $content = File::get($configPath);
         $config = json_decode($content, true);
 
-        if (!isset($config['auths']) || !is_array($config['auths'])) {
+        if (! isset($config['auths']) || ! is_array($config['auths'])) {
             return response()->json([
                 'error' => 'Invalid docker config',
             ], 500);
@@ -368,8 +367,8 @@ class DockerController extends Controller
             // For other registries, look for exact match or with https:// prefix
             $searchKeys = [
                 $normalizedAddress,
-                'https://' . $normalizedAddress,
-                'http://' . $normalizedAddress,
+                'https://'.$normalizedAddress,
+                'http://'.$normalizedAddress,
             ];
 
             foreach (array_keys($config['auths']) as $key) {
@@ -443,7 +442,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['info', '--format', '{{json .}}']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get Docker info',
                 'details' => $result['error'],
@@ -462,7 +461,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['version', '--format', '{{json .}}']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get Docker version',
             ], 500);
@@ -484,7 +483,7 @@ class DockerController extends Controller
         $args = array_filter(['ps', $all, $format]);
         $result = $this->runDockerCommand(array_values($args));
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to list containers',
             ], 500);
@@ -492,7 +491,7 @@ class DockerController extends Controller
 
         $containers = [];
         foreach (explode("\n", trim($result['output'])) as $line) {
-            if (!empty($line)) {
+            if (! empty($line)) {
                 $containers[] = json_decode($line, true);
             }
         }
@@ -511,7 +510,7 @@ class DockerController extends Controller
             $id,
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get container',
             ], 500);
@@ -527,7 +526,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['start', $id]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to start container',
                 'details' => $result['error'],
@@ -545,7 +544,7 @@ class DockerController extends Controller
         $t = $request->input('t', 10);
         $result = $this->runDockerCommand(['stop', '-t', $t, $id]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to stop container',
                 'details' => $result['error'],
@@ -563,7 +562,7 @@ class DockerController extends Controller
         $t = $request->input('t', 10);
         $result = $this->runDockerCommand(['restart', '-t', $t, $id]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to restart container',
                 'details' => $result['error'],
@@ -589,7 +588,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to remove container',
                 'details' => $result['error'],
@@ -616,7 +615,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get container logs',
             ], 500);
@@ -638,7 +637,7 @@ class DockerController extends Controller
         $args = array_filter(['stats', $noStream, $format, $id]);
         $result = $this->runDockerCommand(array_values($args));
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get container stats',
             ], 500);
@@ -657,6 +656,7 @@ class DockerController extends Controller
         $tag = $request->input('tag', 'latest');
         $registry = $request->input('registry');
         $restartPolicy = $request->input('restart_policy', 'no');
+        $labels = $request->input('labels', []);
         $ports = $request->input('ports', []);
         $volumes = $request->input('volumes', []);
         $environment = $request->input('environment', []);
@@ -670,7 +670,7 @@ class DockerController extends Controller
 
         // Build the full image name with registry
         $imageName = $image;
-        if (!empty($registry)) {
+        if (! empty($registry)) {
             // Prepend registry to image (e.g., registry.example.com/nginx)
             $imageName = "{$registry}/{$image}";
         }
@@ -679,6 +679,11 @@ class DockerController extends Controller
         }
 
         $args = ['run', '-d', '--name', $name];
+
+        foreach ($labels as $label) {
+            $args[] = '--label';
+            $args[] = $label;
+        }
 
         $restartMap = [
             'no' => 'no',
@@ -690,31 +695,31 @@ class DockerController extends Controller
         $args[] = $restartMap[$restartPolicy] ?? 'no';
 
         foreach ($ports as $port) {
-            if (!empty($port['host']) && !empty($port['container'])) {
+            if (! empty($port['host']) && ! empty($port['container'])) {
                 $args[] = '-p';
                 $args[] = "{$port['host']}:{$port['container']}";
             }
         }
 
         foreach ($volumes as $volume) {
-            if (!empty($volume['container_path'])) {
+            if (! empty($volume['container_path'])) {
                 $args[] = '-v';
-                if ($volume['type'] === 'bind' && !empty($volume['host_path'])) {
+                if ($volume['type'] === 'bind' && ! empty($volume['host_path'])) {
                     $args[] = "{$volume['host_path']}:{$volume['container_path']}";
-                } elseif ($volume['type'] === 'volume' && !empty($volume['volume_name'])) {
+                } elseif ($volume['type'] === 'volume' && ! empty($volume['volume_name'])) {
                     $args[] = "{$volume['volume_name']}:{$volume['container_path']}";
                 }
             }
         }
 
         foreach ($environment as $env) {
-            if (!empty($env['key'])) {
+            if (! empty($env['key'])) {
                 $args[] = '-e';
                 $args[] = "{$env['key']}={$env['value']}";
             }
         }
 
-        if (!empty($envFile)) {
+        if (! empty($envFile)) {
             $args[] = '--env-file';
             $args[] = $envFile;
         }
@@ -723,7 +728,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to create container',
                 'details' => $result['error'],
@@ -743,7 +748,7 @@ class DockerController extends Controller
     {
         $inspectResult = $this->runDockerCommand(['inspect', '--format={{json .}}', $id]);
 
-        if (!$inspectResult['success']) {
+        if (! $inspectResult['success']) {
             return response()->json([
                 'error' => 'Container not found',
             ], 404);
@@ -757,6 +762,7 @@ class DockerController extends Controller
         $tag = $request->input('tag', 'latest');
         $registry = $request->input('registry');
         $restartPolicy = $request->input('restart_policy', 'no');
+        $labels = $request->input('labels', []);
         $ports = $request->input('ports', []);
         $volumes = $request->input('volumes', []);
         $environment = $request->input('environment', []);
@@ -765,7 +771,7 @@ class DockerController extends Controller
         $this->runDockerCommand(['stop', $id]);
         $rmResult = $this->runDockerCommand(['rm', '-f', $id]);
 
-        if (!$rmResult['success']) {
+        if (! $rmResult['success']) {
             return response()->json([
                 'error' => 'Failed to remove container',
                 'details' => $rmResult['error'],
@@ -774,7 +780,7 @@ class DockerController extends Controller
 
         // Build the full image name with registry
         $imageName = $image;
-        if (!empty($registry)) {
+        if (! empty($registry)) {
             // Prepend registry to image (e.g., registry.example.com/nginx)
             $imageName = "{$registry}/{$image}";
         }
@@ -783,6 +789,11 @@ class DockerController extends Controller
         }
 
         $args = ['run', '-d', '--name', $name];
+
+        foreach ($labels as $label) {
+            $args[] = '--label';
+            $args[] = $label;
+        }
 
         $restartMap = [
             'no' => 'no',
@@ -794,31 +805,31 @@ class DockerController extends Controller
         $args[] = $restartMap[$restartPolicy] ?? 'no';
 
         foreach ($ports as $port) {
-            if (!empty($port['host']) && !empty($port['container'])) {
+            if (! empty($port['host']) && ! empty($port['container'])) {
                 $args[] = '-p';
                 $args[] = "{$port['host']}:{$port['container']}";
             }
         }
 
         foreach ($volumes as $volume) {
-            if (!empty($volume['container_path'])) {
+            if (! empty($volume['container_path'])) {
                 $args[] = '-v';
-                if ($volume['type'] === 'bind' && !empty($volume['host_path'])) {
+                if ($volume['type'] === 'bind' && ! empty($volume['host_path'])) {
                     $args[] = "{$volume['host_path']}:{$volume['container_path']}";
-                } elseif ($volume['type'] === 'volume' && !empty($volume['volume_name'])) {
+                } elseif ($volume['type'] === 'volume' && ! empty($volume['volume_name'])) {
                     $args[] = "{$volume['volume_name']}:{$volume['container_path']}";
                 }
             }
         }
 
         foreach ($environment as $env) {
-            if (!empty($env['key'])) {
+            if (! empty($env['key'])) {
                 $args[] = '-e';
                 $args[] = "{$env['key']}={$env['value']}";
             }
         }
 
-        if (!empty($envFile)) {
+        if (! empty($envFile)) {
             $args[] = '--env-file';
             $args[] = $envFile;
         }
@@ -827,7 +838,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to create new container',
                 'details' => $result['error'],
@@ -847,7 +858,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['inspect', '--format={{json .}}', $id]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get container config',
             ], 500);
@@ -855,19 +866,27 @@ class DockerController extends Controller
 
         $config = json_decode($result['output'], true);
 
+        $labels = [];
+        if (! empty($config['Config']['Labels'])) {
+            foreach ($config['Config']['Labels'] as $key => $value) {
+                $labels[] = "{$key}={$value}";
+            }
+        }
+
         $parsed = [
             'id' => $config['Id'],
             'name' => trim($config['Name'], '/'),
             'image' => $config['Config']['Image'],
             'restart_policy' => $config['HostConfig']['RestartPolicy']['Name'] ?? 'no',
+            'labels' => $labels,
             'ports' => [],
             'volumes' => [],
             'environment' => [],
         ];
 
-        if (!empty($config['HostConfig']['PortBindings'])) {
+        if (! empty($config['HostConfig']['PortBindings'])) {
             foreach ($config['HostConfig']['PortBindings'] as $containerPort => $bindings) {
-                if (!empty($bindings)) {
+                if (! empty($bindings)) {
                     foreach ($bindings as $binding) {
                         $parsed['ports'][] = [
                             'host' => $binding['HostPort'] ?? '',
@@ -878,7 +897,7 @@ class DockerController extends Controller
             }
         }
 
-        if (!empty($config['HostConfig']['Binds'])) {
+        if (! empty($config['HostConfig']['Binds'])) {
             $binds = is_array($config['HostConfig']['Binds'])
                 ? $config['HostConfig']['Binds']
                 : [$config['HostConfig']['Binds']];
@@ -900,7 +919,7 @@ class DockerController extends Controller
             }
         }
 
-        if (!empty($config['Config']['Env'])) {
+        if (! empty($config['Config']['Env'])) {
             foreach ($config['Config']['Env'] as $env) {
                 $parts = explode('=', $env, 2);
                 if (count($parts) === 2) {
@@ -928,7 +947,7 @@ class DockerController extends Controller
         $args = array_filter(['images', $all, $format]);
         $result = $this->runDockerCommand(array_values($args));
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to list images',
             ], 500);
@@ -936,7 +955,7 @@ class DockerController extends Controller
 
         $images = [];
         foreach (explode("\n", trim($result['output'])) as $line) {
-            if (!empty($line)) {
+            if (! empty($line)) {
                 $images[] = json_decode($line, true);
             }
         }
@@ -956,7 +975,7 @@ class DockerController extends Controller
             $id,
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get image',
             ], 500);
@@ -982,7 +1001,7 @@ class DockerController extends Controller
         $imageName = $tag ? "{$image}:{$tag}" : $image;
         $result = $this->runDockerCommand(['pull', $imageName]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to pull image',
                 'details' => $result['error'],
@@ -1011,7 +1030,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to remove image',
                 'details' => $result['error'],
@@ -1035,7 +1054,7 @@ class DockerController extends Controller
             '{{json .}}',
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to list volumes',
             ], 500);
@@ -1043,7 +1062,7 @@ class DockerController extends Controller
 
         $volumes = [];
         foreach (explode("\n", trim($result['output'])) as $line) {
-            if (!empty($line)) {
+            if (! empty($line)) {
                 $volumes[] = json_decode($line, true);
             }
         }
@@ -1068,7 +1087,7 @@ class DockerController extends Controller
         $args = ['volume', 'create', '--name', $name, '--driver', $driver];
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to create volume',
                 'details' => $result['error'],
@@ -1093,7 +1112,7 @@ class DockerController extends Controller
             $name,
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get volume',
             ], 500);
@@ -1115,7 +1134,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to remove volume',
                 'details' => $result['error'],
@@ -1139,7 +1158,7 @@ class DockerController extends Controller
             '{{json .}}',
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to list networks',
             ], 500);
@@ -1147,7 +1166,7 @@ class DockerController extends Controller
 
         $networks = [];
         foreach (explode("\n", trim($result['output'])) as $line) {
-            if (!empty($line)) {
+            if (! empty($line)) {
                 $networks[] = json_decode($line, true);
             }
         }
@@ -1167,7 +1186,7 @@ class DockerController extends Controller
             $id,
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to get network',
             ], 500);
@@ -1204,7 +1223,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to create network',
                 'details' => $result['error'],
@@ -1225,7 +1244,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['network', 'rm', $id]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to remove network',
                 'details' => $result['error'],
@@ -1255,7 +1274,7 @@ class DockerController extends Controller
             $containerId,
         ]);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to connect container to network',
                 'details' => $result['error'],
@@ -1288,7 +1307,7 @@ class DockerController extends Controller
 
         $result = $this->runDockerCommand($args);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to disconnect container from network',
                 'details' => $result['error'],
@@ -1307,7 +1326,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['container', 'prune', '-f']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to prune containers',
             ], 500);
@@ -1323,7 +1342,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['image', 'prune', '-a', '-f']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to prune images',
             ], 500);
@@ -1339,7 +1358,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['volume', 'prune', '-f']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to prune volumes',
             ], 500);
@@ -1355,7 +1374,7 @@ class DockerController extends Controller
     {
         $result = $this->runDockerCommand(['network', 'prune', '-f']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'error' => 'Failed to prune networks',
             ], 500);
