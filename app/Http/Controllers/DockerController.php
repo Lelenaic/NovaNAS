@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\LinuxUserService;
+use App\Services\DockerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -14,7 +14,7 @@ use Symfony\Component\Process\Process;
 class DockerController extends Controller
 {
     public function __construct(
-        private LinuxUserService $linuxUserService,
+        private DockerService $dockerService,
     ) {}
 
     /**
@@ -32,14 +32,6 @@ class DockerController extends Controller
             'error' => $process->getErrorOutput(),
             'exitCode' => $process->getExitCode(),
         ];
-    }
-
-    /**
-     * Get the Docker config file path.
-     */
-    private function getDockerConfigPath(): string
-    {
-        return $this->linuxUserService->getHomeDirectory(allowRoot: true).'/.docker/config.json';
     }
 
     /**
@@ -94,7 +86,7 @@ class DockerController extends Controller
      */
     private function getLoggedInRegistries(): array
     {
-        $configPath = $this->getDockerConfigPath();
+        $configPath = $this->dockerService->getDockerConfigPath();
 
         if (! File::exists($configPath)) {
             return [];
@@ -168,7 +160,7 @@ class DockerController extends Controller
      */
     public function listRegistries(): JsonResponse
     {
-        $configPath = $this->getDockerConfigPath();
+        $configPath = $this->dockerService->getDockerConfigPath();
 
         $loggedInRegistries = $this->getLoggedInRegistries();
 
@@ -322,7 +314,7 @@ class DockerController extends Controller
         }
 
         // Get the config file path
-        $configPath = $this->getDockerConfigPath();
+        $configPath = $this->dockerService->getDockerConfigPath();
 
         if (! File::exists($configPath)) {
             return response()->json([

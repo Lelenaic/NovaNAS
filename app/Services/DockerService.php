@@ -15,6 +15,11 @@ class DockerService
     private const DEFAULT_DOCKER_DATA_DIR = '/var/lib/docker';
     private const DAEMON_JSON_PATH = '/etc/docker/daemon.json';
 
+    public function __construct(
+        private LinuxUserService $linuxUserService,
+    )
+    {}
+
     /**
      * Check if Docker is installed.
      */
@@ -100,76 +105,6 @@ class DockerService
         $tempFile = storage_path('app/daemon.json.tmp');
         file_put_contents($tempFile, $jsonContent . "\n");
         Process::run('sudo mv ' . $tempFile . ' ' . self::DAEMON_JSON_PATH);
-    }
-
-    /**
-     * Stop the Docker service.
-     */
-    public function stopService(): bool
-    {
-        $result = Process::run('systemctl stop docker');
-
-        return $result->successful();
-    }
-
-    /**
-     * Start the Docker service.
-     */
-    public function startService(): bool
-    {
-        $result = Process::run('systemctl start docker');
-
-        return $result->successful();
-    }
-
-    /**
-     * Restart the Docker service.
-     */
-    public function restartService(): bool
-    {
-        $result = Process::run('systemctl restart docker');
-
-        return $result->successful();
-    }
-
-    /**
-     * Check if the data directory exists.
-     */
-    public function dataDirectoryExists(string $path): bool
-    {
-        return File::exists($path) && is_dir($path);
-    }
-
-    /**
-     * Check if we can write to the target directory.
-     */
-    public function canWriteToDirectory(string $path): bool
-    {
-        if (!File::exists($path)) {
-            $parentDir = dirname($path);
-
-            return File::isWritable($parentDir);
-        }
-
-        return File::isWritable($path);
-    }
-
-    /**
-     * Get directory size in bytes.
-     */
-    public function getDirectorySize(string $path): int
-    {
-        if (!File::exists($path)) {
-            return 0;
-        }
-
-        $result = Process::run("du -sb $path 2>/dev/null | cut -f1");
-
-        if ($result->successful()) {
-            return (int) trim($result->output());
-        }
-
-        return 0;
     }
 
     /**
@@ -307,5 +242,14 @@ class DockerService
         }
 
         return $mountPoints;
+    }
+
+
+    /**
+     * Get the Docker config file path.
+     */
+    public function getDockerConfigPath(): string
+    {
+        return $this->linuxUserService->getHomeDirectory(allowRoot: true).'/.docker/config.json';
     }
 }
