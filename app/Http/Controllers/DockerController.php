@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LinuxUserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -12,6 +13,10 @@ use Symfony\Component\Process\Process;
  */
 class DockerController extends Controller
 {
+    public function __construct(
+        private LinuxUserService $linuxUserService,
+    ) {}
+
     /**
      * Run a docker command and return the output.
      */
@@ -34,25 +39,7 @@ class DockerController extends Controller
      */
     private function getDockerConfigPath(): string
     {
-        // Get the username first
-        $whoamiProcess = Process::fromShellCommandLine('whoami');
-        $whoamiProcess->run();
-        $username = trim($whoamiProcess->getOutput()) ?: 'root';
-
-        // Get home directory from /etc/passwd - more reliable than tilde expansion
-        $passwdProcess = Process::fromShellCommandLine("getent passwd $username");
-        $passwdProcess->run();
-        $passwdEntry = $passwdProcess->getOutput();
-
-        $home = '/root'; // default
-        if ($passwdEntry && str_contains($passwdEntry, ':')) {
-            $parts = explode(':', $passwdEntry);
-            if (isset($parts[5]) && ! empty($parts[5])) {
-                $home = $parts[5];
-            }
-        }
-
-        return $home.'/.docker/config.json';
+        return $this->linuxUserService->getHomeDirectory(allowRoot: true).'/.docker/config.json';
     }
 
     /**

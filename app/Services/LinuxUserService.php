@@ -22,7 +22,7 @@ class LinuxUserService
         $process = new Process(['getent', 'passwd']);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return [];
         }
 
@@ -45,7 +45,7 @@ class LinuxUserService
                 if ($uid >= 1000 && $username !== 'nobody') {
                     $users[] = [
                         'value' => $username,
-                        'label' => $username . ' (UID: ' . $uid . ')',
+                        'label' => $username.' (UID: '.$uid.')',
                     ];
                 }
             }
@@ -73,7 +73,7 @@ class LinuxUserService
         $process = new Process(['id', '-u', $username]);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return null;
         }
 
@@ -101,7 +101,7 @@ class LinuxUserService
      */
     public function isUsernameAvailable(string $username): bool
     {
-        if (!$this->userExists($username)) {
+        if (! $this->userExists($username)) {
             return true;
         }
 
@@ -117,10 +117,11 @@ class LinuxUserService
     /**
      * Create a new Linux user.
      *
-     * @param string $username The username
-     * @param string $homeDir The home directory path
-     * @param string $password The initial password
+     * @param  string  $username  The username
+     * @param  string  $homeDir  The home directory path
+     * @param  string  $password  The initial password
      * @return bool True if successful
+     *
      * @throws \InvalidArgumentException If username is a system user
      * @throws \RuntimeException If user creation fails
      */
@@ -150,7 +151,7 @@ class LinuxUserService
         try {
             $process->mustRun();
         } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to create user '{$username}': " . $process->getErrorOutput());
+            throw new \RuntimeException("Failed to create user '{$username}': ".$process->getErrorOutput());
         }
 
         // Set the password
@@ -160,9 +161,10 @@ class LinuxUserService
     /**
      * Update a Linux user's password.
      *
-     * @param string $username The username
-     * @param string $password The new password
+     * @param  string  $username  The username
+     * @param  string  $password  The new password
      * @return bool True if successful
+     *
      * @throws \RuntimeException If password update fails
      */
     public function updatePassword(string $username, string $password): bool
@@ -178,7 +180,7 @@ class LinuxUserService
         try {
             $process->mustRun();
         } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to update password for user '{$username}': " . $process->getErrorOutput());
+            throw new \RuntimeException("Failed to update password for user '{$username}': ".$process->getErrorOutput());
         }
 
         return true;
@@ -187,15 +189,16 @@ class LinuxUserService
     /**
      * Delete a Linux user.
      *
-     * @param string $username The username to delete
-     * @param bool $removeHome Whether to remove the home directory
+     * @param  string  $username  The username to delete
+     * @param  bool  $removeHome  Whether to remove the home directory
      * @return bool True if successful
+     *
      * @throws \RuntimeException If user deletion fails
      */
     public function deleteUser(string $username, bool $removeHome = true): bool
     {
         // Check if user exists
-        if (!$this->userExists($username)) {
+        if (! $this->userExists($username)) {
             return true;
         }
 
@@ -205,7 +208,7 @@ class LinuxUserService
         try {
             $process->mustRun();
         } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to delete user '{$username}': " . $process->getErrorOutput());
+            throw new \RuntimeException("Failed to delete user '{$username}': ".$process->getErrorOutput());
         }
 
         return true;
@@ -214,21 +217,26 @@ class LinuxUserService
     /**
      * Get the home directory of a Linux user.
      */
-    public function getHomeDirectory(string $username): ?string
+    public function getHomeDirectory(?string $username = null, bool $allowRoot = false): string
     {
+        // Get the username if not specified
+        if ($username === null) {
+            $whoamiProcess = Process::fromShellCommandLine('whoami');
+            $whoamiProcess->run();
+            $username = trim($whoamiProcess->getOutput());
+        }
+
         $process = new Process(['getent', 'passwd', $username]);
         $process->run();
-
-        if (!$process->isSuccessful()) {
-            return null;
-        }
 
         $parts = explode(':', $process->getOutput());
 
         if (count($parts) >= 6) {
             return $parts[5];
+        } elseif ($allowRoot) {
+            return '/root';
         }
 
-        return null;
+        throw new \RuntimeException("Failed to get home directory for user '{$username}'.");
     }
 }
