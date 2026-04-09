@@ -9,6 +9,7 @@ import { SettingsAppContent } from '../Apps/SettingsApp';
 import { FirewallAppContent } from '../Apps/FirewallApp';
 import { StorageAppContent } from '../Apps/StorageApp';
 import { DockerAppContent } from '../Apps/DockerApp';
+import { UpdatesAppContent } from '../Apps/UpdatesApp';
 import { useCallback, useState } from 'react';
 
 const APP_COMPONENTS = {
@@ -19,6 +20,7 @@ const APP_COMPONENTS = {
     monitor: () => <SampleAppContent title="Monitor" emoji="📊" />,
     storage: () => <StorageAppContent />,
     firewall: () => <FirewallAppContent />,
+    updates: () => <UpdatesAppContent />,
 };
 
 function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {

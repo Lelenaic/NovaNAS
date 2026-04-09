@@ -22,9 +22,10 @@ Schedule::call(function () {
 
     foreach ($configs as $config) {
         // Skip if never updated or if enough time has passed since last update
-        if (!$config->last_updated_at) {
+        if (! $config->last_updated_at) {
             // First time update - run synchronously
             dispatch_sync(new \App\Jobs\DynDnsUpdateJob($config->id));
+
             continue;
         }
 
@@ -48,9 +49,10 @@ Schedule::call(function () {
 
     foreach ($rules as $rule) {
         // Skip if never renewed or if enough time has passed since last renewal
-        if (!$rule->last_renewed_at) {
+        if (! $rule->last_renewed_at) {
             // First time publish - run synchronously
             dispatch_sync(new \App\Jobs\UpnpRenewJob($rule->id));
+
             continue;
         }
 
@@ -69,6 +71,22 @@ Schedule::call(function () {
  * Runs weekly SMART short tests on all non-system disks every Sunday at 2:00 AM.
  */
 Schedule::call(function () {
-    $smartService = new SmartService();
+    $smartService = new SmartService;
     $smartService->runTestsOnAllDisks('short');
 })->weekly()->at('02:00')->name('smart-weekly-test');
+
+/**
+ * System Updates
+ *
+ * Runs apt update every 2 hours to keep package lists current.
+ */
+Schedule::call(function () {
+    $updateService = new \App\Services\UpdateService;
+    $result = $updateService->checkForUpdates();
+
+    if ($result['success']) {
+        \Illuminate\Support\Facades\Log::info('Scheduled apt update completed successfully');
+    } else {
+        \Illuminate\Support\Facades\Log::error('Scheduled apt update failed: '.$result['message']);
+    }
+})->everyTwoHours()->name('system-apt-update');

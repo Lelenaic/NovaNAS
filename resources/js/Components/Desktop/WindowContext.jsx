@@ -36,8 +36,8 @@ export function WindowProvider({ children }) {
             icon,
             x: 100 + windows.length * 30,
             y: 50 + windows.length * 30,
-            width: 1000,
-            height: 600,
+            width: 1100,
+            height: 650,
             minimized: false,
             maximized: false,
             zIndex: maxZIndex + 1,
@@ -68,8 +68,8 @@ export function WindowProvider({ children }) {
                         maximized: false,
                         x: w.prevPosition?.x ?? 100,
                         y: w.prevPosition?.y ?? 50,
-                        width: w.prevPosition?.width ?? 800,
-                        height: w.prevPosition?.height ?? 600,
+                        width: w.prevPosition?.width ?? 1100,
+                        height: w.prevPosition?.height ?? 650,
                         zIndex: maxZIndex + 1,
                     };
                 }

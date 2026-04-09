@@ -15,6 +15,7 @@ use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UpnpController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WizardController;
@@ -222,6 +223,21 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/gpus/status', [GPUController::class, 'status']);
         Route::get('/api/gpus/providers', [GPUController::class, 'providers']);
         Route::get('/api/gpus/{provider}/{index}', [GPUController::class, 'show']);
+
+        // Badge routes
+        Route::get('/api/badges', [HomeController::class, 'badges']);
+
+        // Update routes
+        Route::get('/api/updates/status', [UpdateController::class, 'status']);
+        Route::post('/api/updates/check', [UpdateController::class, 'check']);
+        Route::get('/api/updates/check/{jobId}', [UpdateController::class, 'checkStatus']);
+        Route::post('/api/updates/upgrade', [UpdateController::class, 'upgrade']);
+        Route::get('/api/updates/upgrade/{jobId}', [UpdateController::class, 'upgradeStatus']);
+        Route::get('/api/updates/available', [UpdateController::class, 'availableUpdates']);
+        Route::post('/api/updates/clean-cache', [UpdateController::class, 'cleanCache']);
+        Route::get('/api/updates/reboot-status', [UpdateController::class, 'rebootStatus']);
+        Route::post('/api/updates/clear-badge', [UpdateController::class, 'clearBadge']);
+        Route::post('/api/updates/restart', [UpdateController::class, 'restart']);
     });
 
     // API routes - exclude Inertia middleware

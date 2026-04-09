@@ -1,5 +1,6 @@
-import { Box, Text, Title } from '@mantine/core';
+import { Box, Text, Title, Badge } from '@mantine/core';
 import { useWindow } from './WindowContext';
+import { useBadges } from './BadgeContext';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
@@ -10,6 +11,7 @@ import {
     IconActivity,
     IconDisc,
     IconShield,
+    IconRefresh,
 } from '@tabler/icons-react';
 
 // Map icon name strings to Tabler React components
@@ -21,10 +23,12 @@ const ICON_MAP = {
     IconActivity,
     IconDisc,
     IconShield,
+    IconRefresh,
 };
 
 export function DesktopIcons({ apps = [], onIconPositionChange }) {
     const { windows, openWindow, focusWindow } = useWindow();
+    const { getBadge } = useBadges();
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef(null);
 
@@ -195,11 +199,39 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                                         boxShadow: snapshot.isDragging
                                                             ? '0 8px 24px rgba(0, 0, 0, 0.4)'
                                                             : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                                                        position: 'relative',
                                                     }}
                                                 >
                                                 {(() => {
                                                     const IconComponent = ICON_MAP[app.iconName] || IconFolder;
                                                     return <IconComponent size={32} color="white" />;
+                                                })()}
+                                                {(() => {
+                                                    const badgeCount = getBadge(app.identifier || app.id);
+                                                    if (badgeCount > 0) {
+                                                        return (
+                                                            <Badge
+                                                                size="sm"
+                                                                variant="filled"
+                                                                color="red"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '-10px',
+                                                                    right: '-10px',
+                                                                    minWidth: '24px',
+                                                                    height: '24px',
+                                                                    padding: '0 6px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 600,
+                                                                    borderRadius: '12px',
+                                                                    border: '2px solid var(--mantine-color-dark-9)',
+                                                                }}
+                                                            >
+                                                                {badgeCount > 99 ? '99+' : badgeCount}
+                                                            </Badge>
+                                                        );
+                                                    }
+                                                    return null;
                                                 })()}
                                                 </Box>
                                                 <Text

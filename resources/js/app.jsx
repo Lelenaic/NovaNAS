@@ -14,6 +14,7 @@ import { createInertiaApp } from '@inertiajs/react'
 import { createRoot } from 'react-dom/client'
 
 import { MantineProvider } from '@mantine/core';
+import { BadgeProvider } from './Components/Desktop/BadgeContext';
 
 createInertiaApp({
     resolve: name => {
@@ -21,6 +22,12 @@ createInertiaApp({
         return pages[`./Pages/${name}.jsx`]
     },
     setup({ el, App, props }) {
-        createRoot(el).render(<MantineProvider defaultColorScheme="dark"><App {...props} /></MantineProvider>)
+        createRoot(el).render(
+            <MantineProvider defaultColorScheme="dark">
+                <BadgeProvider>
+                    <App {...props} />
+                </BadgeProvider>
+            </MantineProvider>
+        )
     },
 })
