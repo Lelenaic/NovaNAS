@@ -160,8 +160,8 @@ Route::group(['middleware' => 'auth'], function () {
 
         // Docker settings routes
         Route::get('/api/settings/docker', [DockerSettingsController::class, 'index']);
-        Route::post('/api/settings/docker/move-data-directory', [DockerSettingsController::class, 'moveDataDirectory']);
-        Route::get('/api/settings/docker/mount-points', [DockerSettingsController::class, 'mountPoints']);
+        Route::get('/api/settings/docker/auto-update', [DockerSettingsController::class, 'getAutoUpdate']);
+        Route::put('/api/settings/docker/auto-update', [DockerSettingsController::class, 'updateAutoUpdate']);
 
         // Docker API routes
         Route::get('/api/docker/ping', [DockerController::class, 'ping']);

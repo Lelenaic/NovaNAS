@@ -5,22 +5,20 @@ import {
     Text,
     Group,
     Button,
-    TextInput,
+    NumberInput,
     Stack,
     Alert,
     Loader,
     useMantineTheme,
     Badge,
     Select,
-    Modal,
-    Progress,
+    Switch,
 } from '@mantine/core';
 import {
     IconBrandDocker,
     IconCheck,
     IconAlertTriangle,
     IconFolder,
-    IconRefresh,
 } from '@tabler/icons-react';
 
 export function DockerTab() {
@@ -30,16 +28,16 @@ export function DockerTab() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [dockerStatus, setDockerStatus] = useState(null);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [moving, setMoving] = useState(false);
-
     const [settings, setSettings] = useState({
         dataDirectory: '',
-        newDataDirectory: '',
+        autoUpdateEnabled: false,
+        autoUpdateIntervalValue: 30,
+        autoUpdateIntervalUnit: 'minutes',
     });
 
     useEffect(() => {
         fetchDockerSettings();
+        fetchAutoUpdateSettings();
     }, []);
 
     const fetchDockerSettings = async () => {
@@ -54,10 +52,10 @@ export function DockerTab() {
                 defaultDataDir: data.default_data_dir,
             });
 
-            setSettings({
+            setSettings((prev) => ({
+                ...prev,
                 dataDirectory: data.data_directory,
-                newDataDirectory: data.data_directory,
-            });
+            }));
         } catch (err) {
             setError('Failed to load Docker settings');
             console.error(err);
@@ -66,52 +64,63 @@ export function DockerTab() {
         }
     };
 
-    const handleMoveDirectory = async () => {
-        if (settings.newDataDirectory === settings.dataDirectory) {
-            setError('New directory is the same as current directory');
+    const fetchAutoUpdateSettings = async () => {
+        try {
+            const response = await fetch('/api/settings/docker/auto-update');
+            const data = await response.json();
+
+            setSettings((prev) => ({
+                ...prev,
+                autoUpdateEnabled: data.auto_update_enabled,
+                autoUpdateIntervalValue: data.auto_update_interval_value ?? 30,
+                autoUpdateIntervalUnit: data.auto_update_interval_unit ?? 'minutes',
+            }));
+        } catch (err) {
+            console.error('Failed to load auto-update settings:', err);
+            // Don't show error for auto-update settings, just use defaults
+        }
+    };
+
+    const handleSaveAutoUpdate = async () => {
+        setError(null);
+        setSuccess(null);
+
+        // Client-side validation
+        if (!settings.autoUpdateIntervalValue || settings.autoUpdateIntervalValue < 1) {
+            setError('Update interval must be at least 1');
             return;
         }
 
-        setShowConfirmModal(true);
-    };
-
-    const confirmMoveDirectory = async () => {
-        setShowConfirmModal(false);
-        setError(null);
-        setSuccess(null);
-        setMoving(true);
-
         try {
-            const response = await fetch('/api/settings/docker/move-data-directory', {
-                method: 'POST',
+            setSaving(true);
+            const response = await fetch('/api/settings/docker/auto-update', {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    new_data_directory: settings.newDataDirectory,
+                    auto_update_enabled: settings.autoUpdateEnabled,
+                    auto_update_interval_value: settings.autoUpdateIntervalValue,
+                    auto_update_interval_unit: settings.autoUpdateIntervalUnit,
                 }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Failed to move data directory');
+                throw new Error(data.message || 'Failed to save auto-update settings');
             }
 
-            setSuccess(data.message);
-            setSettings({
-                ...settings,
-                dataDirectory: settings.newDataDirectory,
-            });
-
-            // Refresh to get updated status
-            await fetchDockerSettings();
+            setSuccess('Auto-update settings saved successfully!');
+            setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
             setError(err.message);
         } finally {
-            setMoving(false);
+            setSaving(false);
         }
     };
+
+
 
     if (loading) {
         return (
@@ -213,7 +222,7 @@ export function DockerTab() {
                     </Group>
                 </Box>
 
-                {/* Move Data Directory */}
+                {/* Auto-Update Settings */}
                 <Box
                     style={{
                         backgroundColor: theme.colors.dark[6],
@@ -223,106 +232,85 @@ export function DockerTab() {
                     }}
                 >
                     <Group gap="xs" mb="md">
-                        <IconFolder size={20} color={theme.colors.blue[5]} />
-                        <Title order={5} c="white">Move Data Directory</Title>
+                        <IconBrandDocker size={20} color={theme.colors.blue[5]} />
+                        <Title order={5} c="white">Auto-Update</Title>
                     </Group>
 
                     <Text size="sm" c="dimmed" mb="md">
-                        Change where Docker stores its data (images, containers, volumes, etc.).
-                        This will stop Docker, move the data, update the configuration, and restart Docker.
+                        Automatically update Docker containers using Watchtower. This will keep your containers up-to-date with the latest images. It updates only the containers that are tagged for auto-update.
                     </Text>
 
-                    <TextInput
-                        label="Current Data Directory"
-                        description="The current Docker data directory"
-                        value={settings.dataDirectory}
-                        disabled
-                        mb="md"
-                    />
-
-                    <TextInput
-                        label="New Data Directory"
-                        description="Enter the absolute path for the new data directory"
-                        placeholder="/mnt/storage/docker"
-                        value={settings.newDataDirectory}
-                        onChange={(e) => setSettings({ ...settings, newDataDirectory: e.target.value })}
-                        error={settings.newDataDirectory === settings.dataDirectory ? 'Same as current directory' : null}
-                        mb="md"
-                    />
-
-                    {dockerStatus?.available_mount_points?.length > 0 && (
-                        <Select
-                            label="Quick Select Mount Point"
-                            description="Select from available mount points"
-                            placeholder="Select a mount point"
-                            data={dockerStatus.available_mount_points.map((mp) => ({
-                                value: mp.path + '/docker',
-                                label: mp.name + ' (' + mp.path + ')',
-                            }))}
-                            onChange={(value) => {
-                                if (value) {
-                                    setSettings({ ...settings, newDataDirectory: value });
-                                }
-                            }}
-                            mb="md"
-                            clearable
+                    <Stack gap="md">
+                        <Switch
+                            label="Enable auto-update"
+                            description="When enabled, Watchtower will periodically check for and apply container updates"
+                            checked={settings.autoUpdateEnabled}
+                            onChange={(event) => setSettings({
+                                ...settings,
+                                autoUpdateEnabled: event.currentTarget.checked
+                            })}
                         />
-                    )}
 
-                    <Group justify="flex-end">
-                        <Button
-                            onClick={handleMoveDirectory}
-                            loading={moving}
-                            disabled={!settings.newDataDirectory || settings.newDataDirectory === settings.dataDirectory}
-                            leftSection={<IconRefresh size={16} />}
-                            color="orange"
-                        >
-                            Move Data Directory
-                        </Button>
-                    </Group>
+                        {settings.autoUpdateEnabled && (
+                            <Group grow>
+                                <NumberInput
+                                    label="Update interval"
+                                    placeholder="30"
+                                    value={settings.autoUpdateIntervalValue}
+                                    onChange={(value) => setSettings({
+                                        ...settings,
+                                        autoUpdateIntervalValue: value
+                                    })}
+                                    min={1}
+                                    max={settings.autoUpdateIntervalUnit === 'hours' ? 24 : settings.autoUpdateIntervalUnit === 'minutes' ? 1440 : 86400}
+                                    required
+                                />
+                                <Select
+                                    label="Unit"
+                                    data={[
+                                        { value: 'seconds', label: 'Seconds' },
+                                        { value: 'minutes', label: 'Minutes' },
+                                        { value: 'hours', label: 'Hours' },
+                                    ]}
+                                    value={settings.autoUpdateIntervalUnit}
+                                    onChange={(value) => setSettings({
+                                        ...settings,
+                                        autoUpdateIntervalUnit: value
+                                    })}
+                                    required
+                                />
+                            </Group>
+                        )}
+
+                        {settings.autoUpdateEnabled && (
+                            <Text size="xs" c="dimmed">
+                                Watchtower will check every {settings.autoUpdateIntervalValue} {settings.autoUpdateIntervalUnit}
+                            </Text>
+                        )}
+
+                        <Group justify="flex-end">
+                            <Button
+                                onClick={handleSaveAutoUpdate}
+                                loading={saving}
+                                leftSection={<IconCheck size={16} />}
+                            >
+                                Save Auto-Update Settings
+                            </Button>
+                        </Group>
+                    </Stack>
                 </Box>
-            </Stack>
 
-            {/* Confirmation Modal */}
-            <Modal
-                opened={showConfirmModal}
-                onClose={() => setShowConfirmModal(false)}
-                title="Confirm Data Directory Move"
-                centered
-            >
-                <Stack gap="md">
-                    <Alert
-                        color="yellow"
-                        variant="light"
-                        icon={<IconAlertTriangle size={16} />}
-                    >
-                        This operation will:
-                    </Alert>
-                    <Text size="sm" c="dimmed">
-                        1. Stop the Docker service
+                {/* Note about data directory */}
+                <Alert
+                    color="blue"
+                    variant="light"
+                    icon={<IconFolder size={16} />}
+                >
+                    <Text size="sm">
+                        To change the Docker data directory, use the Storage app in the Apps tab.
                     </Text>
-                    <Text size="sm" c="dimmed">
-                        2. Move data from <code>{settings.dataDirectory}</code> to <code>{settings.newDataDirectory}</code>
-                    </Text>
-                    <Text size="sm" c="dimmed">
-                        3. Update Docker daemon.json configuration
-                    </Text>
-                    <Text size="sm" c="dimmed">
-                        4. Restart Docker service
-                    </Text>
-                    <Text size="sm" c="dimmed" fw={500}>
-                        This may take several minutes depending on the size of your Docker data.
-                    </Text>
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="default" onClick={() => setShowConfirmModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button color="orange" onClick={confirmMoveDirectory}>
-                            Move Directory
-                        </Button>
-                    </Group>
-                </Stack>
-            </Modal>
+                </Alert>
+            </Stack>
         </Box>
     );
 }

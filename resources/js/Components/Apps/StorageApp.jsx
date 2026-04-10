@@ -18,7 +18,7 @@ const tabs = [
     { id: 'health', label: 'Health', icon: IconHeart },
     { id: 'pools', label: 'Pools', icon: IconStack2 },
     { id: 'shares', label: 'Shares', icon: IconFolderShare },
-    { id: 'app', label: 'App', icon: IconApps },
+    { id: 'app', label: 'Apps', icon: IconApps },
 ];
 
 export function StorageAppContent() {

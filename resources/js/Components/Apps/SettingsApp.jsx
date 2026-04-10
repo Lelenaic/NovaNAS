@@ -11,6 +11,7 @@ import {
     IconMail,
     IconServer,
     IconCpu,
+    IconBrandDocker,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -20,12 +21,14 @@ import { UsersTab } from './Settings/UsersTab';
 import { EmailTab } from './Settings/EmailTab';
 import { ServicesTab } from './Settings/ServicesTab';
 import { GPUTab } from './Settings/GPUTab';
+import { DockerTab } from './Settings/DockerTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
     { id: 'network', label: 'Network', icon: IconNetwork },
     { id: 'upnp', label: 'UPNP', icon: IconWifi },
     { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
+    { id: 'docker', label: 'Docker', icon: IconBrandDocker },
     { id: 'services', label: 'Services', icon: IconServer },
     { id: 'gpus', label: 'GPUs', icon: IconCpu },
     { id: 'account', label: 'Users', icon: IconUsers },
@@ -48,6 +51,8 @@ export function SettingsAppContent() {
                 return <UpnpTab />;
             case 'dyndns':
                 return <DynDnsTab />;
+            case 'docker':
+                return <DockerTab />;
             case 'services':
                 return <ServicesTab />;
             case 'gpus':
