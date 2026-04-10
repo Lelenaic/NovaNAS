@@ -6,6 +6,7 @@ import { DesktopIcons } from './DesktopIcons';
 import { DraggableWindow } from './DraggableWindow';
 import { SampleAppContent } from '../Apps/SampleApp';
 import { SettingsAppContent } from '../Apps/SettingsApp';
+import { TerminalAppContent } from '../Apps/TerminalApp';
 import { FirewallAppContent } from '../Apps/FirewallApp';
 import { StorageAppContent } from '../Apps/StorageApp';
 import { DockerAppContent } from '../Apps/DockerApp';
@@ -15,7 +16,7 @@ import { useCallback, useState } from 'react';
 const APP_COMPONENTS = {
     filemanager: () => <SampleAppContent title="File Manager" emoji="📁" />,
     settings: () => <SettingsAppContent />,
-    terminal: () => <SampleAppContent title="Terminal" emoji="💻" />,
+    terminal: () => <TerminalAppContent />,
     docker: () => <DockerAppContent />,
     monitor: () => <SampleAppContent title="Monitor" emoji="📊" />,
     storage: () => <StorageAppContent />,

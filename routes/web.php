@@ -15,6 +15,7 @@ use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UpnpController;
 use App\Http\Controllers\UserController;
@@ -226,6 +227,9 @@ Route::group(['middleware' => 'auth'], function () {
 
         // Badge routes
         Route::get('/api/badges', [HomeController::class, 'badges']);
+
+        // Terminal routes
+        Route::post('/api/terminal/session', [TerminalController::class, 'createSession']);
 
         // Update routes
         Route::get('/api/updates/status', [UpdateController::class, 'status']);
