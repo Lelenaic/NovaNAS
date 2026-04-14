@@ -159,7 +159,43 @@ class SystemController extends Controller
                         'used' => $used,
                         'total' => $total,
                         'percentage' => round(($used / $total) * 100, 1),
+                        'temperature' => $this->getCpuTemperature(),
                     ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get CPU temperature.
+     */
+    protected function getCpuTemperature(): ?float
+    {
+        // Try to get CPU temperature from hwmon sensors
+        $hwmonDirs = glob('/sys/class/hwmon/*', GLOB_ONLYDIR);
+        foreach ($hwmonDirs as $hwmonDir) {
+            $tempFiles = glob($hwmonDir.'/temp*_input');
+            foreach ($tempFiles as $tempFile) {
+                if (File::exists($tempFile)) {
+                    // Check if this is a CPU temperature sensor
+                    $labelFile = str_replace('_input', '_label', $tempFile);
+                    if (File::exists($labelFile)) {
+                        $label = trim(File::get($labelFile));
+                        // Look for CPU-related labels
+                        if (preg_match('/^(Tctl|CPU|Core|Package)/i', $label)) {
+                            $tempValue = (int) trim(File::get($tempFile));
+
+                            // Convert from millidegrees Celsius to degrees Celsius
+                            return round($tempValue / 1000, 1);
+                        }
+                    } else {
+                        // If no label, assume first temp sensor is CPU temp
+                        $tempValue = (int) trim(File::get($tempFile));
+
+                        return round($tempValue / 1000, 1);
+                    }
                 }
             }
         }

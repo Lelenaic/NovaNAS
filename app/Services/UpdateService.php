@@ -121,12 +121,12 @@ class UpdateService
         \Illuminate\Support\Facades\Cache::forget($cacheKey);
 
         // Check if upgrade was successful
-        // Look for success indicators rather than just absence of errors
-        $hasErrors = preg_match('/(E:\s|Errno|apt.*failed|dpkg.*error|Errors were encountered|error.*exit|failed.*exit)/i', $output);
-        $hasSuccessIndicators = preg_match('/(Setting up|Processing triggers|upgrade completed|packages upgraded)/i', $output);
+        // Look for error indicators - if no errors found, consider successful
+        $hasErrors = preg_match('/(E:\s|Errno|apt.*failed|dpkg.*error|Errors were encountered|error.*exit|failed.*exit|unable to|cannot.*upgrade|some packages could not be installed)/i', $output);
 
-        // Consider successful if no clear errors and has success indicators
-        $success = ! $hasErrors && $hasSuccessIndicators;
+        // Consider successful if no clear errors found
+        // APT upgrade typically succeeds when it completes without error messages
+        $success = ! $hasErrors;
 
         $completionMessage = $success
             ? 'System upgrade completed successfully at '.now()->format('Y-m-d H:i:s')."\n"

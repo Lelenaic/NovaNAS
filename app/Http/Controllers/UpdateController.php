@@ -22,6 +22,9 @@ class UpdateController extends Controller
         $lastUpdate = $this->updateService->getLastUpdateTime();
         $updateStatus = $this->updateService->getUpdateStatus();
 
+        // Update badge count based on current status
+        $this->updateService->updateBadgeCount('updates', $updateStatus['count'] ?? 0);
+
         return response()->json([
             'last_update' => $lastUpdate,
             'updates_available' => $updateStatus['available'],

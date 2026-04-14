@@ -22,22 +22,14 @@ class TerminalController extends Controller
     {
         $user = $request->user();
 
-        Log::info('Creating terminal session for user', ['user_id' => $user->id]);
-
         if (! $user->username) {
             Log::warning('No Linux user bound', ['user_id' => $user->id]);
 
             return response()->json(['error' => 'No Linux user bound to your account'], 400);
         }
 
-        // Get user home directory
-        $home = $this->linuxUserService->getHomeDirectory($user->username);
-        Log::info('Got home', ['home' => $home]);
-
         // Use fixed port for testing
-        $port = 10000;
-
-        Log::info('Using port', ['port' => $port]);
+        $port = $this->findFreePort();
 
         // Generate session ID
         $sessionId = Str::uuid()->toString();
@@ -47,8 +39,6 @@ class TerminalController extends Controller
         $command = [
             'sudo', 'su', '-', $user->username, '-c', "tmux new-session -d -s {$tmuxSession} /usr/local/bin/ttyd -p {$port} -i 127.0.0.1 -W -o -H X-Terminal-User /bin/bash"
         ];
-
-        Log::info('Starting ttyd', ['command' => implode(' ', $command)]);
 
         $process = new Process($command);
         $process->setTimeout(10); // 10 seconds timeout
@@ -60,12 +50,7 @@ class TerminalController extends Controller
             return response()->json(['error' => 'Failed to start terminal: '.$process->getErrorOutput()], 500);
         }
 
-        Log::info('ttyd started successfully');
-
-        // Write Apache config for this session
-        Log::info('Writing Apache config');
         $this->writeApacheConfig($sessionId, $port);
-        Log::info('Apache config written and reloaded');
 
         // Store session info (in cache, expires in 24 hours)
         Cache::put("terminal_session_{$sessionId}", [

@@ -152,6 +152,12 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
         return 'teal';
     };
 
+    const getTemperatureColor = (temp) => {
+        if (temp > 80) return 'red';
+        if (temp > 60) return 'orange';
+        return 'green';
+    };
+
     return (
         <Box
             style={{
@@ -177,12 +183,22 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
                 ) : systemInfo ? (
                     <>
                         {systemInfo.cpu_usage && (
-                            <GaugeWidget
-                                icon={IconCpu}
-                                label="CPU"
-                                value={systemInfo.cpu_usage.percentage}
-                                color={getCpuColor(systemInfo.cpu_usage.percentage)}
-                            />
+                            <>
+                                <GaugeWidget
+                                    icon={IconCpu}
+                                    label="CPU"
+                                    value={systemInfo.cpu_usage.percentage}
+                                    color={getCpuColor(systemInfo.cpu_usage.percentage)}
+                                />
+                                {systemInfo.cpu_usage.temperature !== null && (
+                                    <Group justify="space-between" mt={4}>
+                                        <Text size="xs" c="dimmed">Temperature</Text>
+                                        <Text size="xs" c={getTemperatureColor(systemInfo.cpu_usage.temperature)} fw={500}>
+                                            {systemInfo.cpu_usage.temperature}°C
+                                        </Text>
+                                    </Group>
+                                )}
+                            </>
                         )}
                         {systemInfo.memory_usage && (
                             <GaugeWidget
