@@ -1,0 +1,53 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.5'
+
+    - run: composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - run: npm install
+
+    - run: npm run build
+
+    - name: Extract version
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG#v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        if [[ $VERSION == 0.* ]]; then
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+        else
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Create tar.gz
+      run: tar -czf release.tgz --exclude=node_modules .
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: ${{ env.VERSION }}
+        prerelease: ${{ env.PRERELEASE == 'true' }}
+        files: release.tgz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
