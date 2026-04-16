@@ -52,11 +52,9 @@ jobs:
       run: tar -czf /tmp/release.tgz --exclude=node_modules .
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ github.ref_name }}
         name: ${{ env.VERSION }}
         prerelease: ${{ env.PRERELEASE == 'true' }}
         files: /tmp/release.tgz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
