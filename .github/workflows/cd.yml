@@ -58,5 +58,4 @@ jobs:
         name: ${{ env.VERSION }}
         prerelease: ${{ env.PRERELEASE == 'true' }}
         files: /tmp/release.tgz
-      env:
-        GITHUB_TOKEN: ${{ secrets.CUSTOM_CI_TOKEN }}
+        token: ${{ secrets.CUSTOM_CI_TOKEN }}
