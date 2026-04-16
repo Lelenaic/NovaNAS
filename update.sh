@@ -7,15 +7,24 @@ REPO="NovaNasOrg/NovaNAS"
 API_URL="https://api.github.com/repos/$REPO/releases/latest"
 DOWNLOAD_URL="https://github.com/$REPO/releases/download"
 
-# Get current version
-CURRENT_VERSION=$(php artisan tinker --execute "echo config('app.version');" | tail -n1 | tr -d '\n')
-
-if [ -z "$CURRENT_VERSION" ]; then
-    echo "Error: Could not retrieve current version"
-    exit 1
+# Check for force flag
+FORCE=false
+if [ "$1" = "--force" ]; then
+    FORCE=true
+    echo "Force update enabled, skipping version checks"
 fi
 
-echo "Current version: $CURRENT_VERSION"
+# Get current version
+if [ "$FORCE" = false ]; then
+    CURRENT_VERSION=$(php artisan tinker --execute "echo config('app.version');" | tail -n1 | tr -d '\n')
+
+    if [ -z "$CURRENT_VERSION" ]; then
+        echo "Error: Could not retrieve current version"
+        exit 1
+    fi
+
+    echo "Current version: $CURRENT_VERSION"
+fi
 
 # Fetch latest release info
 RELEASE_JSON=$(curl -s "$API_URL")
@@ -50,50 +59,55 @@ semver_compare() {
     return 0  # equal
 }
 
-semver_compare "$CURRENT_VERSION" "$LATEST_VERSION"
-COMPARE_RESULT=$?
+if [ "$FORCE" = false ]; then
+    semver_compare "$CURRENT_VERSION" "$LATEST_VERSION"
+    COMPARE_RESULT=$?
 
-if [ $COMPARE_RESULT -eq 0 ]; then
-    echo "Already up to date."
-    exit 0
-elif [ $COMPARE_RESULT -eq 2 ]; then
-    echo "Newer version available: $LATEST_VERSION"
-    # Download the asset
-    ASSET_NAME="release.tgz"
-    ASSET_URL="$DOWNLOAD_URL/$LATEST_TAG/$ASSET_NAME"
-    TEMP_DIR="/tmp/novanas_update"
-    mkdir -p "$TEMP_DIR"
-    curl -L -o "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to download update"
-        rm -rf "$TEMP_DIR"
-        exit 1
+    if [ $COMPARE_RESULT -eq 0 ]; then
+        echo "Already up to date."
+        exit 0
+    elif [ $COMPARE_RESULT -eq 2 ]; then
+        echo "Newer version available: $LATEST_VERSION"
+    else
+        echo "Current version is newer than latest release."
+        exit 0
     fi
-    # Extract
-    tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR"
-    # Assuming the archive extracts to a directory like NovaNAS-1.0.0
-    EXTRACTED_DIR=$(find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
-    if [ -z "$EXTRACTED_DIR" ]; then
-        echo "Error: Could not find extracted directory"
-        rm -rf "$TEMP_DIR"
-        exit 1
-    fi
-    # Update app: copy files, preserving ignored files
-    echo "Backing up current app..."
-    cp -r . "$TEMP_DIR/backup"
-    # Update files, excluding those in .gitignore and database/database.sqlite
-    rsync -av --delete --exclude-from=.gitignore "$EXTRACTED_DIR/" .
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to update files"
-        # Restore backup
-        rsync -av "$TEMP_DIR/backup/" .
-        rm -rf "$TEMP_DIR"
-        exit 1
-    fi
-    # Clean up
-    rm -rf "$TEMP_DIR"
-    echo "Update successful to version $LATEST_VERSION"
-    # Perhaps run migrations or clear cache, but user said without composer, so maybe not
 else
-    echo "Current version is newer than latest release?"
+    echo "Forcing update to latest version: $LATEST_VERSION"
 fi
+
+# Download the asset
+ASSET_NAME="release.tgz"
+ASSET_URL="$DOWNLOAD_URL/$LATEST_TAG/$ASSET_NAME"
+TEMP_DIR="/tmp/novanas_update"
+mkdir -p "$TEMP_DIR"
+curl -L -o "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to download update"
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+# Extract
+mkdir -p "$TEMP_DIR/update"
+tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR/update"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to extract update"
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+# Update app: copy files, preserving ignored files
+echo "Backing up current app..."
+cp -r . "$TEMP_DIR/backup"
+# Update files, excluding those in .gitignore and database/database.sqlite
+rsync -a --delete --exclude-from=.gitignore "$TEMP_DIR/update/" .
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to update files"
+    # Restore backup
+    rsync -a "$TEMP_DIR/backup/" .
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+php artisan migrate --force
+# Clean up
+rm -rf "$TEMP_DIR"
+echo "Update successful to version $LATEST_VERSION"
