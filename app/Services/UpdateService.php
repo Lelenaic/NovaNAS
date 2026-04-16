@@ -20,39 +20,67 @@ class UpdateService
     protected const LAST_UPDATE_KEY = 'system.last_apt_update';
 
     /**
-     * Start a full system upgrade in the background and return a job ID for tracking.
+     * Perform a full system upgrade synchronously (for use in queued jobs).
      * Uses non-interactive flags to avoid prompts.
+     *
+     * @return array{success: bool, message: string, output?: string, error?: string}
+     */
+    public function performUpgrade(): array
+    {
+        try {
+            $process = new Process([
+                'sudo', 'DEBIAN_FRONTEND=noninteractive', 'apt', 'full-upgrade', '--assume-yes',
+                '-o', 'Dpkg::Options::="--force-confdef"',
+                '-o', 'Dpkg::Options::="--force-confold"',
+            ]);
+
+            $process->setTimeout(1800); // 30 minutes timeout
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                // Update the last update timestamp
+                Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
+
+                return [
+                    'success' => true,
+                    'message' => 'System upgrade completed successfully',
+                    'output' => $process->getOutput(),
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'message' => 'System upgrade failed',
+                    'error' => $process->getErrorOutput(),
+                    'output' => $process->getOutput(),
+                ];
+            }
+        } catch (ProcessFailedException $e) {
+            return [
+                'success' => false,
+                'message' => 'System upgrade failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Start a full system upgrade using Laravel jobs and return a job ID for tracking.
      *
      * @return array{success: bool, message: string, job_id?: string, error?: string}
      */
     public function startUpgrade(): array
     {
         $jobId = 'upgrade_'.time().'_'.uniqid();
-        $outputFile = storage_path('logs/upgrade_'.$jobId.'.log');
-        $pidFile = storage_path('logs/upgrade_'.$jobId.'.pid');
 
         try {
-            // Create the output directory if it doesn't exist
-            $logDir = dirname($outputFile);
-            if (! is_dir($logDir)) {
-                mkdir($logDir, 0755, true);
-            }
-
-            // Write initial status
-            file_put_contents($outputFile, 'Starting system upgrade at '.now()->format('Y-m-d H:i:s')."\n");
-
-            // Start the upgrade process in background using nohup
-            $command = 'sudo DEBIAN_FRONTEND=noninteractive apt full-upgrade --assume-yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
-
-            // Execute in background and redirect output
-            $fullCommand = "nohup {$command} >> ".escapeshellarg($outputFile).' 2>&1 & echo $! > '.escapeshellarg($pidFile);
-            exec($fullCommand);
+            $job = new \App\Jobs\SystemUpdateJob('upgrade', $jobId);
+            \Illuminate\Support\Facades\Bus::dispatch($job);
 
             // Store job info in cache for tracking
             \Illuminate\Support\Facades\Cache::put("upgrade_job_{$jobId}", [
-                'output_file' => $outputFile,
-                'pid_file' => $pidFile,
+                'job_id' => $jobId,
                 'started_at' => now(),
+                'operation' => 'upgrade',
             ], 3600); // 1 hour cache
 
             return [
@@ -61,10 +89,6 @@ class UpdateService
                 'job_id' => $jobId,
             ];
         } catch (\Exception $e) {
-            if (file_exists($outputFile)) {
-                file_put_contents($outputFile, 'Error: '.$e->getMessage()."\n", FILE_APPEND);
-            }
-
             return [
                 'success' => false,
                 'message' => 'Failed to start system upgrade',
@@ -80,8 +104,10 @@ class UpdateService
      */
     public function getUpgradeStatus(string $jobId): array
     {
-        $cacheKey = "upgrade_job_{$jobId}";
-        $jobData = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        $jobCacheKey = "upgrade_job_{$jobId}";
+        $resultCacheKey = "job_result_{$jobId}";
+
+        $jobData = \Illuminate\Support\Facades\Cache::get($jobCacheKey);
 
         if (! $jobData) {
             return [
@@ -91,63 +117,36 @@ class UpdateService
             ];
         }
 
-        $outputFile = $jobData['output_file'];
-        $pidFile = $jobData['pid_file'];
-        $output = '';
+        // Check if job result is available
+        $result = \Illuminate\Support\Facades\Cache::get($resultCacheKey);
 
-        if (file_exists($outputFile)) {
-            $output = file_get_contents($outputFile);
-        }
+        if ($result) {
+            // Job completed - clean up and return result
+            \Illuminate\Support\Facades\Cache::forget($jobCacheKey);
+            \Illuminate\Support\Facades\Cache::forget($resultCacheKey);
 
-        // Check if process is still running by checking PID
-        $running = false;
-        if (file_exists($pidFile)) {
-            $pid = trim(file_get_contents($pidFile));
-            if (is_numeric($pid)) {
-                // Check if process exists
-                $running = posix_kill($pid, 0);
+            $output = $result['success']
+                ? 'System upgrade completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
+                : 'System upgrade failed at '.now()->format('Y-m-d H:i:s')."\n";
+
+            if ($result['output']) {
+                $output .= "\n".$result['output'];
             }
-        }
 
-        if ($running) {
             return [
-                'running' => true,
+                'running' => false,
                 'output' => $output,
-                'completed' => false,
+                'completed' => true,
+                'success' => $result['success'],
+                'error' => $result['error'],
             ];
         }
 
-        // Process completed - clean up and check result
-        \Illuminate\Support\Facades\Cache::forget($cacheKey);
-
-        // Check if upgrade was successful
-        // Look for error indicators - if no errors found, consider successful
-        $hasErrors = preg_match('/(E:\s|Errno|apt.*failed|dpkg.*error|Errors were encountered|error.*exit|failed.*exit|unable to|cannot.*upgrade|some packages could not be installed)/i', $output);
-
-        // Consider successful if no clear errors found
-        // APT upgrade typically succeeds when it completes without error messages
-        $success = ! $hasErrors;
-
-        $completionMessage = $success
-            ? 'System upgrade completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
-            : 'System upgrade failed at '.now()->format('Y-m-d H:i:s')."\n";
-
-        file_put_contents($outputFile, $completionMessage, FILE_APPEND);
-
-        if ($success) {
-            // Update the last update timestamp
-            Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
-        }
-
-        // Clean up files
-        @unlink($pidFile);
-
+        // Job still running
         return [
-            'running' => false,
-            'output' => file_get_contents($outputFile),
-            'completed' => true,
-            'success' => $success,
-            'error' => $success ? null : 'Upgrade process failed - check output for details',
+            'running' => true,
+            'output' => 'System upgrade in progress...',
+            'completed' => false,
         ];
     }
 
@@ -226,38 +225,23 @@ class UpdateService
     }
 
     /**
-     * Start checking for updates in the background with real-time logging.
+     * Start checking for updates using Laravel jobs.
      *
      * @return array{success: bool, message: string, job_id?: string, error?: string}
      */
     public function startCheckForUpdates(): array
     {
         $jobId = 'check_'.time().'_'.uniqid();
-        $outputFile = storage_path('logs/check_'.$jobId.'.log');
-        $pidFile = storage_path('logs/check_'.$jobId.'.pid');
 
         try {
-            // Create the output directory if it doesn't exist
-            $logDir = dirname($outputFile);
-            if (! is_dir($logDir)) {
-                mkdir($logDir, 0755, true);
-            }
-
-            // Write initial status
-            file_put_contents($outputFile, 'Checking for available updates at '.now()->format('Y-m-d H:i:s')."\n");
-
-            // Start the check process in background using nohup
-            $command = 'sudo apt update';
-
-            // Execute in background and redirect output
-            $fullCommand = "nohup {$command} >> ".escapeshellarg($outputFile).' 2>&1 & echo $! > '.escapeshellarg($pidFile);
-            exec($fullCommand);
+            $job = new \App\Jobs\SystemUpdateJob('check', $jobId);
+            \Illuminate\Support\Facades\Bus::dispatch($job);
 
             // Store job info in cache for tracking
             \Illuminate\Support\Facades\Cache::put("check_job_{$jobId}", [
-                'output_file' => $outputFile,
-                'pid_file' => $pidFile,
+                'job_id' => $jobId,
                 'started_at' => now(),
+                'operation' => 'check',
             ], 3600); // 1 hour cache
 
             return [
@@ -266,10 +250,6 @@ class UpdateService
                 'job_id' => $jobId,
             ];
         } catch (\Exception $e) {
-            if (file_exists($outputFile)) {
-                file_put_contents($outputFile, 'Error: '.$e->getMessage()."\n", FILE_APPEND);
-            }
-
             return [
                 'success' => false,
                 'message' => 'Failed to start update check',
@@ -285,8 +265,10 @@ class UpdateService
      */
     public function getCheckStatus(string $jobId): array
     {
-        $cacheKey = "check_job_{$jobId}";
-        $jobData = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        $jobCacheKey = "check_job_{$jobId}";
+        $resultCacheKey = "job_result_{$jobId}";
+
+        $jobData = \Illuminate\Support\Facades\Cache::get($jobCacheKey);
 
         if (! $jobData) {
             return [
@@ -296,62 +278,45 @@ class UpdateService
             ];
         }
 
-        $outputFile = $jobData['output_file'];
-        $pidFile = $jobData['pid_file'];
-        $output = '';
+        // Check if job result is available
+        $result = \Illuminate\Support\Facades\Cache::get($resultCacheKey);
 
-        if (file_exists($outputFile)) {
-            $output = file_get_contents($outputFile);
-        }
+        if ($result) {
+            // Job completed - clean up and return result
+            \Illuminate\Support\Facades\Cache::forget($jobCacheKey);
+            \Illuminate\Support\Facades\Cache::forget($resultCacheKey);
 
-        // Check if process is still running by checking PID
-        $running = false;
-        if (file_exists($pidFile)) {
-            $pid = trim(file_get_contents($pidFile));
-            if (is_numeric($pid)) {
-                // Check if process exists
-                $running = posix_kill($pid, 0);
+            $output = $result['success']
+                ? 'Update check completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
+                : 'Update check failed at '.now()->format('Y-m-d H:i:s')."\n";
+
+            if ($result['output']) {
+                $output .= "\n".$result['output'];
             }
-        }
 
-        if ($running) {
+            if ($result['success']) {
+                // Update the last update timestamp
+                Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
+
+                // Update badge count for updates app
+                $status = $this->getUpdateStatus();
+                $this->updateBadgeCount('updates', $status['count'] ?? 0);
+            }
+
             return [
-                'running' => true,
+                'running' => false,
                 'output' => $output,
-                'completed' => false,
+                'completed' => true,
+                'success' => $result['success'],
+                'error' => $result['error'],
             ];
         }
 
-        // Process completed - clean up and check result
-        \Illuminate\Support\Facades\Cache::forget($cacheKey);
-
-        // Check if check was successful by looking for error indicators
-        $success = ! preg_match('/(E:\s|Errno|apt.*failed|dpkg.*error|Errors were encountered)/i', $output);
-
-        $completionMessage = $success
-            ? 'Update check completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
-            : 'Update check failed at '.now()->format('Y-m-d H:i:s')."\n";
-
-        file_put_contents($outputFile, $completionMessage, FILE_APPEND);
-
-        if ($success) {
-            // Update the last update timestamp
-            Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
-
-            // Update badge count for updates app
-            $status = $this->getUpdateStatus();
-            $this->updateBadgeCount('updates', $status['count'] ?? 0);
-        }
-
-        // Clean up files
-        @unlink($pidFile);
-
+        // Job still running
         return [
-            'running' => false,
-            'output' => file_get_contents($outputFile),
-            'completed' => true,
-            'success' => $success,
-            'error' => $success ? null : 'Update check failed - check output for details',
+            'running' => true,
+            'output' => 'Checking for updates...',
+            'completed' => false,
         ];
     }
 
