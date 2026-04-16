@@ -11,8 +11,10 @@ echo "Starting NovaNAS installation..."
 # Step 1: Install system dependencies
 echo "Installing system dependencies..."
 
-# Add backports repository
-echo "deb http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware" | tee /etc/apt/sources.list.d/backports.list
+# Add backports repository if not exists
+if [ ! -f /etc/apt/sources.list.d/backports.list ]; then
+    echo "deb http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware" | tee /etc/apt/sources.list.d/backports.list
+fi
 
 # Update package lists
 apt update
@@ -41,15 +43,21 @@ apt install -y \
 # Enable ZFS services
 systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target
 
-# Install Docker
-echo "Installing Docker..."
-curl https://get.docker.com | bash
+# Install Docker if not installed
+if ! command -v docker &> /dev/null; then
+    echo "Installing Docker..."
+    curl https://get.docker.com | bash
+else
+    echo "Docker already installed."
+fi
 
-# Add PHP repository and install PHP 8.5
-echo "Installing PHP 8.5..."
-tee /etc/apt/sources.list.d/php.list > /dev/null <<EOF
+# Add PHP repository if not exists
+if [ ! -f /etc/apt/sources.list.d/php.list ]; then
+    echo "Installing PHP 8.5..."
+    tee /etc/apt/sources.list.d/php.list > /dev/null <<EOF
 deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main
 EOF
+fi
 
 # Update and install PHP
 apt update
@@ -69,87 +77,101 @@ apt install -y \
 
 # Configure Apache
 a2enmod rewrite proxy headers proxy_http proxy_wstunnel
+
+# Set Apache user and group to novanas
+sed -i 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=novanas/' /etc/apache2/envvars
+sed -i 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=novanas/' /etc/apache2/envvars
+
 systemctl restart apache2
 
 echo "System dependencies installed successfully."
 
 # Step 2: Create novanas user
-echo "Creating novanas user..."
-useradd -m -d /var/novanas -s /bin/bash novanas
-echo "novanas  ALL=NOPASSWD:ALL" >> /etc/sudoers
-echo "User created: novanas with home /var/novanas and sudo privileges"
+if ! id novanas &>/dev/null; then
+    echo "Creating novanas user..."
+    useradd -m -d /var/novanas -s /bin/bash novanas
+    echo "novanas  ALL=NOPASSWD:ALL" >> /etc/sudoers
+    echo "User created: novanas with home /var/novanas and sudo privileges"
+else
+    echo "User novanas already exists."
+fi
 
 # Step 3: Install NovaNAS application
-echo "Installing NovaNAS application..."
+if [ ! -f /var/novanas/.env ]; then
+    echo "Installing NovaNAS application..."
 
-# Define variables (similar to update.sh)
-REPO="NovaNasOrg/NovaNAS"
-API_URL="https://api.github.com/repos/$REPO/releases/latest"
-DOWNLOAD_URL="https://github.com/$REPO/releases/download"
-ASSET_NAME="release.tgz"
+    # Define variables
+    REPO="NovaNasOrg/NovaNAS"
+    API_URL="https://api.github.com/repos/$REPO/releases/latest"
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download"
+    ASSET_NAME="release.tgz"
 
-# Fetch latest release info
-echo "Fetching latest release information..."
-RELEASE_JSON=$(curl -s "$API_URL")
+    # Fetch latest release info
+    echo "Fetching latest release information..."
+    RELEASE_JSON=$(curl -s "$API_URL")
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to fetch release info"
-    exit 1
-fi
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to fetch release info"
+        exit 1
+    fi
 
-LATEST_TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
-echo "Latest version: $LATEST_TAG"
+    LATEST_TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
+    echo "Latest version: $LATEST_TAG"
 
-# Download and extract
-TEMP_DIR="/tmp/novanas_install"
-mkdir -p "$TEMP_DIR"
+    # Download and extract
+    TEMP_DIR="/tmp/novanas_install"
+    mkdir -p "$TEMP_DIR"
 
-ASSET_URL="$DOWNLOAD_URL/$LATEST_TAG/$ASSET_NAME"
-echo "Downloading $ASSET_URL..."
-curl -L -o "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"
+    ASSET_URL="$DOWNLOAD_URL/$LATEST_TAG/$ASSET_NAME"
+    echo "Downloading $ASSET_URL..."
+    curl -L -o "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to download release"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to download release"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    fi
+
+    echo "Extracting..."
+    mkdir -p "$TEMP_DIR/extract"
+    tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR/extract"
+
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to extract release"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    fi
+
+    # Install to user home
+    echo "Installing to /var/novanas..."
+    cp -r "$TEMP_DIR/extract"/* /var/novanas/
+
+    # Set ownership
+    chown -R novanas:novanas /var/novanas
+
+    # Copy environment file
+    cd /var/novanas
+    cp .env.prod .env
+
+    echo "Running database migrations..."
+    php artisan migrate --force
+
+    # Make update script executable
+    chmod +x update.sh
+
+    # Clean up
     rm -rf "$TEMP_DIR"
-    exit 1
+
+    echo "NovaNAS application installed successfully."
+else
+    echo "NovaNAS application already installed."
 fi
-
-echo "Extracting..."
-mkdir -p "$TEMP_DIR/extract"
-tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR/extract"
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to extract release"
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
-
-# Install to user home
-echo "Installing to /var/novanas..."
-cp -r "$TEMP_DIR/extract"/* /var/novanas/
-
-# Set ownership
-chown -R novanas:novanas /var/novanas
-
-# Copy environment file
-cd /var/novanas
-cp .env.prod .env
-
-echo "Running database migrations..."
-php artisan migrate --force
-
-# Make update script executable
-chmod +x update.sh
-
-# Clean up
-rm -rf "$TEMP_DIR"
-
-echo "NovaNAS application installed successfully."
 
 # Step 3.5: Install systemd service
 echo "Installing novanas-update systemd service..."
 cp system-files/novanas-update.service /etc/systemd/system/
 systemctl daemon-reload
+echo "Systemd update service installed."
 
 # Step 4: Configure Apache
 echo "Configuring Apache..."
