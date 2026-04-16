@@ -1,0 +1,11 @@
+[Unit]
+Description=NovaNAS Update Service
+
+[Service]
+Type=oneshot
+User=novanas
+WorkingDirectory=/var/novanas
+ExecStart=/var/novanas/update.sh
+
+[Install]
+WantedBy=multi-user.target

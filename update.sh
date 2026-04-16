@@ -76,6 +76,8 @@ else
     echo "Forcing update to latest version: $LATEST_VERSION"
 fi
 
+php artisan down
+
 # Download the asset
 ASSET_NAME="release.tgz"
 ASSET_URL="$DOWNLOAD_URL/$LATEST_TAG/$ASSET_NAME"
@@ -110,4 +112,5 @@ fi
 php artisan migrate --force
 # Clean up
 rm -rf "$TEMP_DIR"
+php artisan up
 echo "Update successful to version $LATEST_VERSION"
