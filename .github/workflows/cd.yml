@@ -42,11 +42,6 @@ jobs:
         TAG=${GITHUB_REF#refs/tags/}
         VERSION=${TAG#v}
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-        if [[ $VERSION == 0.* ]]; then
-          echo "PRERELEASE=true" >> $GITHUB_ENV
-        else
-          echo "PRERELEASE=false" >> $GITHUB_ENV
-        fi
 
     - name: Create tar.gz
       run: tar -czf /tmp/release.tgz --exclude=node_modules .
@@ -56,6 +51,5 @@ jobs:
       with:
         tag_name: ${{ github.ref_name }}
         name: ${{ env.VERSION }}
-        prerelease: ${{ env.PRERELEASE == 'true' }}
         files: /tmp/release.tgz
         token: ${{ secrets.CUSTOM_CI_TOKEN }}
