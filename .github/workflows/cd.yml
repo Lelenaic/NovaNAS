@@ -40,7 +40,7 @@ jobs:
         fi
 
     - name: Create tar.gz
-      run: tar -czf release.tgz --exclude=node_modules .
+      run: tar -czf /tmp/release.tgz --exclude=node_modules .
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -48,6 +48,6 @@ jobs:
         tag_name: ${{ github.ref_name }}
         name: ${{ env.VERSION }}
         prerelease: ${{ env.PRERELEASE == 'true' }}
-        files: release.tgz
+        files: /tmp/release.tgz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
