@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\NovaNASUpdateService;
 use App\Services\UpdateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,10 @@ use Symfony\Component\Process\Process;
  */
 class UpdateController extends Controller
 {
-    public function __construct(public UpdateService $updateService) {}
+    public function __construct(
+        public UpdateService $updateService,
+        public NovaNASUpdateService $novaNasUpdateService,
+    ) {}
 
     /**
      * Get update status including last update time and available updates.
@@ -172,6 +176,35 @@ class UpdateController extends Controller
             return response()->json([
                 'message' => 'Failed to initiate system restart',
                 'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get NovaNAS update status including current version and availability.
+     */
+    public function novaNasStatus(): JsonResponse
+    {
+        $status = $this->novaNasUpdateService->checkForUpdates();
+
+        return response()->json($status);
+    }
+
+    /**
+     * Trigger NovaNAS update process.
+     */
+    public function novaNasUpdate(): JsonResponse
+    {
+        $result = $this->novaNasUpdateService->triggerUpdate();
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => $result['message'],
+            ]);
+        } else {
+            return response()->json([
+                'message' => $result['message'],
+                'error' => $result['error'] ?? 'Unknown error occurred',
             ], 500);
         }
     }

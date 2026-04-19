@@ -242,6 +242,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/updates/reboot-status', [UpdateController::class, 'rebootStatus']);
         Route::post('/api/updates/clear-badge', [UpdateController::class, 'clearBadge']);
         Route::post('/api/updates/restart', [UpdateController::class, 'restart']);
+
+        // NovaNAS update routes
+        Route::get('/api/updates/novanas/status', [UpdateController::class, 'novaNasStatus']);
+        Route::post('/api/updates/novanas/update', [UpdateController::class, 'novaNasUpdate']);
     });
 
     // API routes - exclude Inertia middleware

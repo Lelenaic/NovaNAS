@@ -3,6 +3,8 @@
 # Update script for NovaNAS
 # Fetches latest release from GitHub if newer than current version
 
+php artisan down
+
 REPO="NovaNasOrg/NovaNAS"
 API_URL="https://api.github.com/repos/$REPO/releases/latest"
 DOWNLOAD_URL="https://github.com/$REPO/releases/download"
@@ -20,6 +22,7 @@ if [ "$FORCE" = false ]; then
 
     if [ -z "$CURRENT_VERSION" ]; then
         echo "Error: Could not retrieve current version"
+        php artisan up
         exit 1
     fi
 
@@ -31,6 +34,7 @@ RELEASE_JSON=$(curl -s "$API_URL")
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to fetch release info"
+    php artisan up
     exit 1
 fi
 
@@ -65,18 +69,19 @@ if [ "$FORCE" = false ]; then
 
     if [ $COMPARE_RESULT -eq 0 ]; then
         echo "Already up to date."
+        php artisan up
         exit 0
     elif [ $COMPARE_RESULT -eq 2 ]; then
         echo "Newer version available: $LATEST_VERSION"
     else
         echo "Current version is newer than latest release."
+        php artisan up
         exit 0
     fi
 else
     echo "Forcing update to latest version: $LATEST_VERSION"
 fi
 
-php artisan down
 
 # Download the asset
 ASSET_NAME="release.tgz"
@@ -87,6 +92,7 @@ curl -L -o "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to download update"
     rm -rf "$TEMP_DIR"
+    php artisan up
     exit 1
 fi
 # Extract
@@ -95,6 +101,7 @@ tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR/update"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to extract update"
     rm -rf "$TEMP_DIR"
+    php artisan up
     exit 1
 fi
 # Update app: copy files, preserving ignored files

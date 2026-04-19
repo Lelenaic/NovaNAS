@@ -90,3 +90,23 @@ Schedule::call(function () {
         \Illuminate\Support\Facades\Log::error('Scheduled apt update failed: '.$result['message']);
     }
 })->everyTwoHours()->name('system-apt-update');
+
+/**
+ * NovaNAS Updates
+ *
+ * Checks for NovaNAS application updates daily and updates badge if needed.
+ */
+Schedule::call(function () {
+    $novaNasUpdateService = new \App\Services\NovaNASUpdateService;
+    $result = $novaNasUpdateService->checkForUpdates();
+
+    if ($result['available']) {
+        // Update badge to indicate NovaNAS update is available
+        $updateService = new \App\Services\UpdateService;
+        $updateService->updateBadgeCount('updates', 1); // Use a special indicator for NovaNAS updates
+
+        \Illuminate\Support\Facades\Log::info('NovaNAS update available: '.$result['latest_version']);
+    } else {
+        \Illuminate\Support\Facades\Log::info('NovaNAS is up to date');
+    }
+})->daily()->name('novanas-update-check');

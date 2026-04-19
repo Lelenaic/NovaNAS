@@ -62,9 +62,7 @@ export function Header() {
         >
             {/* Left Section - Logo */}
             <Group gap="sm">
-                <Text size="xl" fw={700} c="blue">
-                    NovaNAS
-                </Text>
+                <img src="/images/logo.png" alt="Logo" style={{ height: '32px' }} />
             </Group>
 
             {/* Right Section - System Tray */}

@@ -13,7 +13,7 @@ import {
     rem,
     Alert,
 } from '@mantine/core';
-import { IconCloudComputing, IconLock, IconMail, IconCheck } from '@tabler/icons-react';
+import { IconLock, IconMail, IconCheck } from '@tabler/icons-react';
 import { useForm } from '@inertiajs/react';
 
 export default function Login({ version, errors, passwordSet }) {
@@ -87,7 +87,7 @@ export default function Login({ version, errors, passwordSet }) {
                         width: '300px',
                         height: '300px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(32, 153, 240, 0.15) 0%, transparent 70%)',
                         animation: 'float 8s ease-in-out infinite',
                     }}
                 />
@@ -99,7 +99,7 @@ export default function Login({ version, errors, passwordSet }) {
                         width: '400px',
                         height: '400px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(21, 101, 192, 0.12) 0%, transparent 70%)',
                         animation: 'float 10s ease-in-out infinite reverse',
                     }}
                 />
@@ -111,7 +111,7 @@ export default function Login({ version, errors, passwordSet }) {
                         width: '500px',
                         height: '500px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(13, 71, 161, 0.08) 0%, transparent 70%)',
                         transform: 'translate(-50%, -50%)',
                         animation: 'pulse 15s ease-in-out infinite',
                     }}
@@ -119,37 +119,26 @@ export default function Login({ version, errors, passwordSet }) {
             </Box>
 
             {/* Login Form */}
-            <Container size={420} style={{ position: 'relative', zIndex: 1 }}>
+            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '500px', maxWidth: '500px' }}>
                 <Paper
                     shadow="xl"
                     radius="lg"
-                    p={rem(40)}
+                    p={rem(50)}
                     style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
+                        width: '100%',
+                        maxWidth: '500px',
+                        minHeight: '500px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
                     }}
                 >
                     <Stack align="center" gap="xs">
                         {/* Logo/Icon */}
-                        <Box
-                            style={{
-                                width: rem(80),
-                                height: rem(80),
-                                borderRadius: '20px',
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-                            }}
-                        >
-                            <IconCloudComputing size={40} color="white" stroke={1.5} />
-                        </Box>
-
-                        <Title order={1} ta="center" fw={700} c="white" style={{ fontSize: rem(28), letterSpacing: '-0.5px' }}>
-                            NovaNAS
-                        </Title>
+                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px' }} />
                         <Text c="dimmed" size="sm" ta="center" maw={280}>
                             Your personal cloud storage solution
                         </Text>
@@ -175,6 +164,7 @@ export default function Login({ version, errors, passwordSet }) {
                                 onChange={(e) => setData('email', e.target.value)}
                                 leftSection={<IconMail size={18} stroke={1.5} />}
                                 error={errors?.email}
+                                style={{ width: '100%' }}
                                 styles={{
                                     input: {
                                         background: 'rgba(255, 255, 255, 0.05)',
@@ -184,7 +174,7 @@ export default function Login({ version, errors, passwordSet }) {
                                             color: 'rgba(255, 255, 255, 0.4)',
                                         },
                                         '&:focus': {
-                                            borderColor: '#6366f1',
+                                            borderColor: '#2099f0',
                                         },
                                     },
                                 }}
@@ -199,6 +189,7 @@ export default function Login({ version, errors, passwordSet }) {
                                 onChange={(e) => setData('password', e.target.value)}
                                 leftSection={<IconLock size={18} stroke={1.5} />}
                                 error={errors?.password}
+                                style={{ width: '100%' }}
                                 styles={{
                                     input: {
                                         background: 'rgba(255, 255, 255, 0.05)',
@@ -208,7 +199,7 @@ export default function Login({ version, errors, passwordSet }) {
                                             color: 'rgba(255, 255, 255, 0.4)',
                                         },
                                         '&:focus': {
-                                            borderColor: '#6366f1',
+                                            borderColor: '#2099f0',
                                         },
                                     },
                                 }}
@@ -229,7 +220,7 @@ export default function Login({ version, errors, passwordSet }) {
                                 />
                                 <Text
                                     size="xs"
-                                    c="cyan"
+                                    c="blue"
                                     style={{ cursor: 'pointer' }}
                                 >
                                     Forgot password?
@@ -243,7 +234,7 @@ export default function Login({ version, errors, passwordSet }) {
                                 mt="md"
                                 loading={processing}
                                 style={{
-                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                    background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
                                     border: 'none',
                                     fontWeight: 600,
                                     height: rem(44),
@@ -253,7 +244,7 @@ export default function Login({ version, errors, passwordSet }) {
                                         transition: 'all 0.3s ease',
                                         '&:hover': {
                                             transform: 'translateY(-2px)',
-                                            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+                                            boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
                                         },
                                     },
                                 }}
