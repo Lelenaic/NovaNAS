@@ -62,17 +62,15 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 ## Installation
 
 ### System Requirements
-- Debian 11/12 or Ubuntu 20.04/22.04 LTS
-- Minimum 4GB RAM (8GB recommended)
-- 2-core CPU minimum (4-core recommended)
+- Debian 13
+- Minimum 2GB RAM
+- 1-core CPU minimum
 - Storage: At least 20GB system drive + additional drives for data
 
 ### Quick Install
 ```bash
-# Download and run the installer
-wget https://github.com/your-org/novanas/releases/latest/download/install.sh
-chmod +x install.sh
-sudo ./install.sh
+# Run as root
+curl https://github.com/novanasorg/novanas/releases/latest/download/install.sh | bash
 ```
 
 ### Manual Installation
@@ -81,7 +79,7 @@ sudo ./install.sh
 3. Configure your system
 4. Run the setup script
 
-Detailed installation instructions available in our [documentation](https://novanas.org/docs/installation).
+Detailed installation instructions available in our [documentation](https://docs.novanas.org/installation).
 
 ## Usage
 
@@ -107,35 +105,10 @@ NovaNAS is built with modern web technologies:
 - **Desktop System**: Custom window manager for app organization
 - **API**: RESTful API for external integrations
 
-## Contributing
-
-We welcome contributions from the community! Here's how you can help:
-
-### Development Setup
-```bash
-git clone https://github.com/your-org/novanas.git
-cd novanas
-composer install
-npm install
-php artisan migrate
-npm run dev
-```
-
-### Areas for Contribution
-- New app development
-- UI/UX improvements
-- Feature requests and bug fixes
-- Documentation
-- Translation support
-
-See our [Contributing Guide](CONTRIBUTING.md) for detailed instructions.
-
 ## Community
 
-- **Forum**: [Discuss NovaNAS](https://forum.novanas.org)
-- **Discord**: [Join our community](https://discord.gg/novanas)
-- **Documentation**: [Full docs](https://novanas.org/docs)
-- **Bug Reports**: [GitHub Issues](https://github.com/your-org/novanas/issues)
+- **Documentation**: [Full docs](https://docs.novanas.org)
+- **Bug Reports**: [GitHub Issues](https://github.com/novanasorg/novanas/issues)
 
 ## License
 
@@ -143,9 +116,7 @@ NovaNAS is open source software licensed under the MIT License. See [LICENSE](LI
 
 ## Support
 
-- **Documentation**: [novanas.org/docs](https://novanas.org/docs)
-- **Community Support**: [Forum](https://forum.novanas.org)
-- **Commercial Support**: Available for enterprise deployments
+- **Documentation**: [docs.novanas.org](https://docs.novanas.org)
 
 ---
 

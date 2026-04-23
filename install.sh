@@ -167,13 +167,18 @@ else
     echo "NovaNAS application already installed."
 fi
 
-# Step 3.5: Install systemd service
-echo "Installing novanas-update systemd service..."
-cp system-files/novanas-update.service /etc/systemd/system/
+# Step 4: Install systemd service
+echo "Installing systemd services..."
+cp system-files/services/* /etc/systemd/system/
 systemctl daemon-reload
-echo "Systemd update service installed."
+for service in /etc/systemd/system/novanas-*.service; do
+    if [[ "$service" != "/etc/systemd/system/novanas-update.service" ]]; then
+        systemctl enable --now "$(basename "$service" .service)"
+    fi
+done
+echo "Systemd services installed."
 
-# Step 4: Configure Apache
+# Step 5: Configure Apache
 echo "Configuring Apache..."
 
 # Create new config

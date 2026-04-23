@@ -24,7 +24,7 @@ Schedule::call(function () {
         // Skip if never updated or if enough time has passed since last update
         if (! $config->last_updated_at) {
             // First time update - run synchronously
-            dispatch_sync(new \App\Jobs\DynDnsUpdateJob($config->id));
+            dispatch(new \App\Jobs\DynDnsUpdateJob($config->id));
 
             continue;
         }
@@ -33,7 +33,7 @@ Schedule::call(function () {
 
         if (now()->gte($nextUpdate)) {
             // Run synchronously within the schedule
-            dispatch_sync(new \App\Jobs\DynDnsUpdateJob($config->id));
+            dispatch(new \App\Jobs\DynDnsUpdateJob($config->id));
         }
     }
 })->everyMinute()->name('dyndns-schedule-check');
@@ -51,7 +51,7 @@ Schedule::call(function () {
         // Skip if never renewed or if enough time has passed since last renewal
         if (! $rule->last_renewed_at) {
             // First time publish - run synchronously
-            dispatch_sync(new \App\Jobs\UpnpRenewJob($rule->id));
+            dispatch(new \App\Jobs\UpnpRenewJob($rule->id));
 
             continue;
         }
@@ -60,7 +60,7 @@ Schedule::call(function () {
 
         if (now()->gte($nextRenewal)) {
             // Run synchronously within the schedule
-            dispatch_sync(new \App\Jobs\UpnpRenewJob($rule->id));
+            dispatch(new \App\Jobs\UpnpRenewJob($rule->id));
         }
     }
 })->everyMinute()->name('upnp-renewal-check');
@@ -78,35 +78,17 @@ Schedule::call(function () {
 /**
  * System Updates
  *
- * Runs apt update every 2 hours to keep package lists current.
+ * Runs apt update and novanas update check every 2 hours to keep package lists current.
  */
 Schedule::call(function () {
     $updateService = new \App\Services\UpdateService;
-    $result = $updateService->checkForUpdates();
-
-    if ($result['success']) {
-        \Illuminate\Support\Facades\Log::info('Scheduled apt update completed successfully');
-    } else {
-        \Illuminate\Support\Facades\Log::error('Scheduled apt update failed: '.$result['message']);
-    }
-})->everyTwoHours()->name('system-apt-update');
-
-/**
- * NovaNAS Updates
- *
- * Checks for NovaNAS application updates daily and updates badge if needed.
- */
-Schedule::call(function () {
+    $result = $updateService->startCheckForUpdates();
     $novaNasUpdateService = new \App\Services\NovaNASUpdateService;
     $result = $novaNasUpdateService->checkForUpdates();
 
-    if ($result['available']) {
-        // Update badge to indicate NovaNAS update is available
-        $updateService = new \App\Services\UpdateService;
-        $updateService->updateBadgeCount('updates', 1); // Use a special indicator for NovaNAS updates
-
-        \Illuminate\Support\Facades\Log::info('NovaNAS update available: '.$result['latest_version']);
+    if ($result['success']) {
+        \Illuminate\Support\Facades\Log::info('Scheduled updates check completed successfully');
     } else {
-        \Illuminate\Support\Facades\Log::info('NovaNAS is up to date');
+        \Illuminate\Support\Facades\Log::error('Scheduled updates check failed: '.$result['message']);
     }
-})->daily()->name('novanas-update-check');
+})->everyTwoHours()->name('updates-check');

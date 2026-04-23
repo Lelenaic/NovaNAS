@@ -1,0 +1,22 @@
+[Unit]
+Description=Novanas Queue Worker
+After=network.target
+
+[Service]
+Type=simple
+User=novanas
+Group=novanas
+WorkingDirectory=/var/novanas
+
+ExecStart=/usr/bin/php /var/novanas/artisan queue:work --sleep=3 --tries=3 --timeout=120 --queue=default --max-time=3600
+Restart=always
+RestartSec=5
+
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+StandardOutput=append:/var/novanas/storage/logs/queue-worker.log
+StandardError=append:/var/novanas/storage/logs/queue-worker-error.log
+
+[Install]
+WantedBy=multi-user.target

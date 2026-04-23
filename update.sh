@@ -107,8 +107,8 @@ fi
 # Update app: copy files, preserving ignored files
 echo "Backing up current app..."
 cp -r . "$TEMP_DIR/backup"
-# Update files, excluding those in .gitignore and database/database.sqlite
-rsync -a --delete --exclude-from=.gitignore "$TEMP_DIR/update/" .
+# Update files, excluding those in the new .gitignore
+rsync -a --delete --exclude-from="$TEMP_DIR/update/.gitignore" "$TEMP_DIR/update/" .
 if [ $? -ne 0 ]; then
     echo "Error: Failed to update files"
     # Restore backup
@@ -117,6 +117,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 php artisan migrate --force
+
+# Run version-specific update script if it exists
+if [ -f "update-scripts/$LATEST_VERSION.sh" ]; then
+    echo "Running update script for version $LATEST_VERSION"
+    bash "update-scripts/$LATEST_VERSION.sh"
+fi
+
+php artisan queue:restart
 # Clean up
 rm -rf "$TEMP_DIR"
 php artisan up

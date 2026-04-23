@@ -107,7 +107,7 @@ class NovaNASUpdateService
                 'sudo systemctl start novanas-update'
             );
 
-            $process->setTimeout(30); // 30 seconds should be enough to start the service
+            $process->setTimeout(10); // 10 seconds should be enough to start the service
             $process->run();
 
             if ($process->isSuccessful()) {

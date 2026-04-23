@@ -41,7 +41,7 @@ class SystemUpdateJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $updateService = new UpdateService;
+        $updateService = app(UpdateService::class);
         $jobId = $this->customJobId;
 
         Log::info("SystemUpdateJob: Starting {$this->operation} operation (Job ID: {$jobId})");
