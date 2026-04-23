@@ -4,9 +4,10 @@
 
 # NovaNAS
 
-**An Open Source NAS Operating System - A Complete Alternative to CasaOS**
+**An Open Source NAS Operating System - A Complete Alternative to CasaOS, Unraid and more**
 
-NovaNAS is a powerful, open-source Network Attached Storage (NAS) operating system designed as a comprehensive alternative to CasaOS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
+NovaNAS is a powerful, open-source Network Attached Storage (NAS) operating system designed as a comprehensive alternative to other NAS OS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
+I wanted to build a NAS OS that is elegant is completely manageable via its web interface, without having to use the terminal.
 
 ## Why NovaNAS?
 
