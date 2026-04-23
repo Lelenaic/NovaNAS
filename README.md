@@ -71,6 +71,7 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 - Storage: At least 20GB system drive + additional drives for data
 
 ### Quick Install
+The installer is made to be run on a fresh debian 13 intall as root.
 ```bash
 # Run as root
 curl https://github.com/novanasorg/novanas/releases/latest/download/install.sh | bash
