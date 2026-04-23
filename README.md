@@ -44,7 +44,7 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 - **Firewall Management**: Advanced firewall rules and port management
 - **DynDNS**: Dynamic DNS configuration for remote access
 - **VPN Server**: Built-in VPN for secure remote connections
-- **SSL/TLS Certificates**: Automatic certificate management
+- **SSL/TLS Certificates**: Automatic certificate management with Letsencrypt
 - **Network Configuration**: IP settings, DHCP server, and routing
 
 ### Monitoring & Analytics
