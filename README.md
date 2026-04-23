@@ -18,6 +18,8 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 - **Desktop-Like Experience**: Familiar window-based UI with movable, resizable windows
 - **Extensible Architecture**: Easy to add new apps and features
 - **Open Source**: Transparent, community-driven development
+- **No dependency** Everything that NovaNAS does, it's running command on your systems. You can just uninstall it, and continue managing your system by yourself, without loosing any data.
+- **Your system, your rules** you can install whathever additionnal software you want or customize your system however you like, we don't prevent you from using your system as you want.
 
 ## Features
 
