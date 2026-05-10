@@ -21,7 +21,7 @@ apt update
 
 # Install packages
 apt install -y \
-    linux-headers-$(uname -r) \
+    linux-headers-generic \
     zfs-dkms \
     zfsutils-linux \
     ca-certificates \
