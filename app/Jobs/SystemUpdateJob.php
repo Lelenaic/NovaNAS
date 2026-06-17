@@ -34,6 +34,7 @@ class SystemUpdateJob implements ShouldQueue
     {
         $this->operation = $operation;
         $this->customJobId = $customJobId;
+        $this->onQueue('updates');
     }
 
     /**

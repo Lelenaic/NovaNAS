@@ -159,7 +159,8 @@ if [ ! -f /var/novanas/.env ]; then
     php artisan migrate --force
 
     # Set ownership
-    chown -R novanas:novanas /var/novanas
+    chown -R novanas:novanas .
+    chmod 770 database/database.sqlite .env
 
     # Make update script executable
     chmod +x update.sh
