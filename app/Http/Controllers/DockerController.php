@@ -626,28 +626,10 @@ class DockerController extends Controller
     }
 
     /**
-     * Create a container.
+     * Build the full image name with registry and tag.
      */
-    public function createContainer(Request $request): JsonResponse
+    private function buildImageName(string $image, string $tag, ?string $registry): string
     {
-        $name = $request->input('name');
-        $image = $request->input('image');
-        $tag = $request->input('tag', 'latest');
-        $registry = $request->input('registry');
-        $restartPolicy = $request->input('restart_policy', 'no');
-        $labels = $request->input('labels', []);
-        $ports = $request->input('ports', []);
-        $volumes = $request->input('volumes', []);
-        $environment = $request->input('environment', []);
-        $envFile = $request->input('env_file');
-
-        if (empty($name) || empty($image)) {
-            return response()->json([
-                'error' => 'Container name and image are required',
-            ], 422);
-        }
-
-        // Build the full image name with registry
         $imageName = $image;
         if (! empty($registry)) {
             // Prepend registry to image (e.g., registry.example.com/nginx)
@@ -657,7 +639,20 @@ class DockerController extends Controller
             $imageName = "{$imageName}:{$tag}";
         }
 
+        return $imageName;
+    }
+
+    /**
+     * Build the docker run command arguments.
+     */
+    private function buildContainerRunArgs(string $name, string $imageName, string $restartPolicy, array $labels, array $ports, array $volumes, array $environment, ?string $envFile, ?string $primaryNetwork): array
+    {
         $args = ['run', '-d', '--name', $name];
+
+        if ($primaryNetwork) {
+            $args[] = '--network';
+            $args[] = $primaryNetwork;
+        }
 
         foreach ($labels as $label) {
             $args[] = '--label';
@@ -705,7 +700,65 @@ class DockerController extends Controller
 
         $args[] = $imageName;
 
+        return $args;
+    }
+
+    /**
+     * Create container from built args and handle additional networks.
+     */
+    private function createContainerFromArgs(array $args, string $name, array $additionalNetworks): array
+    {
         $result = $this->runDockerCommand($args);
+
+        if (! $result['success']) {
+            return $result;
+        }
+
+        // Connect additional networks after container creation
+        if (! empty($additionalNetworks)) {
+            foreach ($additionalNetworks as $network) {
+                $this->runDockerCommand(['network', 'connect', $network, $name]);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Create a container.
+     */
+    public function createContainer(Request $request): JsonResponse
+    {
+        $name = $request->input('name');
+        $image = $request->input('image');
+        $tag = $request->input('tag', 'latest');
+        $registry = $request->input('registry');
+        $restartPolicy = $request->input('restart_policy', 'no');
+        $labels = $request->input('labels', []);
+        $ports = $request->input('ports', []);
+        $volumes = $request->input('volumes', []);
+        $environment = $request->input('environment', []);
+        $envFile = $request->input('env_file');
+        $networks = $request->input('networks', []);
+
+        if (empty($name) || empty($image)) {
+            return response()->json([
+                'error' => 'Container name and image are required',
+            ], 422);
+        }
+
+        $imageName = $this->buildImageName($image, $tag, $registry);
+
+        // Handle networks
+        $primaryNetwork = null;
+        $additionalNetworks = [];
+        if (! empty($networks) && is_array($networks)) {
+            $primaryNetwork = array_shift($networks);
+            $additionalNetworks = $networks;
+        }
+
+        $args = $this->buildContainerRunArgs($name, $imageName, $restartPolicy, $labels, $ports, $volumes, $environment, $envFile, $primaryNetwork);
+        $result = $this->createContainerFromArgs($args, $name, $additionalNetworks);
 
         if (! $result['success']) {
             return response()->json([
@@ -746,6 +799,7 @@ class DockerController extends Controller
         $volumes = $request->input('volumes', []);
         $environment = $request->input('environment', []);
         $envFile = $request->input('env_file');
+        $networks = $request->input('networks', []);
 
         $this->runDockerCommand(['stop', $id]);
         $rmResult = $this->runDockerCommand(['rm', '-f', $id]);
@@ -757,65 +811,18 @@ class DockerController extends Controller
             ], 500);
         }
 
-        // Build the full image name with registry
-        $imageName = $image;
-        if (! empty($registry)) {
-            // Prepend registry to image (e.g., registry.example.com/nginx)
-            $imageName = "{$registry}/{$image}";
-        }
-        if ($tag) {
-            $imageName = "{$imageName}:{$tag}";
-        }
+        $imageName = $this->buildImageName($image, $tag, $registry);
 
-        $args = ['run', '-d', '--name', $name];
-
-        foreach ($labels as $label) {
-            $args[] = '--label';
-            $args[] = $label;
+        // Handle networks
+        $primaryNetwork = null;
+        $additionalNetworks = [];
+        if (! empty($networks) && is_array($networks)) {
+            $primaryNetwork = array_shift($networks);
+            $additionalNetworks = $networks;
         }
 
-        $restartMap = [
-            'no' => 'no',
-            'on-failure' => 'on-failure',
-            'always' => 'always',
-            'unless-stopped' => 'unless-stopped',
-        ];
-        $args[] = '--restart';
-        $args[] = $restartMap[$restartPolicy] ?? 'no';
-
-        foreach ($ports as $port) {
-            if (! empty($port['host']) && ! empty($port['container'])) {
-                $args[] = '-p';
-                $args[] = "{$port['host']}:{$port['container']}";
-            }
-        }
-
-        foreach ($volumes as $volume) {
-            if (! empty($volume['container_path'])) {
-                $args[] = '-v';
-                if ($volume['type'] === 'bind' && ! empty($volume['host_path'])) {
-                    $args[] = "{$volume['host_path']}:{$volume['container_path']}";
-                } elseif ($volume['type'] === 'volume' && ! empty($volume['volume_name'])) {
-                    $args[] = "{$volume['volume_name']}:{$volume['container_path']}";
-                }
-            }
-        }
-
-        foreach ($environment as $env) {
-            if (! empty($env['key'])) {
-                $args[] = '-e';
-                $args[] = "{$env['key']}={$env['value']}";
-            }
-        }
-
-        if (! empty($envFile)) {
-            $args[] = '--env-file';
-            $args[] = $envFile;
-        }
-
-        $args[] = $imageName;
-
-        $result = $this->runDockerCommand($args);
+        $args = $this->buildContainerRunArgs($name, $imageName, $restartPolicy, $labels, $ports, $volumes, $environment, $envFile, $primaryNetwork);
+        $result = $this->createContainerFromArgs($args, $name, $additionalNetworks);
 
         if (! $result['success']) {
             return response()->json([
@@ -861,6 +868,7 @@ class DockerController extends Controller
             'ports' => [],
             'volumes' => [],
             'environment' => [],
+            'networks' => [],
         ];
 
         if (! empty($config['HostConfig']['PortBindings'])) {
@@ -908,6 +916,10 @@ class DockerController extends Controller
                     ];
                 }
             }
+        }
+
+        if (! empty($config['NetworkSettings']['Networks'])) {
+            $parsed['networks'] = array_keys($config['NetworkSettings']['Networks']);
         }
 
         return response()->json($parsed);

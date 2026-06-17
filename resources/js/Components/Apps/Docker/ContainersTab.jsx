@@ -24,12 +24,17 @@ export function ContainersTab() {
         volumes: [{ type: 'bind', host_path: '', volume_name: '', container_path: '' }],
         environment: [{ key: '', value: '' }],
         env_file: '',
+        networks: [{ name: '' }],
     });
     const [formLoading, setFormLoading] = useState(false);
     // (removed formStep - single modal)
     const [existingVolumes, setExistingVolumes] = useState([]);
     const [volumesLoading, setVolumesLoading] = useState(false);
     const [volumeCreating, setVolumeCreating] = useState(false);
+
+    // Networks
+    const [existingNetworks, setExistingNetworks] = useState([]);
+    const [networksLoading, setNetworksLoading] = useState(false);
 
     // File selector for volumes/env file
     const [fileSelectorOpen, setFileSelectorOpen] = useState({ open: false, field: null, index: null });
@@ -52,6 +57,22 @@ export function ContainersTab() {
             console.error('Failed to fetch registries:', err);
         } finally {
             setRegistriesLoading(false);
+        }
+    };
+
+    const fetchNetworks = async () => {
+        setNetworksLoading(true);
+        try {
+            const response = await fetch('/api/docker/networks');
+            if (response.ok) {
+                const data = await response.json();
+                const networks = data || [];
+                setExistingNetworks(networks.map(n => ({ value: n.Name, label: n.Name })));
+            }
+        } catch (err) {
+            console.error('Failed to fetch networks:', err);
+        } finally {
+            setNetworksLoading(false);
         }
     };
 
@@ -133,11 +154,13 @@ export function ContainersTab() {
             volumes: [{ type: 'bind', host_path: '', volume_name: '', container_path: '' }],
             environment: [{ key: '', value: '' }],
             env_file: '',
+            networks: [{ name: '' }],
         });
         setCreateModal({ open: true, container: null });
         setError(null);
         fetchVolumes();
         fetchRegistries();
+        fetchNetworks();
     };
 
     const fetchVolumes = async () => {
@@ -188,6 +211,7 @@ export function ContainersTab() {
     const openEditModal = async (container) => {
         setError(null);
         await fetchVolumes();
+        await fetchNetworks();
         try {
             const response = await fetch(`/api/docker/containers/${container.ID}/config`);
             if (response.ok) {
@@ -219,6 +243,9 @@ export function ContainersTab() {
                         ? config.environment
                         : [{ key: '', value: '' }],
                     env_file: '',
+                    networks: config.networks && config.networks.length > 0
+                        ? config.networks.map(name => ({ name }))
+                        : [{ name: '' }],
                 });
                 setCreateModal({ open: true, container: config });
             } else {
@@ -248,6 +275,7 @@ export function ContainersTab() {
                 volumes: formData.volumes.filter(v => v.container_path),
                 environment: formData.environment.filter(e => e.key),
                 env_file: formData.env_file || null,
+                networks: formData.networks.filter(n => n.name).map(n => n.name),
             };
 
             let response;
@@ -348,6 +376,27 @@ export function ContainersTab() {
         setFormData(prev => ({
             ...prev,
             environment: prev.environment.map((e, i) => i === index ? { ...e, [field]: value } : e)
+        }));
+    };
+
+    const addNetwork = () => {
+        setFormData(prev => ({
+            ...prev,
+            networks: [...prev.networks, { name: '' }]
+        }));
+    };
+
+    const removeNetwork = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            networks: prev.networks.filter((_, i) => i !== index)
+        }));
+    };
+
+    const updateNetwork = (index, value) => {
+        setFormData(prev => ({
+            ...prev,
+            networks: prev.networks.map((n, i) => i === index ? { name: value } : n)
         }));
     };
 
@@ -768,6 +817,42 @@ export function ContainersTab() {
                         ))}
                         <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addEnv} size="xs">
                             Add Variable
+                        </Button>
+
+                        {/* Networks */}
+                        <Text fw={600} size="sm" mt="md">Networks</Text>
+                        {formData.networks.map((network, index) => (
+                            <Group key={index} gap="sm">
+                                <Select
+                                    label="Network"
+                                    placeholder="Select or enter network name"
+                                    data={existingNetworks}
+                                    value={network.name}
+                                    onChange={(value) => updateNetwork(index, value || '')}
+                                    searchable
+                                    creatable
+                                    getCreateLabel={(query) => `+ Create network "${query}"`}
+                                    onCreate={(query) => {
+                                        const item = { value: query, label: query };
+                                        setExistingNetworks((current) => [...current, item]);
+                                        return item;
+                                    }}
+                                    rightSection={networksLoading ? <Loader size={14} /> : null}
+                                    style={{ flex: 1 }}
+                                />
+                                <ActionIcon
+                                    variant="light"
+                                    color="red"
+                                    mt={24}
+                                    onClick={() => removeNetwork(index)}
+                                    disabled={formData.networks.length === 1}
+                                >
+                                    <IconX size={16} />
+                                </ActionIcon>
+                            </Group>
+                        ))}
+                        <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addNetwork} size="xs">
+                            Add Network
                         </Button>
 
                         <Group justify="flex-end" mt="md">

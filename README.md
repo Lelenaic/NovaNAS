@@ -9,6 +9,10 @@
 NovaNAS is a powerful, open-source Network Attached Storage (NAS) operating system designed as a comprehensive alternative to other NAS OS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
 I wanted to build a NAS OS that is elegant is completely manageable via its web interface, without having to use the terminal.
 
+<p align="center">
+  <img src="screenshot.png" alt="NovaNAS Desktop">
+</p>
+
 ## Why NovaNAS?
 
 CasaOS offers basic NAS functionality, but lacks the depth and completeness needed for serious home or small business storage solutions. NovaNAS fills this gap by providing enterprise-grade features comparable to commercial solutions like QNAP OS or Synology DSM, while remaining fully open-source and free.
