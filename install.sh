@@ -150,15 +150,16 @@ if [ ! -f /var/novanas/.env ]; then
     echo "Installing to /var/novanas..."
     cp -r "$TEMP_DIR/extract"/{.,}* /var/novanas/
 
-    # Set ownership
-    chown -R novanas:novanas /var/novanas
-
     # Copy environment file
     cd /var/novanas
     cp .env.prod .env
+    php artisan key:generate
 
     echo "Running database migrations..."
     php artisan migrate --force
+
+    # Set ownership
+    chown -R novanas:novanas /var/novanas
 
     # Make update script executable
     chmod +x update.sh
