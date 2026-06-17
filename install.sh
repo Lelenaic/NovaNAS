@@ -6,6 +6,8 @@
 
 set -e  # Exit on any error
 
+export PATH="/usr/sbin:/sbin:$PATH"
+
 echo "Starting NovaNAS installation..."
 
 # Step 1: Install system dependencies
@@ -54,6 +56,8 @@ fi
 # Add PHP repository if not exists
 if [ ! -f /etc/apt/sources.list.d/php.list ]; then
     echo "Installing PHP 8.5..."
+    curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+    dpkg -i /tmp/debsuryorg-archive-keyring.deb
     tee /etc/apt/sources.list.d/php.list > /dev/null <<EOF
 deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main
 EOF
@@ -78,12 +82,6 @@ apt install -y \
 # Configure Apache
 a2enmod rewrite proxy headers proxy_http proxy_wstunnel
 
-# Set Apache user and group to novanas
-sed -i 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=novanas/' /etc/apache2/envvars
-sed -i 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=novanas/' /etc/apache2/envvars
-
-systemctl restart apache2
-
 echo "System dependencies installed successfully."
 
 # Step 2: Create novanas user
@@ -95,6 +93,12 @@ if ! id novanas &>/dev/null; then
 else
     echo "User novanas already exists."
 fi
+
+# Set Apache user and group to novanas
+sed -i 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=novanas/' /etc/apache2/envvars
+sed -i 's/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=novanas/' /etc/apache2/envvars
+
+systemctl restart apache2
 
 # Step 3: Install NovaNAS application
 if [ ! -f /var/novanas/.env ]; then
@@ -144,7 +148,7 @@ if [ ! -f /var/novanas/.env ]; then
 
     # Install to user home
     echo "Installing to /var/novanas..."
-    cp -r "$TEMP_DIR/extract"/* /var/novanas/
+    cp -r "$TEMP_DIR/extract"/{.,}* /var/novanas/
 
     # Set ownership
     chown -R novanas:novanas /var/novanas

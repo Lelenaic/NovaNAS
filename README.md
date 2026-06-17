@@ -78,7 +78,7 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 The installer is made to be run on a fresh debian 13 intall as root.
 ```bash
 # Run as root
-curl https://github.com/novanasorg/novanas/releases/latest/download/install.sh | bash
+curl https://raw.githubusercontent.com/NovaNasOrg/NovaNAS/refs/heads/main/install.sh | bash
 ```
 
 ### Manual Installation

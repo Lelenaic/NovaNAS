@@ -44,7 +44,7 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Create tar.gz
-      run: tar -czf /tmp/release.tgz --exclude=node_modules .
+      run: tar -czf /tmp/release.tgz --exclude='node_modules' --exclude='.git' .
 
     - name: Create Release
       uses: softprops/action-gh-release@v3
