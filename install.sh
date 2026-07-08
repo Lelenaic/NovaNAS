@@ -206,6 +206,10 @@ EOF
 # Reload Apache
 systemctl reload apache2
 
+# Download acme.sh
+curl -fsSL https://get.acme.sh | bash
+/root/.acme.sh/acme.sh --upgrade --auto-upgrade --force
+
 echo "Apache configured and reloaded."
 
 SERVER_IP=$(hostname -I | awk '{print $1}')
