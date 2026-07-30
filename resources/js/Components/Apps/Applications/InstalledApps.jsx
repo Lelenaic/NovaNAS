@@ -13,6 +13,7 @@ import {
     Tooltip,
     Button,
     Divider,
+    Modal,
 } from '@mantine/core';
 import {
     IconAlertCircle,
@@ -32,6 +33,7 @@ export function InstalledApps({ onAppChange }) {
     const [actionLoading, setActionLoading] = useState(null);
     const [selectedApp, setSelectedApp] = useState(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const fetchInstalled = useCallback(async () => {
         try {
@@ -241,7 +243,7 @@ export function InstalledApps({ onAppChange }) {
                                         color="red"
                                         size="sm"
                                         loading={actionLoading === `${app.app_id}-remove`}
-                                        onClick={() => handleAction(app.app_id, app.store_provider, 'remove')}
+                                        onClick={() => setDeleteConfirm(app)}
                                     >
                                         <IconTrash size={14} />
                                     </ActionIcon>
@@ -251,6 +253,33 @@ export function InstalledApps({ onAppChange }) {
                     ))}
                 </Box>
             )}
+
+            <Modal
+                opened={!!deleteConfirm}
+                onClose={() => setDeleteConfirm(null)}
+                title={<Text fw={600}>Remove Application</Text>}
+                size="sm"
+                centered
+            >
+                <Text c="dimmed" mb="lg">
+                    Are you sure you want to remove {deleteConfirm?.title}? This will uninstall the application and all its data.
+                </Text>
+                <Group justify="flex-end">
+                    <Button variant="subtle" onClick={() => setDeleteConfirm(null)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color="red"
+                        loading={actionLoading === `${deleteConfirm?.app_id}-remove`}
+                        onClick={() => {
+                            handleAction(deleteConfirm.app_id, deleteConfirm.store_provider, 'remove');
+                            setDeleteConfirm(null);
+                        }}
+                    >
+                        Remove
+                    </Button>
+                </Group>
+            </Modal>
 
             {selectedApp && (
                 <AppDetailModal

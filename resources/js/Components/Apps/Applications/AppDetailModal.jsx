@@ -33,6 +33,7 @@ export function AppDetailModal({ opened, onClose, app, storeProvider, onInstallC
     const [removing, setRemoving] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
     useEffect(() => {
         if (opened && app) {
@@ -354,7 +355,7 @@ export function AppDetailModal({ opened, onClose, app, storeProvider, onInstallC
                                     variant="light"
                                     color="red"
                                     leftSection={<IconTrash size={16} />}
-                                    onClick={handleRemove}
+                                    onClick={() => setShowRemoveConfirm(true)}
                                     loading={removing}
                                     size="sm"
                                 >
@@ -373,6 +374,33 @@ export function AppDetailModal({ opened, onClose, app, storeProvider, onInstallC
                     </Group>
                 </Stack>
             ) : null}
+
+            <Modal
+                opened={showRemoveConfirm}
+                onClose={() => setShowRemoveConfirm(false)}
+                title={<Text fw={600}>Remove Application</Text>}
+                size="sm"
+                centered
+            >
+                <Text c="dimmed" mb="lg">
+                    Are you sure you want to remove {details?.title}? This will uninstall the application and all its data.
+                </Text>
+                <Group justify="flex-end">
+                    <Button variant="subtle" onClick={() => setShowRemoveConfirm(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color="red"
+                        loading={removing}
+                        onClick={() => {
+                            handleRemove();
+                            setShowRemoveConfirm(false);
+                        }}
+                    >
+                        Remove
+                    </Button>
+                </Group>
+            </Modal>
         </Modal>
     );
 }
