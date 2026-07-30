@@ -123,9 +123,9 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
             return sortedApps;
         }
 
-        // Map order to apps
+        // Map order to apps - use loose equality since iconOrder stores strings
         return iconOrder
-            .map(id => apps.find(app => (app.desktopAppId || app.id) === id))
+            .map(id => apps.find(app => String(app.desktopAppId || app.id) === String(id)))
             .filter(Boolean);
     }, [iconOrder, apps]);
 
