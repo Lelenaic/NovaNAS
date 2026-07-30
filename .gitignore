@@ -25,6 +25,7 @@ Homestead.yaml
 Thumbs.db
 /database/database.sqlite
 /storage/app
+/storage/applications
 /storage/framework/sessions
 /storage/framework/views
 /storage/framework/cache

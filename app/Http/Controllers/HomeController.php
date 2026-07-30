@@ -34,6 +34,29 @@ class HomeController extends Controller
     }
 
     /**
+     * Get desktop apps and icon orders as JSON (for live refresh).
+     */
+    public function desktopApps()
+    {
+        $user = request()->user();
+
+        $desktopApps = DesktopApp::query()
+            ->visibleFor($user)
+            ->orderBy('name')
+            ->get();
+
+        $userIconOrders = UserDesktopIcon::where('user_id', $user->id)
+            ->where('is_visible', true)
+            ->get()
+            ->keyBy('desktop_app_id');
+
+        return response()->json([
+            'desktopApps' => $desktopApps,
+            'userIconOrders' => $userIconOrders,
+        ]);
+    }
+
+    /**
      * Display the home page.
      */
     public function index()

@@ -6,6 +6,7 @@ import {
     Group,
     Button,
     NumberInput,
+    TextInput,
     Stack,
     Alert,
     Loader,
@@ -28,6 +29,7 @@ export function GeneralTab() {
 
     const [settings, setSettings] = useState({
         invitation_lifetime_hours: 48,
+        hostname: '',
     });
 
     useEffect(() => {
@@ -42,6 +44,7 @@ export function GeneralTab() {
 
             setSettings({
                 invitation_lifetime_hours: data.invitation_lifetime_hours || 48,
+                hostname: data.hostname || '',
             });
         } catch (err) {
             setError('Failed to load settings');
@@ -75,6 +78,39 @@ export function GeneralTab() {
             }
 
             setSuccess('Settings saved successfully!');
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleHostnameSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setSuccess(null);
+
+        try {
+            setSaving(true);
+            const response = await fetch('/api/settings/general', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    hostname: settings.hostname,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to save hostname');
+            }
+
+            setSettings({ ...settings, hostname: data.hostname || settings.hostname });
+            setSuccess('Hostname saved successfully!');
             setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
             setError(err.message);
@@ -180,7 +216,42 @@ export function GeneralTab() {
                 </Tabs.Panel>
 
                 <Tabs.Panel value="general" pt="md">
-                    <Text c="dimmed">General settings will appear here.</Text>
+                    <form onSubmit={handleHostnameSubmit}>
+                        <Stack gap="lg">
+                            <Box
+                                style={{
+                                    backgroundColor: theme.colors.dark[6],
+                                    borderRadius: '12px',
+                                    padding: '20px',
+                                    border: `1px solid ${theme.colors.dark[4]}`,
+                                }}
+                            >
+                                <Title order={5} c="white" mb="md">Hostname</Title>
+                                <Text size="sm" c="dimmed" mb="md">
+                                    Set the system hostname for this NAS. This is used for SSL certificates and network identification.
+                                </Text>
+
+                                <TextInput
+                                    label="Hostname"
+                                    description="The system hostname (e.g. mynas or myhost.mynovanas.com)"
+                                    placeholder="localhost"
+                                    value={settings.hostname}
+                                    onChange={(e) => setSettings({ ...settings, hostname: e.target.value })}
+                                    required
+                                />
+                            </Box>
+
+                            <Group justify="flex-end">
+                                <Button
+                                    type="submit"
+                                    loading={saving}
+                                    leftSection={<IconSettings size={16} />}
+                                >
+                                    Save Hostname
+                                </Button>
+                            </Group>
+                        </Stack>
+                    </form>
                 </Tabs.Panel>
             </Tabs>
         </Box>

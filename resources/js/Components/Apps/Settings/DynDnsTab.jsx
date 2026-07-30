@@ -26,6 +26,7 @@ import {
     IconInfoCircle,
     IconCopy,
     IconCheck,
+    IconServer,
 } from '@tabler/icons-react';
 
 export function DynDnsTab() {
@@ -51,6 +52,7 @@ export function DynDnsTab() {
     const [dynDnsInfo, setDynDnsInfo] = useState({ max_subdomains: 0, domain: '' });
     const [subdomainError, setSubdomainError] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
+    const [hostnameLoading, setHostnameLoading] = useState(null);
 
     useEffect(() => {
         fetchConfigs();
@@ -157,6 +159,26 @@ export function DynDnsTab() {
             setDeleteConfirm(null);
         } catch (err) {
             setError(err.message);
+        }
+    };
+
+    const handleSetHostname = async (config) => {
+        setHostnameLoading(config.id);
+        try {
+            const response = await fetch(`/api/dyndns/configs/${config.id}/set-hostname`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.message || 'Failed to set hostname');
+            }
+
+            await fetchConfigs();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setHostnameLoading(null);
         }
     };
 
@@ -273,6 +295,8 @@ export function DynDnsTab() {
         );
     }
 
+    const hostnameConfig = configs.find((c) => c.is_hostname);
+
     return (
         <Box>
             <Group justify="space-between" mb="lg">
@@ -287,6 +311,20 @@ export function DynDnsTab() {
                     Add Configuration
                 </Button>
             </Group>
+
+            {hostnameConfig && (
+                <Alert
+                    color="blue"
+                    variant="light"
+                    mb="md"
+                    icon={<IconServer size={16} />}
+                >
+                    <Text fw={500} mb="xs">NAS Hostname</Text>
+                    <Text size="sm">
+                        This NAS is using <strong>{hostnameConfig.full_domain}</strong> as its system hostname.
+                    </Text>
+                </Alert>
+            )}
 
             {error && (
                 <Alert
@@ -341,13 +379,13 @@ export function DynDnsTab() {
                                             width: '48px',
                                             height: '48px',
                                             borderRadius: '12px',
-                                            backgroundColor: theme.colors.blue[6],
+                                            backgroundColor: config.is_hostname ? theme.colors.green[6] : theme.colors.blue[6],
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                         }}
                                     >
-                                        <IconCloud size={24} color="white" />
+                                        {config.is_hostname ? <IconServer size={24} color="white" /> : <IconCloud size={24} color="white" />}
                                     </Box>
                                     <div>
                                         <Group gap="sm">
@@ -359,6 +397,15 @@ export function DynDnsTab() {
                                             >
                                                 {config.is_enabled ? 'Enabled' : 'Disabled'}
                                             </Badge>
+                                            {config.is_hostname && (
+                                                <Badge
+                                                    color="blue"
+                                                    variant="light"
+                                                    size="sm"
+                                                >
+                                                    Hostname
+                                                </Badge>
+                                            )}
                                         </Group>
                                         <Group gap="xs">
                                             <Box
@@ -400,7 +447,7 @@ export function DynDnsTab() {
                                 </Group>
 
                                 <Group gap="sm" wrap="nowrap">
-                                    <Menu shadow="md" width={150} position="bottom-end">
+                                    <Menu shadow="md" width={180} position="bottom-end">
                                         <Menu.Target>
                                             <ActionIcon variant="subtle" color="gray" size="lg">
                                                 <IconDots size={18} />
@@ -408,6 +455,15 @@ export function DynDnsTab() {
                                         </Menu.Target>
 
                                         <Menu.Dropdown>
+                                            {!config.is_hostname && (
+                                                <Menu.Item
+                                                    leftSection={<IconServer size={14} />}
+                                                    onClick={() => handleSetHostname(config)}
+                                                    loading={hostnameLoading === config.id}
+                                                >
+                                                    Set as Hostname
+                                                </Menu.Item>
+                                            )}
                                             <Menu.Item
                                                 leftSection={<IconEdit size={14} />}
                                                 onClick={() => openEditModal(config)}

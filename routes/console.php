@@ -92,3 +92,13 @@ Schedule::call(function () {
         \Illuminate\Support\Facades\Log::error('Scheduled updates check failed: '.$result['message']);
     }
 })->everyTwoHours()->name('updates-check');
+
+/**
+ * Self-Signed Certificate Renewal
+ *
+ * Renews self-signed certificates that are expiring within a month.
+ * Runs monthly to keep self-signed certificates current.
+ */
+Schedule::job(new \App\Jobs\RenewSelfSignedCertificatesJob)
+    ->monthly()
+    ->name('self-signed-cert-renewal');

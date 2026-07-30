@@ -12,6 +12,7 @@ import {
     IconServer,
     IconCpu,
     IconBrandDocker,
+    IconLock,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -22,12 +23,14 @@ import { EmailTab } from './Settings/EmailTab';
 import { ServicesTab } from './Settings/ServicesTab';
 import { GPUTab } from './Settings/GPUTab';
 import { DockerTab } from './Settings/DockerTab';
+import { SslTab } from './Settings/SslTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
     { id: 'network', label: 'Network', icon: IconNetwork },
     { id: 'upnp', label: 'UPNP', icon: IconWifi },
     { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
+    { id: 'ssl', label: 'SSL', icon: IconLock },
     { id: 'docker', label: 'Docker', icon: IconBrandDocker },
     { id: 'services', label: 'Services', icon: IconServer },
     { id: 'gpus', label: 'GPUs', icon: IconCpu },
@@ -51,6 +54,8 @@ export function SettingsAppContent() {
                 return <UpnpTab />;
             case 'dyndns':
                 return <DynDnsTab />;
+            case 'ssl':
+                return <SslTab />;
             case 'docker':
                 return <DockerTab />;
             case 'services':

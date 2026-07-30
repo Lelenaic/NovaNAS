@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Services\Applications\StoreManager;
 use App\Services\GPU\GPUManager;
+use App\Services\NovaNasApiService;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,6 +16,14 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(GPUManager::class, function ($app) {
             return new GPUManager($app);
+        });
+
+        $this->app->singleton(NovaNasApiService::class, function () {
+            return new NovaNasApiService;
+        });
+
+        $this->app->singleton(StoreManager::class, function ($app) {
+            return new StoreManager($app);
         });
     }
 

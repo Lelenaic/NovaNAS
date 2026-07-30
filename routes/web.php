@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplicationsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DesktopIconController;
 use App\Http\Controllers\DockerController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
+use App\Http\Controllers\SslSettingsController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\TerminalController;
@@ -47,6 +49,9 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [HomeController::class, 'index']);
 
     Route::withoutMiddleware(\App\Http\Middleware\HandleInertiaRequests::class)->group(function () {
+        // Desktop apps API (for live refresh)
+        Route::get('/api/desktop-apps', [HomeController::class, 'desktopApps']);
+
         Route::get('/api/system/info', [SystemController::class, 'info']);
         Route::get('/api/system/network-interfaces', [SystemController::class, 'networkInterfaces']);
         Route::get('/api/system/network-config', [SystemController::class, 'getNetworkConfig']);
@@ -74,6 +79,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/dyndns/configs/{id}/update', [DynDnsController::class, 'updateNow']);
         Route::post('/api/dyndns/update-all', [DynDnsController::class, 'updateAll']);
         Route::get('/api/dyndns/provider-fields', [DynDnsController::class, 'getProviderFields']);
+        Route::post('/api/dyndns/configs/{id}/set-hostname', [DynDnsController::class, 'setHostname']);
 
         // UPNP routes
         Route::get('/api/upnp/rules', [UpnpController::class, 'index']);
@@ -83,6 +89,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/upnp/publish-all', [UpnpController::class, 'publishAll']);
         Route::get('/api/upnp/discover', [UpnpController::class, 'discover']);
         Route::get('/api/upnp/interfaces', [UpnpController::class, 'getInterfaces']);
+
+        // SSL settings routes
+        Route::get('/api/settings/ssl', [SslSettingsController::class, 'index']);
+        Route::post('/api/settings/ssl/check-reachability', [SslSettingsController::class, 'checkReachability']);
+        Route::post('/api/settings/ssl/issue-certificate', [SslSettingsController::class, 'issueCertificate']);
+        Route::post('/api/settings/ssl/install-certificate', [SslSettingsController::class, 'installCertificate']);
+        Route::post('/api/settings/ssl/enable', [SslSettingsController::class, 'enableSsl']);
+        Route::post('/api/settings/ssl/disable', [SslSettingsController::class, 'disableSsl']);
+        Route::delete('/api/settings/ssl/certificate', [SslSettingsController::class, 'deleteCertificate']);
+        Route::post('/api/settings/ssl/generate-self-signed', [SslSettingsController::class, 'generateSelfSigned']);
 
         // Firewall routes
         Route::get('/api/firewall/status', [FirewallController::class, 'status']);
@@ -246,6 +262,19 @@ Route::group(['middleware' => 'auth'], function () {
         // NovaNAS update routes
         Route::get('/api/updates/novanas/status', [UpdateController::class, 'novaNasStatus']);
         Route::post('/api/updates/novanas/update', [UpdateController::class, 'novaNasUpdate']);
+
+        // Application store routes
+        Route::get('/api/applications/stores', [ApplicationsController::class, 'stores']);
+        Route::get('/api/applications/installed', [ApplicationsController::class, 'installed']);
+        Route::get('/api/applications/{store}/categories', [ApplicationsController::class, 'categories']);
+        Route::get('/api/applications/{store}/apps', [ApplicationsController::class, 'apps']);
+        Route::get('/api/applications/{store}/apps/{app}', [ApplicationsController::class, 'show']);
+        Route::post('/api/applications/{store}/apps/{app}/install', [ApplicationsController::class, 'install']);
+        Route::post('/api/applications/{store}/apps/{app}/update', [ApplicationsController::class, 'update']);
+        Route::post('/api/applications/{store}/apps/{app}/stop', [ApplicationsController::class, 'stop']);
+        Route::post('/api/applications/{store}/apps/{app}/start', [ApplicationsController::class, 'start']);
+        Route::delete('/api/applications/{store}/apps/{app}', [ApplicationsController::class, 'destroy']);
+        Route::get('/api/applications/{store}/apps/{app}/status', [ApplicationsController::class, 'status']);
     });
 
     // API routes - exclude Inertia middleware

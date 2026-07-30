@@ -1,4 +1,4 @@
-import { Box, Text, Title, Badge } from '@mantine/core';
+import { Box, Text, Title, Badge, Image } from '@mantine/core';
 import { useWindow } from './WindowContext';
 import { useBadges } from './BadgeContext';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -35,15 +35,24 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
     // Local state to track order - initialized from apps prop
     const [iconOrder, setIconOrder] = useState([]);
 
-    // Initialize order from apps only once when apps first load
+    // Initialize order from apps, and append any new apps that aren't in the order yet
     useEffect(() => {
-        if (apps.length > 0 && iconOrder.length === 0) {
-            // Sort by order if available
-            const sortedApps = [...apps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-            const initialOrder = sortedApps.map(app => app.desktopAppId || app.id);
-            setIconOrder(initialOrder);
-        }
-    }, [apps]); // Only run when apps changes, not when iconOrder changes
+        if (apps.length === 0) return;
+
+        setIconOrder((prev) => {
+            if (prev.length === 0) {
+                const sortedApps = [...apps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                return sortedApps.map(app => app.desktopAppId || app.id);
+            }
+
+            const existingIds = new Set(prev.map(String));
+            const newIds = apps
+                .map(app => String(app.desktopAppId || app.id))
+                .filter(id => !existingIds.has(id));
+
+            return newIds.length > 0 ? [...prev, ...newIds] : prev;
+        });
+    }, [apps]);
 
     // Handle double click to open window
     const handleDoubleClick = useCallback((app) => {
@@ -58,6 +67,10 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
 
     // Handle single click to open window
     const handleClick = useCallback((app) => {
+        if (app.type === 'url' && app.url) {
+            window.open(app.url, '_blank');
+            return;
+        }
         const IconComponent = ICON_MAP[app.iconName] || IconFolder;
         openWindow(app.id, app.name, IconComponent);
     }, [openWindow]);
@@ -202,7 +215,15 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                                         position: 'relative',
                                                     }}
                                                 >
-                                                {(() => {
+                                                {app.type === 'url' && app.iconPath ? (
+                                                    <Image
+                                                        src={app.iconPath}
+                                                        w={40}
+                                                        h={40}
+                                                        fit="contain"
+                                                        fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"
+                                                    />
+                                                ) : (() => {
                                                     const IconComponent = ICON_MAP[app.iconName] || IconFolder;
                                                     return <IconComponent size={32} color="white" />;
                                                 })()}

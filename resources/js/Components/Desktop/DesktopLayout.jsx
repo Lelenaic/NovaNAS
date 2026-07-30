@@ -10,8 +10,9 @@ import { TerminalAppContent } from '../Apps/TerminalApp';
 import { FirewallAppContent } from '../Apps/FirewallApp';
 import { StorageAppContent } from '../Apps/StorageApp';
 import { DockerAppContent } from '../Apps/DockerApp';
+import { ApplicationsAppContent } from '../Apps/ApplicationsApp';
 import { UpdatesAppContent } from '../Apps/UpdatesApp';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 
 const APP_COMPONENTS = {
     filemanager: () => <SampleAppContent title="File Manager" emoji="📁" />,
@@ -21,13 +22,29 @@ const APP_COMPONENTS = {
     monitor: () => <SampleAppContent title="Monitor" emoji="📊" />,
     storage: () => <StorageAppContent />,
     firewall: () => <FirewallAppContent />,
+    applications: () => <ApplicationsAppContent />,
     updates: () => <UpdatesAppContent />,
 };
 
-function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {
+function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrders = {} }) {
     const theme = useMantineTheme();
     const { windows } = useWindow();
     const [savingPosition, setSavingPosition] = useState(false);
+    const [desktopApps, setDesktopApps] = useState(initialDesktopApps);
+    const [userIconOrders, setUserIconOrders] = useState(initialUserIconOrders);
+
+    const refreshDesktop = useCallback(async () => {
+        try {
+            const response = await fetch('/api/desktop-apps');
+            if (response.ok) {
+                const data = await response.json();
+                setDesktopApps(data.desktopApps);
+                setUserIconOrders(data.userIconOrders);
+            }
+        } catch {
+            // silently fail
+        }
+    }, []);
 
     // Handle icon order change - save to database
     const handleIconPositionChange = useCallback(async (orders) => {
@@ -82,6 +99,7 @@ function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {
             description: app.description,
             type: app.type,
             url: app.url,
+            iconPath: app.icon_path,
             component_path: app.component_path,
             order: userOrder?.order ?? (app.id - 1), // Use database order or fallback to app id as order
         };
@@ -133,6 +151,13 @@ function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {
 
                     {/* Windows */}
                     {windows.map((win) => {
+                        if (win.appId === 'applications') {
+                            return (
+                                <DraggableWindow key={win.id} windowState={win}>
+                                    <ApplicationsAppContent onDesktopChange={refreshDesktop} />
+                                </DraggableWindow>
+                            );
+                        }
                         const AppComponent = APP_COMPONENTS[win.appId];
                         return (
                             <DraggableWindow key={win.id} windowState={win}>
@@ -163,7 +188,7 @@ function DesktopContent({ version, desktopApps = [], userIconOrders = {} }) {
 export function DesktopLayout({ children, version = '1.0.0', desktopApps = [], userIconOrders = {} }) {
     return (
         <WindowProvider>
-            <DesktopContent version={version} desktopApps={desktopApps} userIconOrders={userIconOrders} />
+            <DesktopContent version={version} initialDesktopApps={desktopApps} initialUserIconOrders={userIconOrders} />
             {children}
         </WindowProvider>
     );
