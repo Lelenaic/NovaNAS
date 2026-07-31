@@ -7,6 +7,7 @@ use App\Http\Controllers\DockerController;
 use App\Http\Controllers\DockerSettingsController;
 use App\Http\Controllers\DynDnsController;
 use App\Http\Controllers\EmailSettingsController;
+use App\Http\Controllers\FileManagerController;
 use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\GPUController;
@@ -143,6 +144,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/api/storage/shares/{name}', [StorageController::class, 'deleteShare']);
         Route::get('/api/storage/shares/users', [StorageController::class, 'shareUsers']);
         Route::post('/api/storage/shares/homes', [StorageController::class, 'toggleHomes']);
+
+        // File Manager routes
+        Route::get('/api/filemanager/shares', [FileManagerController::class, 'shares']);
+        Route::get('/api/filemanager/files', [FileManagerController::class, 'files']);
+        Route::post('/api/filemanager/directories', [FileManagerController::class, 'createDirectory']);
+        Route::delete('/api/filemanager/delete', [FileManagerController::class, 'delete']);
+        Route::post('/api/filemanager/copy', [FileManagerController::class, 'copy']);
+        Route::post('/api/filemanager/move', [FileManagerController::class, 'move']);
+        Route::post('/api/filemanager/zip', [FileManagerController::class, 'zip']);
+        Route::post('/api/filemanager/unzip', [FileManagerController::class, 'unzip']);
 
         // User management routes
         Route::get('/api/users', [UserController::class, 'index']);

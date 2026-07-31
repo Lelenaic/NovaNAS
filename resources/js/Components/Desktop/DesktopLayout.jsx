@@ -12,10 +12,11 @@ import { StorageAppContent } from '../Apps/StorageApp';
 import { DockerAppContent } from '../Apps/DockerApp';
 import { ApplicationsAppContent } from '../Apps/ApplicationsApp';
 import { UpdatesAppContent } from '../Apps/UpdatesApp';
+import { FileManagerAppContent } from '../Apps/FileManagerApp';
 import { useCallback, useState, useEffect } from 'react';
 
 const APP_COMPONENTS = {
-    filemanager: () => <SampleAppContent title="File Manager" emoji="📁" />,
+    filemanager: () => <FileManagerAppContent />,
     settings: () => <SettingsAppContent />,
     terminal: () => <TerminalAppContent />,
     docker: () => <DockerAppContent />,

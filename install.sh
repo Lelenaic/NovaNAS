@@ -40,7 +40,9 @@ apt install -y \
     net-tools \
     jq \
     rsync \
-    sudo
+    sudo \
+    zip \
+    unzip
 
 # Enable ZFS services
 systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target
