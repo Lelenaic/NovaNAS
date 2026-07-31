@@ -31,7 +31,7 @@ class NovaNasApiService
         $url = $this->getBaseUrl().'/check-reachability';
 
         try {
-            $response = Http::timeout(15)->get($url, [
+            $response = Http::timeout(15)->post($url, [
                 'domain' => $domain,
             ]);
 
