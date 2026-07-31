@@ -25,6 +25,11 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WizardController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/up', fn () => response()->json([
+    'system' => 'NovaNAS',
+    'version' => config('app.version'),
+]));
+
 // Wizard routes (accessible without authentication when no users exist)
 Route::get('/wizard', [WizardController::class, 'index']);
 Route::get('/wizard/account', [WizardController::class, 'account']);

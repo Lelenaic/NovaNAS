@@ -16,7 +16,7 @@ return new class extends Migration
             'description' => 'Browse and manage applications from app stores',
             'type' => 'component',
             'icon_type' => 'tabler',
-            'icon_name' => 'IconLayoutGrid',
+            'icon_name' => 'IconApps',
             'color' => '#7c3aed',
             'component_path' => 'ApplicationsApp',
             'is_system' => true,

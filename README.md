@@ -6,8 +6,9 @@
 
 **An Open Source NAS Operating System - A Complete Alternative to CasaOS, Unraid and more**
 
-NovaNAS is a powerful, open-source Network Attached Storage (NAS) operating system designed as a comprehensive alternative to other NAS OS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
-I wanted to build a NAS OS that is elegant is completely manageable via its web interface, without having to use the terminal.
+NovaNAS is a powerful, open-source NAS operating system designed as a comprehensive alternative to other NAS OS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
+I wanted to build a NAS OS that is elegant is completely manageable via its web interface, without having to use the terminal and yet stay completely independant from it.
+The heart of NovaNAS is that it is managed entirely using the linux packages and configuration files on the system. You can use it for years and remove it tomorrow while keeping your system and everything you created.
 
 <p align="center">
   <img src="screenshot.png" alt="NovaNAS Desktop">
@@ -16,6 +17,8 @@ I wanted to build a NAS OS that is elegant is completely manageable via its web 
 ## Why NovaNAS?
 
 CasaOS offers basic NAS functionality, but lacks the depth and completeness needed for serious home or small business storage solutions. NovaNAS fills this gap by providing enterprise-grade features comparable to commercial solutions like QNAP OS or Synology DSM, while remaining fully open-source and free.
+I loved using a QNAP NAS for years because their OS is a banger. But it's not a real linux you can use however you want, it's not open source, and a QNAP NAS is expensive. I swaped to a DYI NAS and tries many OS like CasaOS that I love, but it lacks features to be really usable fully via it's web UI.
+I tried to offer a complete experience through the NovaNAS UI making you feel all powerful via a web interface, without the need of using SSH to manage and configure your system. But, you can use SSH as much as you want, and NovaNAS will see your changes and understand them. NovaNAS reads automatically the configuration files of the applications you use on your NAS, and not store the configuration in its database.
 
 ### Key Philosophy
 - **Complete System Management**: Control everything from storage to networking through one unified interface
@@ -23,7 +26,7 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 - **Extensible Architecture**: Easy to add new apps and features
 - **Open Source**: Transparent, community-driven development
 - **No dependency** Everything that NovaNAS does, it's running command on your systems. You can just uninstall it, and continue managing your system by yourself, without loosing any data.
-- **Your system, your rules** you can install whathever additionnal software you want or customize your system however you like, we don't prevent you from using your system as you want.
+- **Your system, your rules** You can install whathever additionnal software you want or customize your system however you like, we don't prevent you from using your system as you want.
 
 ## Features
 
@@ -38,44 +41,46 @@ CasaOS offers basic NAS functionality, but lacks the depth and completeness need
 - **RAID Management**: Configure and monitor storage pools
 - **Shared Folders**: SMB/CIFS and NFS sharing with access controls
 - **File Manager**: Web-based file browser with upload/download capabilities
-- **Backup Solutions**: Automated backup to external drives or cloud storage
+- **Backup Solutions**: Automated backup to external drives or cloud storage (coming soon)
 
 ### Application Management
 - **Docker Integration**: Install and manage Docker containers through the UI
-- **App Store**: Marketplace for community-developed applications
+- **App Store**: Marketplace for community-developed applications (based on CasaOS applications list)
 - **Service Management**: Start, stop, and configure system services
-- **Virtualization Support**: Future support for VM management
+- **Virtualization Support**: Support for VM management (coming soon)
 
 ### Network & Security
-- **Firewall Management**: Advanced firewall rules and port management
-- **DynDNS**: Dynamic DNS configuration for remote access
-- **VPN Server**: Built-in VPN for secure remote connections
+- **Firewall Management**: Advanced firewall rules and port management using UFW
+- **DynDNS**: Free Dynamic DNS configuration for remote access
+- **VPN Server**: Built-in VPN for secure remote connections (coming soon)
 - **SSL/TLS Certificates**: Automatic certificate management with Letsencrypt
-- **Network Configuration**: IP settings, DHCP server, and routing
+- **Network Configuration**: IP settings, UPNP
 
-### Monitoring & Analytics
+### Monitoring & Analytics (coming soon)
 - **System Health**: CPU, memory, disk, and network monitoring
 - **Log Management**: Centralized logging and log viewer
 - **Resource Usage**: Track storage, bandwidth, and system resources
 - **Alert System**: Email/SMS notifications for system events
 
 ### Additional Features
-- **Scheduled Tasks**: Cron job management through the UI
+- **Scheduled Tasks**: Cron job management through the UI (coming soon)
 - **Update Management**: Automated system and app updates
-- **Power Management**: Sleep, hibernate, and shutdown controls
+- **Power Management**: Sleep, hibernate, and shutdown controls (coming soon)
 - **USB Device Support**: Mount and manage external drives
-- **Printer Management**: Network printer configuration and sharing
+- **Printer Management**: Network printer configuration and sharing (coming soon)
+- **UPS support**: Monitor and manage your UPS (coming soon)
 
 ## Installation
 
 ### System Requirements
-- Debian 13
+- Debian 13 (for the moment, it's the only supported OS, but more will come in the future)
 - Minimum 2GB RAM
 - 1-core CPU minimum
 - Storage: At least 20GB system drive + additional drives for data
 
 ### Quick Install
-The installer is made to be run on a fresh debian 13 intall as root.
+The installer is made to be run on a fresh debian 13 intall as root. Please DO NOT run it on a system that is already in use, as it will install and configure many things that may conflict with your current setup.
+
 ```bash
 # Run as root
 curl https://raw.githubusercontent.com/NovaNasOrg/NovaNAS/refs/heads/main/install.sh | bash
@@ -102,16 +107,15 @@ After installation, access NovaNAS through your web browser at `http://your-serv
 ### Managing Your NAS
 - **Storage**: Configure RAID, create shared folders, set up backups
 - **Applications**: Install Docker apps from the marketplace
-- **Network**: Configure firewall rules, DynDNS, VPN
+- **Network**: Configure firewall rules, DynDNS
 - **Users**: Add users, assign permissions, manage access
 
 ## Architecture
 
 NovaNAS is built with modern web technologies:
-- **Backend**: Laravel 12 (PHP 8.5) with MySQL/PostgreSQL
+- **Backend**: Laravel 12 (PHP 8.5) with SQLite database (lightweight and suitable for NAS environments)
 - **Frontend**: React with Inertia.js and Mantine UI
 - **Desktop System**: Custom window manager for app organization
-- **API**: RESTful API for external integrations
 
 ## Community
 
@@ -128,4 +132,4 @@ NovaNAS is open source software licensed under the MIT License. See [LICENSE](LI
 
 ---
 
-**NovaNAS** - Your complete, open-source NAS solution. Built for the community, by the community.
+**NovaNAS** - Your complete, open-source NAS solution. Built for the community, by the community and OpenCode.

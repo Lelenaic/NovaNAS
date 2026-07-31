@@ -12,6 +12,7 @@ import {
     IconDisc,
     IconShield,
     IconRefresh,
+    IconApps,
 } from '@tabler/icons-react';
 
 // Map icon name strings to Tabler React components
@@ -24,6 +25,7 @@ const ICON_MAP = {
     IconDisc,
     IconShield,
     IconRefresh,
+    IconApps,
 };
 
 export function DesktopIcons({ apps = [], onIconPositionChange }) {
