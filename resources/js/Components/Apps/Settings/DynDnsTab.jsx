@@ -53,6 +53,8 @@ export function DynDnsTab() {
     const [subdomainError, setSubdomainError] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
     const [hostnameLoading, setHostnameLoading] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         fetchConfigs();
@@ -97,6 +99,7 @@ export function DynDnsTab() {
         }
 
         setModalError(null);
+        setSubmitting(true);
 
         try {
             // Always use NovaNAS provider and fixed 5-minute interval
@@ -141,10 +144,13 @@ export function DynDnsTab() {
             resetForm();
         } catch (err) {
             setModalError(err.message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
+        setDeleting(true);
         try {
             const response = await fetch(`/api/dyndns/configs/${id}`, {
                 method: 'DELETE',
@@ -159,6 +165,8 @@ export function DynDnsTab() {
             setDeleteConfirm(null);
         } catch (err) {
             setError(err.message);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -489,7 +497,7 @@ export function DynDnsTab() {
 
             <Modal
                 opened={opened}
-                onClose={closeModal}
+                onClose={submitting ? () => {} : closeModal}
                 title={<Text fw={600}>{editingConfig ? 'Edit DynDNS Configuration' : 'Add DynDNS Configuration'}</Text>}
                 size="md"
                 centered
@@ -521,6 +529,7 @@ export function DynDnsTab() {
                             placeholder="My NovaNAS DDNS"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            disabled={submitting}
                             required
                         />
 
@@ -530,6 +539,7 @@ export function DynDnsTab() {
                             value={formData.subdomain}
                             onChange={handleSubdomainChange}
                             error={subdomainError}
+                            disabled={submitting}
                             required
                             rightSection={
                                 <Group gap={0} wrap="nowrap">
@@ -558,13 +568,14 @@ export function DynDnsTab() {
                             label="Enabled"
                             checked={formData.is_enabled}
                             onChange={(e) => setFormData({ ...formData, is_enabled: e.target.checked })}
+                            disabled={submitting}
                         />
 
                         <Group justify="flex-end" mt="md">
-                            <Button variant="subtle" onClick={closeModal}>
+                            <Button variant="subtle" onClick={closeModal} disabled={submitting}>
                                 Cancel
                             </Button>
-                            <Button type="submit">
+                            <Button type="submit" loading={submitting}>
                                 {editingConfig ? 'Save Changes' : 'Create'}
                             </Button>
                         </Group>
@@ -575,7 +586,7 @@ export function DynDnsTab() {
             {/* Delete Confirmation Modal */}
             <Modal
                 opened={!!deleteConfirm}
-                onClose={() => setDeleteConfirm(null)}
+                onClose={deleting ? () => {} : () => setDeleteConfirm(null)}
                 title={<Text fw={600}>Delete Configuration</Text>}
                 size="sm"
                 centered
@@ -584,10 +595,10 @@ export function DynDnsTab() {
                     Are you sure you want to delete this DynDNS configuration? This action cannot be undone.
                 </Text>
                 <Group justify="flex-end">
-                    <Button variant="subtle" onClick={() => setDeleteConfirm(null)}>
+                    <Button variant="subtle" onClick={() => setDeleteConfirm(null)} disabled={deleting}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={() => handleDelete(deleteConfirm)}>
+                    <Button color="red" loading={deleting} onClick={() => handleDelete(deleteConfirm)}>
                         Delete
                     </Button>
                 </Group>

@@ -5,6 +5,7 @@ namespace App\Services\Applications;
 use App\Contracts\StoreProviderInterface;
 use App\Models\DesktopApp;
 use App\Models\InstalledApplication;
+use App\Services\SettingsService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -22,6 +23,7 @@ class ApplicationsService
 
     public function __construct(
         protected StoreManager $storeManager,
+        protected SettingsService $settings,
     ) {}
 
     /**
@@ -143,7 +145,7 @@ class ApplicationsService
             ];
         }
 
-        $composeDir = storage_path(self::COMPOSE_DIR.'/'.$appId);
+        $composeDir = $this->getAppStoragePath().'/'.$appId;
 
         if (! is_dir($composeDir)) {
             mkdir($composeDir, 0755, true);
@@ -459,6 +461,20 @@ class ApplicationsService
         $identifier = 'app-'.$installed->app_id;
 
         DesktopApp::where('identifier', $identifier)->delete();
+    }
+
+    /**
+     * Get the application storage path from settings.
+     */
+    private function getAppStoragePath(): string
+    {
+        $path = $this->settings->get('storage.app_folders_home', '/var/novanas/storage/applications');
+
+        if (! is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
+
+        return $path;
     }
 
     /**

@@ -566,8 +566,8 @@ export function AppTab() {
 
                 <SettingRow
                     icon={IconApps}
-                    label="App Folders Home"
-                    description="Location where Docker application folders will be stored"
+                    label="Apps Storage"
+                    description="Location where applications data from the store will be stored"
                     value={settings[SETTINGS_KEYS.appFoldersHome]}
                     onMove={() => handleOpenModal(SETTINGS_KEYS.appFoldersHome)}
                 />
