@@ -1,2 +1,2 @@
-apt update
-apt install zip unzip -yqq
+sudo apt update
+sudo apt install zip unzip -yqq
