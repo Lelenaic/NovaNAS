@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\SambaService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Services\SambaService;
 
 class User extends Authenticatable
 {
@@ -27,6 +27,8 @@ class User extends Authenticatable
         'status',
         'password_set_at',
         'is_admin',
+        'file_manager_layout',
+        'show_hidden_files',
     ];
 
     /**
@@ -52,6 +54,7 @@ class User extends Authenticatable
             'invitation_expires_at' => 'datetime',
             'password_set_at' => 'datetime',
             'is_admin' => 'boolean',
+            'show_hidden_files' => 'boolean',
         ];
     }
 
@@ -166,7 +169,7 @@ class User extends Authenticatable
      */
     public function isInvitationExpired(): bool
     {
-        if (!$this->invitation_expires_at) {
+        if (! $this->invitation_expires_at) {
             return false;
         }
 
@@ -178,6 +181,6 @@ class User extends Authenticatable
      */
     public function canSetPassword(): bool
     {
-        return $this->isPending() && !$this->isInvitationExpired();
+        return $this->isPending() && ! $this->isInvitationExpired();
     }
 }

@@ -8,6 +8,7 @@ use App\Services\SambaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FileManagerController extends Controller
 {
@@ -15,6 +16,70 @@ class FileManagerController extends Controller
         protected SambaService $sambaService,
         protected AclService $aclService
     ) {}
+
+    /**
+     * Get the current user's file manager layout preference.
+     */
+    public function getLayout(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'layout' => $user->file_manager_layout ?? 'list',
+        ]);
+    }
+
+    /**
+     * Update the current user's file manager layout preference.
+     */
+    public function updateLayout(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'layout' => 'required|in:list,grid',
+        ]);
+
+        $user->update(['file_manager_layout' => $validated['layout']]);
+
+        return response()->json([
+            'layout' => $validated['layout'],
+        ]);
+    }
+
+    /**
+     * Get the current user's hidden files preference.
+     */
+    public function getHiddenFiles(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'show_hidden_files' => $user->show_hidden_files ?? false,
+        ]);
+    }
+
+    /**
+     * Update the current user's hidden files preference.
+     */
+    public function updateHiddenFiles(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'show_hidden_files' => 'required|boolean',
+        ]);
+
+        $user->update(['show_hidden_files' => $validated['show_hidden_files']]);
+
+        return response()->json([
+            'show_hidden_files' => $validated['show_hidden_files'],
+        ]);
+    }
 
     /**
      * Get shares accessible to the current user.
@@ -41,7 +106,7 @@ class FileManagerController extends Controller
             // Handle homes share
             if ($share['name'] === 'homes') {
                 if ($share['enabled']) {
-                    $homePath = '/home/'.$username;
+                    $homePath = $this->getUserHomeDirectory($username);
                     $accessibleShares[] = [
                         'name' => 'Home',
                         'path' => $homePath,
@@ -107,7 +172,7 @@ class FileManagerController extends Controller
 
         // Resolve the path (handle ~ for home directory)
         if (str_starts_with($path, '~')) {
-            $path = '/home/'.$username.ltrim($path, '~');
+            $path = $this->getUserHomeDirectory($username).ltrim($path, '~');
         }
 
         // Normalize path (remove trailing slash except root)
@@ -211,7 +276,8 @@ class FileManagerController extends Controller
             return response()->json(['error' => 'Directory already exists'], 409);
         }
 
-        if (! preg_match('/^\/[a-zA-Z0-9_\-\.\/]+$/', $newPath)) {
+        // Validate directory name follows Linux naming rules
+        if (str_contains($dirName, '/') || $dirName === '.' || $dirName === '..' || $dirName === '' || preg_match('/[\x00]/', $dirName)) {
             return response()->json(['error' => 'Invalid directory name'], 400);
         }
 
@@ -390,6 +456,12 @@ class FileManagerController extends Controller
             $zipName .= '.zip';
         }
 
+        // Validate zip name follows Linux naming rules
+        $baseName = pathinfo($zipName, PATHINFO_FILENAME);
+        if (str_contains($baseName, '/') || $baseName === '.' || $baseName === '..' || $baseName === '' || preg_match('/[\x00]/', $baseName)) {
+            return response()->json(['error' => 'Invalid archive name'], 400);
+        }
+
         $zipPath = ($destination === '/' ? '/' : $destination.'/').$zipName;
         $escapedZipPath = escapeshellarg($zipPath);
 
@@ -461,6 +533,35 @@ class FileManagerController extends Controller
     }
 
     /**
+     * Download a file.
+     */
+    public function download(Request $request): BinaryFileResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $username = $user->username;
+        $isAdmin = $user->is_admin;
+
+        $path = $request->input('path');
+
+        if (empty($path)) {
+            return response()->json(['error' => 'Path is required'], 422);
+        }
+
+        if (! $this->isPathAccessible($path, $username, $isAdmin)) {
+            return response()->json(['error' => 'Access denied to this file'], 403);
+        }
+
+        if (! is_file($path)) {
+            return response()->json(['error' => 'File not found'], 404);
+        }
+
+        return response()->download($path, basename($path), [
+            'Content-Type' => mime_content_type($path) ?: 'application/octet-stream',
+        ]);
+    }
+
+    /**
      * Check if a path is a share root directory (safety check).
      */
     protected function isShareRoot(string $path, string $username): bool
@@ -474,7 +575,7 @@ class FileManagerController extends Controller
             }
 
             if ($share['name'] === 'homes' && $share['enabled']) {
-                $homePath = '/home/'.$username;
+                $homePath = $this->getUserHomeDirectory($username);
                 if ($normalized === rtrim($homePath, '/')) {
                     return true;
                 }
@@ -541,6 +642,21 @@ class FileManagerController extends Controller
     }
 
     /**
+     * Get the real home directory for a user from the system.
+     */
+    protected function getUserHomeDirectory(string $username): string
+    {
+        $userInfo = posix_getpwnam($username);
+
+        if ($userInfo && ! empty($userInfo['dir'])) {
+            return $userInfo['dir'];
+        }
+
+        // Fallback (should not happen for valid users)
+        return '/home/'.$username;
+    }
+
+    /**
      * Check if a path is accessible to the user.
      *
      * A path is accessible if it falls within one of the user's allowed share paths.
@@ -571,7 +687,7 @@ class FileManagerController extends Controller
 
             // Homes share: user's home directory
             if ($share['name'] === 'homes' && $share['enabled']) {
-                $homePath = '/home/'.$username;
+                $homePath = $this->getUserHomeDirectory($username);
                 if (str_starts_with($realPath, $homePath) || $realPath === rtrim($homePath, '/')) {
                     return true;
                 }

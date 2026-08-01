@@ -151,6 +151,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/storage/shares/homes', [StorageController::class, 'toggleHomes']);
 
         // File Manager routes
+        Route::get('/api/filemanager/layout', [FileManagerController::class, 'getLayout']);
+        Route::put('/api/filemanager/layout', [FileManagerController::class, 'updateLayout']);
+        Route::get('/api/filemanager/hidden-files', [FileManagerController::class, 'getHiddenFiles']);
+        Route::put('/api/filemanager/hidden-files', [FileManagerController::class, 'updateHiddenFiles']);
         Route::get('/api/filemanager/shares', [FileManagerController::class, 'shares']);
         Route::get('/api/filemanager/files', [FileManagerController::class, 'files']);
         Route::post('/api/filemanager/directories', [FileManagerController::class, 'createDirectory']);
@@ -159,6 +163,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/filemanager/move', [FileManagerController::class, 'move']);
         Route::post('/api/filemanager/zip', [FileManagerController::class, 'zip']);
         Route::post('/api/filemanager/unzip', [FileManagerController::class, 'unzip']);
+        Route::get('/api/filemanager/download', [FileManagerController::class, 'download']);
 
         // User management routes
         Route::get('/api/users', [UserController::class, 'index']);
