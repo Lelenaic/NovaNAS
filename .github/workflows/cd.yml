@@ -50,6 +50,6 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ github.ref_name }}
-        name: ${{ env.VERSION }}
+        name: v${{ env.VERSION }}
         files: /tmp/release.tgz
         token: ${{ secrets.CUSTOM_CI_TOKEN }}
