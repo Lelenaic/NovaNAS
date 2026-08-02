@@ -11,7 +11,7 @@ I wanted to build a NAS OS that is elegant is completely manageable via its web 
 The heart of NovaNAS is that it is managed entirely using the linux packages and configuration files on the system. You can use it for years and remove it tomorrow while keeping your system and everything you created.
 
 <p align="center">
-  <img src="screenshot.png" alt="NovaNAS Desktop">
+  <img src="usage.gif" alt="NovaNAS Desktop">
 </p>
 
 ## Why NovaNAS?
