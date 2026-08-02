@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TrashedFile;
 use App\Models\User;
 use App\Services\AclService;
 use App\Services\SambaService;
+use App\Services\TrashManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
@@ -13,7 +15,8 @@ class FileManagerController extends Controller
 {
     public function __construct(
         protected SambaService $sambaService,
-        protected AclService $aclService
+        protected AclService $aclService,
+        protected TrashManager $trashManager
     ) {}
 
     /**
@@ -293,7 +296,7 @@ class FileManagerController extends Controller
     }
 
     /**
-     * Delete files and folders.
+     * Delete files and folders (moves to trash).
      */
     public function delete(Request $request): JsonResponse
     {
@@ -307,6 +310,8 @@ class FileManagerController extends Controller
             'paths.*' => 'string',
         ]);
 
+        $trashed = 0;
+
         foreach ($validated['paths'] as $path) {
             if (! $this->isPathAccessible($path, $username, $isAdmin)) {
                 return response()->json(['error' => "Access denied to: {$path}"], 403);
@@ -316,16 +321,125 @@ class FileManagerController extends Controller
                 continue;
             }
 
-            // Safety: don't allow deleting share roots
+            // Safety: don't allow trashing share roots
             if ($this->isShareRoot($path, $username)) {
                 return response()->json(['error' => 'Cannot delete share root directory'], 403);
             }
 
-            $escapedPath = escapeshellarg($path);
-            Process::run("sudo rm -rf {$escapedPath}");
+            $result = $this->trashManager->trash($path, $user->id, $username);
+            if ($result) {
+                $trashed++;
+            }
         }
 
-        return response()->json(['message' => 'Deleted successfully']);
+        return response()->json(['message' => "{$trashed} item(s) moved to trash"]);
+    }
+
+    /**
+     * List trashed files for the current user.
+     */
+    public function getTrash(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $trashedFiles = TrashedFile::forUser($user->id)
+            ->orderByDesc('trashed_at')
+            ->get()
+            ->map(fn (TrashedFile $file) => [
+                'id' => $file->id,
+                'filename' => $file->filename,
+                'original_path' => $file->original_path,
+                'trashed_at' => $file->trashed_at->toIso8601String(),
+                'expires_at' => $file->expires_at->toIso8601String(),
+                'is_directory' => is_dir($file->trash_path),
+            ]);
+
+        return response()->json([
+            'items' => $trashedFiles,
+            'retention_days' => $this->trashManager->getRetentionDays(),
+        ]);
+    }
+
+    /**
+     * Restore a file from trash to its original location.
+     */
+    public function restore(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'id' => 'required|integer|exists:trashed_files,id',
+        ]);
+
+        $trashedFile = TrashedFile::findOrFail($validated['id']);
+
+        // Only allow restoring own files (or admin can restore any)
+        if ($trashedFile->trashed_by !== $user->id && ! $user->is_admin) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        // Validate the original path is still accessible
+        $username = $user->username;
+        $isAdmin = $user->is_admin;
+        if (! $this->isPathAccessible($trashedFile->original_path, $username, $isAdmin)) {
+            return response()->json(['error' => 'Cannot restore to original location (access denied)'], 403);
+        }
+
+        // Check for conflict at original path
+        if (file_exists($trashedFile->original_path)) {
+            return response()->json(['error' => 'A file with the same name already exists at the original location'], 409);
+        }
+
+        $success = $this->trashManager->restore($trashedFile);
+
+        if (! $success) {
+            return response()->json(['error' => 'Failed to restore file'], 500);
+        }
+
+        return response()->json(['message' => 'File restored successfully']);
+    }
+
+    /**
+     * Permanently delete a trashed file.
+     */
+    public function forceDelete(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'id' => 'required|integer|exists:trashed_files,id',
+        ]);
+
+        $trashedFile = TrashedFile::findOrFail($validated['id']);
+
+        // Only allow deleting own files (or admin can delete any)
+        if ($trashedFile->trashed_by !== $user->id && ! $user->is_admin) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        $success = $this->trashManager->forceDelete($trashedFile);
+
+        if (! $success) {
+            return response()->json(['error' => 'Failed to delete file'], 500);
+        }
+
+        return response()->json(['message' => 'File permanently deleted']);
+    }
+
+    /**
+     * Empty all trashed files for the current user.
+     */
+    public function emptyTrash(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $deleted = $this->trashManager->emptyTrash($user->id);
+
+        return response()->json(['message' => "{$deleted} item(s) permanently deleted from trash"]);
     }
 
     /**

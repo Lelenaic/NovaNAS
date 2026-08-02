@@ -102,3 +102,13 @@ Schedule::call(function () {
 Schedule::job(new \App\Jobs\RenewSelfSignedCertificatesJob)
     ->monthly()
     ->name('self-signed-cert-renewal');
+
+/**
+ * Auto-Delete Expired Trash
+ *
+ * Permanently deletes files that have exceeded their retention period in trash.
+ * Runs daily at 3:00 AM.
+ */
+Schedule::job(new \App\Jobs\AutoDeleteTrashJob)
+    ->dailyAt('03:00')
+    ->name('auto-delete-trash');

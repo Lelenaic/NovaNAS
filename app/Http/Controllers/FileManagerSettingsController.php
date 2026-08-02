@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TrashManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,57 +12,73 @@ class FileManagerSettingsController extends Controller
 {
     private const PHP_INI_PATH = '/etc/php/8.5/apache2/php.ini';
 
+    public function __construct(
+        protected TrashManager $trashManager
+    ) {}
+
     /**
-     * Get file manager settings from php.ini.
+     * Get file manager settings.
      */
     public function index(): JsonResponse
     {
         return response()->json([
             'upload_max_filesize' => $this->getIniValue('upload_max_filesize'),
             'post_max_size' => $this->getIniValue('post_max_size'),
+            'trash_retention_days' => $this->trashManager->getRetentionDays(),
         ]);
     }
 
     /**
-     * Update file manager settings in php.ini and reload Apache.
+     * Update file manager settings.
      */
     public function update(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'upload_max_filesize' => 'required|string',
+            'upload_max_filesize' => 'required_without:trash_retention_days|nullable|string',
+            'trash_retention_days' => 'required_without:upload_max_filesize|nullable|integer|min:1|max:365',
         ]);
 
-        $value = $validated['upload_max_filesize'];
+        $message = 'Settings updated successfully.';
 
-        if (! $this->isValidSize($value)) {
-            return response()->json([
-                'message' => 'Invalid size format. Use a value like "2M", "128M", "1G", or "0" for unlimited.',
-            ], 422);
+        // Update upload size if provided
+        if (! empty($validated['upload_max_filesize'])) {
+            $value = $validated['upload_max_filesize'];
+
+            if (! $this->isValidSize($value)) {
+                return response()->json([
+                    'message' => 'Invalid size format. Use a value like "2M", "128M", "1G", or "0" for unlimited.',
+                ], 422);
+            }
+
+            $this->setIniValue('upload_max_filesize', $value);
+
+            $postMaxSize = $this->calculatePostMaxSize($value);
+            $this->setIniValue('post_max_size', $postMaxSize);
+
+            $reloadResult = $this->reloadApache();
+
+            if (! $reloadResult['success']) {
+                return response()->json([
+                    'message' => 'Upload settings saved but Apache reload failed: '.$reloadResult['error'],
+                ], 500);
+            }
+
+            Log::info('File manager upload settings updated', [
+                'upload_max_filesize' => $value,
+                'post_max_size' => $postMaxSize,
+            ]);
         }
 
-        $this->setIniValue('upload_max_filesize', $value);
-
-        // post_max_size should be at least 2x upload_max_filesize to be safe
-        $postMaxSize = $this->calculatePostMaxSize($value);
-        $this->setIniValue('post_max_size', $postMaxSize);
-
-        $reloadResult = $this->reloadApache();
-
-        if (! $reloadResult['success']) {
-            return response()->json([
-                'message' => 'Settings saved but Apache reload failed: '.$reloadResult['error'],
-            ], 500);
+        // Update trash retention if provided
+        if (isset($validated['trash_retention_days'])) {
+            $this->trashManager->setRetentionDays((int) $validated['trash_retention_days']);
         }
-
-        Log::info('File manager upload settings updated', [
-            'upload_max_filesize' => $value,
-            'post_max_size' => $postMaxSize,
-        ]);
 
         return response()->json([
-            'message' => 'Upload size limit updated successfully.',
-            'upload_max_filesize' => $value,
-            'post_max_size' => $postMaxSize,
+            'message' => $message,
+            'upload_max_filesize' => $this->getIniValue('upload_max_filesize'),
+            'post_max_size' => $this->getIniValue('post_max_size'),
+            'trash_retention_days' => $this->trashManager->getRetentionDays(),
         ]);
     }
 

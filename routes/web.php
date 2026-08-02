@@ -171,6 +171,12 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/filemanager/download', [FileManagerController::class, 'download']);
         Route::post('/api/filemanager/upload', [FileManagerController::class, 'upload']);
 
+        // File Manager trash routes
+        Route::get('/api/filemanager/trash', [FileManagerController::class, 'getTrash']);
+        Route::post('/api/filemanager/trash/restore', [FileManagerController::class, 'restore']);
+        Route::delete('/api/filemanager/trash/force-delete', [FileManagerController::class, 'forceDelete']);
+        Route::delete('/api/filemanager/trash/empty', [FileManagerController::class, 'emptyTrash']);
+
         // User management routes
         Route::get('/api/users', [UserController::class, 'index']);
         Route::post('/api/users', [UserController::class, 'store']);

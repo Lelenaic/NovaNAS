@@ -44,6 +44,7 @@ import {
     IconEyeOff,
     IconUpload,
     IconCloudUpload,
+    IconArrowBackUp,
 } from '@tabler/icons-react';
 
 function formatFileSize(bytes) {
@@ -458,6 +459,11 @@ export function FileManagerAppContent() {
     const uploadMenuRef = useRef(null);
     const uploadIdCounter = useRef(0);
 
+    // Trash state
+    const [isTrashView, setIsTrashView] = useState(false);
+    const [trashItems, setTrashItems] = useState([]);
+    const [loadingTrash, setLoadingTrash] = useState(false);
+
     // ---- Data fetching ----
 
     const fetchShares = useCallback(async () => {
@@ -542,6 +548,28 @@ export function FileManagerAppContent() {
         }
     }, [showHiddenFiles]);
 
+    const fetchTrash = useCallback(async () => {
+        setLoadingTrash(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/filemanager/trash', {
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setTrashItems(data.items || []);
+            } else {
+                setError('Failed to load trash');
+                setTrashItems([]);
+            }
+        } catch {
+            setError('Failed to load trash');
+            setTrashItems([]);
+        } finally {
+            setLoadingTrash(false);
+        }
+    }, []);
+
     const fetchFiles = useCallback(async (path, share = activeShare) => {
         setLoadingFiles(true);
         setError(null);
@@ -624,11 +652,27 @@ export function FileManagerAppContent() {
 
     const handleShareClick = (share) => {
         setActiveShare(share);
+        setIsTrashView(false);
+        setTrashItems([]);
         setNewFolderName('');
         setShowNewFolderInput(false);
         setNewFolderError(null);
         setClipboard(null);
         fetchFiles(share.path, share);
+    };
+
+    const handleTrashClick = () => {
+        setIsTrashView(true);
+        setActiveShare(null);
+        setCurrentPath(null);
+        setItems([]);
+        setBreadcrumbs([]);
+        setSelectedPaths(new Set());
+        setNewFolderName('');
+        setShowNewFolderInput(false);
+        setNewFolderError(null);
+        setClipboard(null);
+        fetchTrash();
     };
 
     const handleBreadcrumbClick = (path) => {
@@ -1127,6 +1171,38 @@ export function FileManagerAppContent() {
         document.body.removeChild(a);
     };
 
+    // ---- Trash actions ----
+
+    const handleRestoreTrash = async (id) => {
+        closeContextMenu();
+        try {
+            await apiRequest('/api/filemanager/trash/restore', 'POST', { id });
+            fetchTrash();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleForceDeleteTrash = async (id) => {
+        closeContextMenu();
+        try {
+            await apiRequest('/api/filemanager/trash/force-delete', 'DELETE', { id });
+            fetchTrash();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleEmptyTrash = async () => {
+        closeContextMenu();
+        try {
+            await apiRequest('/api/filemanager/trash/empty', 'DELETE');
+            setTrashItems([]);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
     // ---- Upload ----
 
     const formatSpeed = (bytesPerSecond) => {
@@ -1157,6 +1233,7 @@ export function FileManagerAppContent() {
 
         const newUploads = fileEntries.map(({ file, relativePath }) => ({
             id: ++uploadIdCounter.current,
+            file,
             name: file.name,
             relativePath,
             size: file.size,
@@ -1209,24 +1286,38 @@ export function FileManagerAppContent() {
             });
 
             xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (xhr.status >= 200 && xhr.status < 300 && data.errors && data.errors.length > 0) {
+                        setUploads((prev) =>
+                            prev.map((u) =>
+                                u.id === upload.id
+                                    ? { ...u, status: 'error', errorMsg: data.errors[0].error || 'Upload failed', speed: 0 }
+                                    : u
+                            )
+                        );
+                    } else if (xhr.status >= 200 && xhr.status < 300) {
+                        setUploads((prev) =>
+                            prev.map((u) =>
+                                u.id === upload.id
+                                    ? { ...u, status: 'done', percentage: 100, speed: 0 }
+                                    : u
+                            )
+                        );
+                    } else {
+                        setUploads((prev) =>
+                            prev.map((u) =>
+                                u.id === upload.id
+                                    ? { ...u, status: 'error', errorMsg: data.error || 'Upload failed', speed: 0 }
+                                    : u
+                            )
+                        );
+                    }
+                } catch {
                     setUploads((prev) =>
                         prev.map((u) =>
                             u.id === upload.id
-                                ? { ...u, status: 'done', percentage: 100, speed: 0 }
-                                : u
-                        )
-                    );
-                } else {
-                    let errorMsg = 'Upload failed';
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        errorMsg = data.error || errorMsg;
-                    } catch {}
-                    setUploads((prev) =>
-                        prev.map((u) =>
-                            u.id === upload.id
-                                ? { ...u, status: 'error', errorMsg, speed: 0 }
+                                ? { ...u, status: 'error', errorMsg: 'Upload failed', speed: 0 }
                                 : u
                         )
                     );
@@ -1329,6 +1420,64 @@ export function FileManagerAppContent() {
     // ---- Context menu items ----
 
     const getContextMenuItems = () => {
+        if (isTrashView) {
+            const paths = contextMenu?.paths || [];
+            const hasSelection = paths.length > 0;
+
+            const menuItems = [];
+
+            if (contextMenu?.isBackground) {
+                menuItems.push({
+                    label: 'Refresh',
+                    icon: <IconRefresh size={16} />,
+                    onClick: fetchTrash,
+                });
+                if (trashItems.length > 0) {
+                    menuItems.push({ separator: true });
+                    menuItems.push({
+                        label: 'Empty Trash',
+                        icon: <IconTrash size={16} />,
+                        onClick: handleEmptyTrash,
+                        danger: true,
+                    });
+                }
+            } else {
+                if (hasSelection && paths.length === 1) {
+                    const trashItem = trashItems.find((i) => String(i.id) === paths[0]);
+                    if (trashItem) {
+                        menuItems.push({
+                            label: 'Restore',
+                            icon: <IconRestore size={16} />,
+                            onClick: () => handleRestoreTrash(trashItem.id),
+                        });
+                        menuItems.push({
+                            label: 'Delete Permanently',
+                            icon: <IconTrash size={16} />,
+                            onClick: () => handleForceDeleteTrash(trashItem.id),
+                            danger: true,
+                        });
+                    }
+                } else if (hasSelection && paths.length > 1) {
+                    menuItems.push({
+                        label: 'Delete Permanently',
+                        icon: <IconTrash size={16} />,
+                        onClick: async () => {
+                            closeContextMenu();
+                            for (const id of paths) {
+                                const trashItem = trashItems.find((i) => String(i.id) === id);
+                                if (trashItem) {
+                                    await handleForceDeleteTrash(trashItem.id);
+                                }
+                            }
+                        },
+                        danger: true,
+                    });
+                }
+            }
+
+            return menuItems;
+        }
+
         const paths = contextMenu?.paths || [];
         const hasSelection = paths.length > 0;
         const isZipFile = hasSelection && paths.length === 1 && paths[0].endsWith('.zip');
@@ -1503,6 +1652,32 @@ export function FileManagerAppContent() {
                         onClick={() => handleShareClick(share)}
                     />
                 ))}
+
+                <Divider my="sm" color="dark.4" />
+
+                <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Trash
+                </Text>
+                <UnstyledButton
+                    onClick={handleTrashClick}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: isTrashView ? theme.colors.blue[6] : 'transparent',
+                        color: isTrashView ? 'white' : theme.colors.gray[4],
+                        transition: 'all 0.15s ease',
+                        marginBottom: '2px',
+                        width: '100%',
+                        textAlign: 'left',
+                    }}
+                >
+                    <IconTrash size={18} />
+                    <Text size="sm" fw={isTrashView ? 600 : 400}>Trash</Text>
+                </UnstyledButton>
             </Box>
 
             {/* Main content */}
@@ -1525,120 +1700,141 @@ export function FileManagerAppContent() {
                         gap: '8px',
                     }}
                 >
-                    <Tooltip label="Go back">
-                        <ActionIcon variant="subtle" color="gray" onClick={handleBack} disabled={breadcrumbs.length <= 1}>
-                            <IconArrowLeft size={18} />
-                        </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Refresh">
-                        <ActionIcon variant="subtle" color="gray" onClick={handleRefresh} disabled={!currentPath}>
-                            <IconRefresh size={18} />
-                        </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="New folder">
-                        <ActionIcon variant="subtle" color="gray" onClick={handleNewFolder} disabled={!currentPath || activeShare?.permission !== 'readwrite'}>
-                            <IconFolderPlus size={18} />
-                        </ActionIcon>
-                    </Tooltip>
-                    <Box style={{ position: 'relative' }} ref={uploadMenuRef}>
-                        <Tooltip label="Upload">
-                            <ActionIcon variant="subtle" color="gray" onClick={handleUploadClick} disabled={!currentPath || activeShare?.permission !== 'readwrite'}>
-                                <IconUpload size={18} />
-                            </ActionIcon>
-                        </Tooltip>
-                        {showUploadMenu && (
-                            <Box
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    marginTop: '4px',
-                                    zIndex: 10000,
-                                    minWidth: '160px',
-                                    backgroundColor: theme.colors.dark[6],
-                                    border: `1px solid ${theme.colors.dark[4]}`,
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-                                    padding: '4px',
-                                }}
-                            >
-                                <UnstyledButton
-                                    onClick={handleUploadFiles}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        width: '100%',
-                                        textAlign: 'left',
-                                        color: theme.colors.gray[2],
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                >
-                                    <IconUpload size={16} />
-                                    <Text size="sm">Upload files</Text>
-                                </UnstyledButton>
-                                <UnstyledButton
-                                    onClick={handleUploadFolder}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        width: '100%',
-                                        textAlign: 'left',
-                                        color: theme.colors.gray[2],
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                >
-                                    <IconCloudUpload size={16} />
-                                    <Text size="sm">Upload folder</Text>
-                                </UnstyledButton>
+                    {isTrashView ? (
+                        <>
+                            <IconTrash size={18} color={theme.colors.gray[4]} />
+                            <Text size="sm" fw={600} style={{ flex: 1 }}>Trash</Text>
+                            {trashItems.length > 0 && (
+                                <Tooltip label="Empty Trash">
+                                    <ActionIcon variant="subtle" color="red" onClick={handleEmptyTrash}>
+                                        <IconTrash size={18} />
+                                    </ActionIcon>
+                                </Tooltip>
+                            )}
+                            <Tooltip label="Refresh">
+                                <ActionIcon variant="subtle" color="gray" onClick={fetchTrash} disabled={loadingTrash}>
+                                    <IconRefresh size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+                        </>
+                    ) : (
+                        <>
+                            <Tooltip label="Go back">
+                                <ActionIcon variant="subtle" color="gray" onClick={handleBack} disabled={breadcrumbs.length <= 1}>
+                                    <IconArrowLeft size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="Refresh">
+                                <ActionIcon variant="subtle" color="gray" onClick={handleRefresh} disabled={!currentPath}>
+                                    <IconRefresh size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="New folder">
+                                <ActionIcon variant="subtle" color="gray" onClick={handleNewFolder} disabled={!currentPath || activeShare?.permission !== 'readwrite'}>
+                                    <IconFolderPlus size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Box style={{ position: 'relative' }} ref={uploadMenuRef}>
+                                <Tooltip label="Upload">
+                                    <ActionIcon variant="subtle" color="gray" onClick={handleUploadClick} disabled={!currentPath || activeShare?.permission !== 'readwrite'}>
+                                        <IconUpload size={18} />
+                                    </ActionIcon>
+                                </Tooltip>
+                                {showUploadMenu && (
+                                    <Box
+                                        style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            marginTop: '4px',
+                                            zIndex: 10000,
+                                            minWidth: '160px',
+                                            backgroundColor: theme.colors.dark[6],
+                                            border: `1px solid ${theme.colors.dark[4]}`,
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                                            padding: '4px',
+                                        }}
+                                    >
+                                        <UnstyledButton
+                                            onClick={handleUploadFiles}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '8px 12px',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                width: '100%',
+                                                textAlign: 'left',
+                                                color: theme.colors.gray[2],
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                            <IconUpload size={16} />
+                                            <Text size="sm">Upload files</Text>
+                                        </UnstyledButton>
+                                        <UnstyledButton
+                                            onClick={handleUploadFolder}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '8px 12px',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                width: '100%',
+                                                textAlign: 'left',
+                                                color: theme.colors.gray[2],
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                            <IconCloudUpload size={16} />
+                                            <Text size="sm">Upload folder</Text>
+                                        </UnstyledButton>
+                                    </Box>
+                                )}
                             </Box>
-                        )}
-                    </Box>
-                    {clipboard && (
-                        <Tooltip label="Paste">
-                            <ActionIcon variant="subtle" color="blue" onClick={handlePaste}>
-                                <IconClipboard size={18} />
-                            </ActionIcon>
-                        </Tooltip>
+                            {clipboard && (
+                                <Tooltip label="Paste">
+                                    <ActionIcon variant="subtle" color="blue" onClick={handlePaste}>
+                                        <IconClipboard size={18} />
+                                    </ActionIcon>
+                                </Tooltip>
+                            )}
+
+                            <Tooltip label={layout === 'list' ? 'Switch to grid view' : 'Switch to list view'}>
+                                <ActionIcon variant="subtle" color="gray" onClick={toggleLayout}>
+                                    {layout === 'list' ? <IconLayoutGrid size={18} /> : <IconList size={18} />}
+                                </ActionIcon>
+                            </Tooltip>
+
+                            <Tooltip label={showHiddenFiles ? 'Hide hidden files' : 'Show hidden files'}>
+                                <ActionIcon variant="subtle" color={showHiddenFiles ? 'blue' : 'gray'} onClick={toggleHiddenFiles}>
+                                    {showHiddenFiles ? <IconEye size={18} /> : <IconEyeOff size={18} />}
+                                </ActionIcon>
+                            </Tooltip>
+
+                            <Box style={{ flex: 1, minWidth: 0 }}>
+                                <Breadcrumbs separator="/" size="sm">
+                                    {breadcrumbs.map((crumb) => (
+                                        <Anchor
+                                            key={crumb.path}
+                                            component="button"
+                                            type="button"
+                                            onClick={() => handleBreadcrumbClick(crumb.path)}
+                                            size="sm"
+                                            fw={crumb.path === currentPath ? 600 : 400}
+                                        >
+                                            {crumb.name}
+                                        </Anchor>
+                                    ))}
+                                </Breadcrumbs>
+                            </Box>
+                        </>
                     )}
-
-                    <Tooltip label={layout === 'list' ? 'Switch to grid view' : 'Switch to list view'}>
-                        <ActionIcon variant="subtle" color="gray" onClick={toggleLayout}>
-                            {layout === 'list' ? <IconLayoutGrid size={18} /> : <IconList size={18} />}
-                        </ActionIcon>
-                    </Tooltip>
-
-                    <Tooltip label={showHiddenFiles ? 'Hide hidden files' : 'Show hidden files'}>
-                        <ActionIcon variant="subtle" color={showHiddenFiles ? 'blue' : 'gray'} onClick={toggleHiddenFiles}>
-                            {showHiddenFiles ? <IconEye size={18} /> : <IconEyeOff size={18} />}
-                        </ActionIcon>
-                    </Tooltip>
-
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Breadcrumbs separator="/" size="sm">
-                            {breadcrumbs.map((crumb) => (
-                                <Anchor
-                                    key={crumb.path}
-                                    component="button"
-                                    type="button"
-                                    onClick={() => handleBreadcrumbClick(crumb.path)}
-                                    size="sm"
-                                    fw={crumb.path === currentPath ? 600 : 400}
-                                >
-                                    {crumb.name}
-                                </Anchor>
-                            ))}
-                        </Breadcrumbs>
-                    </Box>
                 </Box>
 
                 {/* Drop targets for parent folders */}
@@ -1766,17 +1962,16 @@ export function FileManagerAppContent() {
                 <Box
                     ref={fileListRef}
                     style={{ flex: 1, overflow: 'auto', padding: '8px', position: 'relative', userSelect: 'none' }}
-                    onMouseDown={handleFileListMouseDown}
-                    onClick={handleBackgroundClick}
-                    onContextMenu={(e) => handleContextMenu(e, null)}
-                    onDragOver={handleExternalDragOver}
-                    onDragLeave={handleExternalDragLeave}
-                    onDrop={handleExternalDrop}
+                    onMouseDown={isTrashView ? undefined : handleFileListMouseDown}
+                    onClick={isTrashView ? undefined : handleBackgroundClick}
+                    onContextMenu={isTrashView ? (e) => handleContextMenu(e, null) : (e) => handleContextMenu(e, null)}
+                    onDragOver={isTrashView ? undefined : handleExternalDragOver}
+                    onDragLeave={isTrashView ? undefined : handleExternalDragLeave}
+                    onDrop={isTrashView ? undefined : handleExternalDrop}
                 >
-                    <LoadingOverlay visible={loadingFiles} zIndex={1} />
+                    <LoadingOverlay visible={loadingFiles || loadingTrash} zIndex={1} />
 
-                    {/* External drop overlay */}
-                    {isDragOverExternal && (
+                    {!isTrashView && isDragOverExternal && (
                         <Box
                             style={{
                                 position: 'absolute',
@@ -1797,7 +1992,7 @@ export function FileManagerAppContent() {
                         </Box>
                     )}
 
-                    {!currentPath && !loadingFiles && (
+                    {!isTrashView && !currentPath && !loadingFiles && (
                         <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
                             <Text size="4rem">📁</Text>
                             <Text size="lg" fw={600} c="white">File Manager</Text>
@@ -1805,14 +2000,111 @@ export function FileManagerAppContent() {
                         </Box>
                     )}
 
-                    {currentPath && visibleItems.length === 0 && !loadingFiles && !error && (
+                    {!isTrashView && currentPath && visibleItems.length === 0 && !loadingFiles && !error && (
                         <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px' }}>
                             <IconFolder size={48} color={theme.colors.dark[3]} />
                             <Text c="dimmed">This folder is empty</Text>
                         </Box>
                     )}
 
-                    {layout === 'list' ? (
+                    {/* Trash view */}
+                    {isTrashView && (
+                        <>
+                            {trashItems.length === 0 && !loadingTrash && (
+                                <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px' }}>
+                                    <IconTrash size={48} color={theme.colors.dark[3]} />
+                                    <Text c="dimmed">Trash is empty</Text>
+                                </Box>
+                            )}
+                            {trashItems.map((item) => (
+                                <UnstyledButton
+                                    key={item.id}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (e.ctrlKey || e.metaKey) {
+                                            setSelectedPaths((prev) => {
+                                                const next = new Set(prev);
+                                                const id = String(item.id);
+                                                if (next.has(id)) next.delete(id); else next.add(id);
+                                                return next;
+                                            });
+                                        } else {
+                                            setSelectedPaths(new Set([String(item.id)]));
+                                        }
+                                    }}
+                                    onContextMenu={(e) => handleContextMenu(e, { ...item, path: String(item.id) })}
+                                    data-path={String(item.id)}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '1px 4px',
+                                        borderRadius: '6px',
+                                        userSelect: 'none',
+                                        backgroundColor: selectedPaths.has(String(item.id)) ? theme.colors.blue[8] : 'transparent',
+                                        transition: 'background-color 0.1s ease',
+                                        border: '2px solid transparent',
+                                    }}
+                                >
+                                    <Group gap="12px" style={{ padding: '7px 8px' }}>
+                                        <ThemeIcon
+                                            size="lg"
+                                            radius="md"
+                                            variant="light"
+                                            color={item.is_directory ? 'yellow' : 'gray'}
+                                            style={{ flexShrink: 0 }}
+                                        >
+                                            {item.is_directory ? <IconFolder size={18} /> : <IconFile size={18} />}
+                                        </ThemeIcon>
+                                        <Box style={{ flex: 1, minWidth: 0 }}>
+                                            <Text size="sm" fw={500} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {item.filename}
+                                            </Text>
+                                            <Text size="xs" c="dimmed">
+                                                From: {item.original_path}
+                                            </Text>
+                                            <Text size="xs" c="dimmed">
+                                                Deleted: {new Date(item.trashed_at).toLocaleString()}
+                                                <br />
+                                                Auto-deletes: {new Date(item.expires_at).toLocaleString()}
+                                            </Text>
+                                        </Box>
+                                        <Tooltip label="Restore">
+                                            <ActionIcon
+                                                variant="subtle"
+                                                color="green"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRestoreTrash(item.id);
+                                                }}
+                                                style={{ flexShrink: 0 }}
+                                            >
+                                                <IconArrowBackUp size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                        <Tooltip label="Delete permanently">
+                                            <ActionIcon
+                                                variant="subtle"
+                                                color="red"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleForceDeleteTrash(item.id);
+                                                }}
+                                                style={{ flexShrink: 0 }}
+                                            >
+                                                <IconTrash size={16} />
+                                            </ActionIcon>
+                                        </Tooltip>
+                                    </Group>
+                                </UnstyledButton>
+                            ))}
+                        </>
+                    )}
+
+                    {/* Normal file view */}
+                    {!isTrashView && layout === 'list' && (
                         visibleItems.map((item) => (
                             <FileItem
                                 key={item.path}
@@ -1833,7 +2125,9 @@ export function FileManagerAppContent() {
                                 onDownload={handleDownload}
                             />
                         ))
-                    ) : (
+                    )}
+
+                    {!isTrashView && layout === 'grid' && (
                         <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '4px' }}>
                             {visibleItems.map((item) => (
                                 <FileItemGrid
@@ -1942,11 +2236,15 @@ export function FileManagerAppContent() {
                     }}
                 >
                     <Text size="xs" c="dimmed">
-                        {selectedPaths.size > 0
-                            ? `${selectedPaths.size} selected`
-                            : `${visibleItems.length} item${visibleItems.length !== 1 ? 's' : ''}`}
+                        {isTrashView
+                            ? (selectedPaths.size > 0
+                                ? `${selectedPaths.size} selected`
+                                : `${trashItems.length} item${trashItems.length !== 1 ? 's' : ''} in trash`)
+                            : (selectedPaths.size > 0
+                                ? `${selectedPaths.size} selected`
+                                : `${visibleItems.length} item${visibleItems.length !== 1 ? 's' : ''}`)}
                     </Text>
-                    {activeShare && (
+                    {!isTrashView && activeShare && (
                         <Text size="xs" c="dimmed">
                             {activeShare.permission === 'readwrite' ? 'Read/Write' : 'Read Only'}
                         </Text>
