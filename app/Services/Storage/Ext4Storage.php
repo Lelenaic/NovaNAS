@@ -185,7 +185,7 @@ class Ext4Storage implements StorageInterface
      */
     public function getMountpoint(string $poolOrDataset): ?string
     {
-        $result = Process::run("sudo findmnt -n -o TARGET {$poolOrDataset}");
+        $result = Process::run('sudo findmnt -n -o TARGET '.escapeshellarg($poolOrDataset));
 
         if ($result->failed()) {
             return null;
@@ -432,13 +432,11 @@ class Ext4Storage implements StorageInterface
     protected function removeFstabEntry(string $device, ?string $uuid, string $mountpoint): void
     {
         if ($uuid) {
-            Process::run('sudo sed -i \'/UUID='.escapeshellcmd($uuid).'/d\' /etc/fstab');
+            Process::run('sudo sed -i '.escapeshellarg('/UUID='.$uuid.'/d').' /etc/fstab');
         }
         // Also remove by device path in case UUID line wasn't found
-        $escapedDevice = str_replace('/', '\\/', $device);
-        Process::run("sudo sed -i '/{$escapedDevice}/d' /etc/fstab");
+        Process::run('sudo sed -i '.escapeshellarg('/'.$device.'/d').' /etc/fstab');
         // Also remove by mountpoint
-        $escapedMount = str_replace('/', '\\/', $mountpoint);
-        Process::run("sudo sed -i '/{$escapedMount}/d' /etc/fstab");
+        Process::run('sudo sed -i '.escapeshellarg('/'.$mountpoint.'/d').' /etc/fstab');
     }
 }

@@ -539,7 +539,7 @@ class SystemController extends Controller
         File::put($tempFile, $interfaceConfig);
 
         // Copy to interfaces.d with sudo
-        $copyResult = shell_exec("sudo cp {$tempFile} {$targetFile} 2>&1");
+        $copyResult = shell_exec('sudo cp '.escapeshellarg($tempFile).' '.escapeshellarg($targetFile).' 2>&1');
 
         if ($copyResult !== null && str_contains($copyResult, 'error')) {
             return response()->json(['success' => false, 'error' => 'Failed to copy config: '.$copyResult], 500);
@@ -547,10 +547,10 @@ class SystemController extends Controller
 
         // Bring interface down and up to apply changes
         // First, try to bring down if it's already up
-        shell_exec("sudo ifdown {$interface} 2>/dev/null");
+        shell_exec('sudo ifdown '.escapeshellarg($interface).' 2>/dev/null');
 
         // Bring interface up
-        $upResult = shell_exec("sudo ifup {$interface} 2>&1");
+        $upResult = shell_exec('sudo ifup '.escapeshellarg($interface).' 2>&1');
 
         // Clean up temp file
         @unlink($tempFile);

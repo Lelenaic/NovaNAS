@@ -81,7 +81,7 @@ class ZfsStorage implements StorageInterface
      */
     public function getMountpoint(string $poolOrDataset): ?string
     {
-        $result = Process::run("zfs get -Hp -o value mountpoint {$poolOrDataset}");
+        $result = Process::run('zfs get -Hp -o value mountpoint '.escapeshellarg($poolOrDataset));
 
         if ($result->failed()) {
             return null;
@@ -104,7 +104,7 @@ class ZfsStorage implements StorageInterface
      */
     public function getPoolInfo(string $pool): ?array
     {
-        $result = Process::run("zpool list -Hp -o name,size,allocated,free,health,cap,altroot {$pool}");
+        $result = Process::run('zpool list -Hp -o name,size,allocated,free,health,cap,altroot '.escapeshellarg($pool));
 
         if ($result->failed()) {
             return null;
@@ -151,7 +151,7 @@ class ZfsStorage implements StorageInterface
      */
     public function listDatasets(string $pool): array
     {
-        $result = Process::run("zfs list -Hp -r -o name,used,available,refer,mountpoint,compression,checksum {$pool}");
+        $result = Process::run('zfs list -Hp -r -o name,used,available,refer,mountpoint,compression,checksum '.escapeshellarg($pool));
 
         if ($result->failed()) {
             return [];
@@ -189,7 +189,7 @@ class ZfsStorage implements StorageInterface
      */
     public function getHealth(string $pool): ?string
     {
-        $result = Process::run("zpool list -Hp -o health {$pool}");
+        $result = Process::run('zpool list -Hp -o health '.escapeshellarg($pool));
 
         if ($result->failed()) {
             return null;
@@ -205,7 +205,7 @@ class ZfsStorage implements StorageInterface
      */
     public function getProperties(string $poolOrDataset): array
     {
-        $result = Process::run("zfs get all -Hp {$poolOrDataset}");
+        $result = Process::run('zfs get all -Hp '.escapeshellarg($poolOrDataset));
 
         if ($result->failed()) {
             return [];
@@ -371,7 +371,7 @@ class ZfsStorage implements StorageInterface
      */
     public function getIoStats(string $pool): ?array
     {
-        $result = Process::run("zpool iostat -Hp {$pool} 1");
+        $result = Process::run('zpool iostat -Hp '.escapeshellarg($pool).' 1');
 
         if ($result->failed()) {
             return null;

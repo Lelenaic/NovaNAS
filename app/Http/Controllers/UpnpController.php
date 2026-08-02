@@ -47,9 +47,9 @@ class UpnpController extends Controller
         if ($rule->is_enabled) {
             $publishResult = $rule->publish();
 
-            if (!$publishResult['success']) {
+            if (! $publishResult['success']) {
                 return response()->json([
-                    'message' => 'Rule created but failed to publish: ' . $publishResult['message'],
+                    'message' => 'Rule created but failed to publish: '.$publishResult['message'],
                     'rule' => $this->formatRule($rule),
                 ], 201);
             }
@@ -91,9 +91,9 @@ class UpnpController extends Controller
 
             $publishResult = $rule->publish();
 
-            if (!$publishResult['success']) {
+            if (! $publishResult['success']) {
                 return response()->json([
-                    'message' => 'Rule updated but failed to publish: ' . $publishResult['message'],
+                    'message' => 'Rule updated but failed to publish: '.$publishResult['message'],
                     'rule' => $this->formatRule($rule->fresh()),
                 ]);
             }
@@ -256,12 +256,12 @@ class UpnpController extends Controller
         $interfaces = [];
 
         $sysClassNet = '/sys/class/net';
-        if (!File::exists($sysClassNet)) {
+        if (! File::exists($sysClassNet)) {
             return response()->json($interfaces);
         }
 
         $devices = File::directories($sysClassNet);
-        if (!$devices) {
+        if (! $devices) {
             return response()->json($interfaces);
         }
 
@@ -316,7 +316,7 @@ class UpnpController extends Controller
         $command = sprintf(
             'sudo upnpc -d %d %s 2>&1',
             $port,
-            $protocol
+            escapeshellarg($protocol)
         );
 
         shell_exec($command);
@@ -389,7 +389,7 @@ class UpnpController extends Controller
             'ipv4' => null,
         ];
 
-        $result = Process::run("ip -4 addr show {$name} 2>/dev/null");
+        $result = Process::run('ip -4 addr show '.escapeshellarg($name).' 2>/dev/null');
         if ($result->successful()) {
             $output = $result->output();
             if (preg_match('/inet (\d+\.\d+\.\d+\.\d+)/', $output, $matches)) {

@@ -8,7 +8,6 @@ use App\Services\SambaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FileManagerController extends Controller
 {
@@ -533,9 +532,117 @@ class FileManagerController extends Controller
     }
 
     /**
+     * Upload files to a directory.
+     *
+     * Accepts multiple files with optional relative paths (for folder uploads).
+     */
+    public function upload(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $username = $user->username;
+        $isAdmin = $user->is_admin;
+
+        $validated = $request->validate([
+            'path' => 'required|string',
+            'files' => 'required|array|min:1',
+            'files.*' => 'file',
+            'relative_paths' => 'required|array|min:1',
+            'relative_paths.*' => 'string',
+        ]);
+
+        $destination = rtrim($validated['path'], '/') ?: '/';
+
+        if (! $this->isPathAccessible($destination, $username, $isAdmin)) {
+            return response()->json(['error' => 'Access denied to this path'], 403);
+        }
+
+        // Check write permission
+        $permission = $this->getUserSharePermissionForPath($destination, $username, $isAdmin);
+        if ($permission !== 'readwrite') {
+            return response()->json(['error' => 'Write permission required'], 403);
+        }
+
+        $files = $request->file('files');
+        $relativePaths = $validated['relative_paths'];
+
+        if (count($files) !== count($relativePaths)) {
+            return response()->json(['error' => 'Files and relative paths count mismatch'], 400);
+        }
+
+        $uploaded = [];
+        $errors = [];
+
+        foreach ($files as $index => $file) {
+            $relativePath = $relativePaths[$index] ?: $file->getClientOriginalName();
+            $targetPath = $destination === '/' ? '/'.$relativePath : $destination.'/'.$relativePath;
+            $targetDir = dirname($targetPath);
+
+            // Validate the target path is accessible
+            if (! $this->isPathAccessible($targetPath, $username, $isAdmin)) {
+                $errors[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'error' => 'Access denied',
+                ];
+
+                continue;
+            }
+
+            // Create parent directory if needed
+            if (! is_dir($targetDir)) {
+                $result = Process::run('sudo mkdir -p '.escapeshellarg($targetDir));
+                if (! $result->successful()) {
+                    $errors[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'error' => 'Failed to create directory: '.$result->errorOutput(),
+                    ];
+
+                    continue;
+                }
+                Process::run('sudo chown -R '.escapeshellarg($username).':'.escapeshellarg($username).' '.escapeshellarg($targetDir));
+            }
+
+            // Save to temp location first, then use sudo cp to handle ownership
+            $tempPath = $file->getRealPath();
+            $escapedTemp = escapeshellarg($tempPath);
+            $escapedTarget = escapeshellarg($targetPath);
+            $result = Process::run("sudo cp {$escapedTemp} {$escapedTarget}");
+
+            if (! $result->successful()) {
+                $errors[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'error' => 'Failed to save file: '.$result->errorOutput(),
+                ];
+
+                continue;
+            }
+
+            Process::run('sudo chown '.escapeshellarg($username).':'.escapeshellarg($username).' '.escapeshellarg($targetPath));
+
+            if (file_exists($targetPath)) {
+                $uploaded[] = [
+                    'name' => basename($targetPath),
+                    'path' => $targetPath,
+                    'size' => $file->getSize(),
+                ];
+            } else {
+                $errors[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'error' => 'File not found after upload',
+                ];
+            }
+        }
+
+        return response()->json([
+            'uploaded' => $uploaded,
+            'errors' => $errors,
+        ]);
+    }
+
+    /**
      * Download a file.
      */
-    public function download(Request $request): BinaryFileResponse
+    public function download(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -559,6 +666,41 @@ class FileManagerController extends Controller
         return response()->download($path, basename($path), [
             'Content-Type' => mime_content_type($path) ?: 'application/octet-stream',
         ]);
+    }
+
+    /**
+     * Get the user's effective permission level on the share containing a path.
+     */
+    protected function getUserSharePermissionForPath(string $path, string $username, bool $isAdmin): ?string
+    {
+        $realPath = realpath($path) ?: $path;
+        $allShares = $this->sambaService->getShares();
+
+        foreach ($allShares as $share) {
+            if ($share['type'] === 'system') {
+                continue;
+            }
+
+            if ($share['name'] === 'homes' && $share['enabled']) {
+                $homePath = $this->getUserHomeDirectory($username);
+                if (str_starts_with($realPath, $homePath) || $realPath === rtrim($homePath, '/')) {
+                    return $isAdmin ? 'readwrite' : 'readwrite';
+                }
+            }
+
+            if ($share['type'] === 'custom' && ! empty($share['path'])) {
+                $sharePath = rtrim($share['path'], '/');
+                if (str_starts_with($realPath, $sharePath) || $realPath === $sharePath) {
+                    if ($isAdmin) {
+                        return 'readwrite';
+                    }
+
+                    return $this->getUserSharePermission($share, $username);
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

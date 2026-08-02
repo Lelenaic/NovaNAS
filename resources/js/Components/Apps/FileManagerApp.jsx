@@ -14,6 +14,8 @@ import {
     Anchor,
     ThemeIcon,
     Divider,
+    Progress,
+    Collapse,
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import {
@@ -40,6 +42,8 @@ import {
     IconDownload,
     IconEye,
     IconEyeOff,
+    IconUpload,
+    IconCloudUpload,
 } from '@tabler/icons-react';
 
 function formatFileSize(bytes) {
@@ -444,6 +448,16 @@ export function FileManagerAppContent() {
     // Context menu state
     const [contextMenu, setContextMenu] = useState(null);
 
+    // Upload state
+    const [uploads, setUploads] = useState([]);
+    const [isDragOverExternal, setIsDragOverExternal] = useState(false);
+    const [showUploadPanel, setShowUploadPanel] = useState(false);
+    const [showUploadMenu, setShowUploadMenu] = useState(false);
+    const fileInputRef = useRef(null);
+    const folderInputRef = useRef(null);
+    const uploadMenuRef = useRef(null);
+    const uploadIdCounter = useRef(0);
+
     // ---- Data fetching ----
 
     const fetchShares = useCallback(async () => {
@@ -573,6 +587,32 @@ export function FileManagerAppContent() {
     }, [activeShare]);
 
     useEffect(() => { fetchShares(); fetchLayout(); fetchHiddenFiles(); }, [fetchShares, fetchLayout, fetchHiddenFiles]);
+
+    // Close upload menu on outside click
+    useEffect(() => {
+        if (!showUploadMenu) return;
+        const handleClick = (e) => {
+            if (uploadMenuRef.current && !uploadMenuRef.current.contains(e.target)) {
+                setShowUploadMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [showUploadMenu]);
+
+    // Refresh file list when uploads finish
+    const uploadsRef = useRef(uploads);
+    uploadsRef.current = uploads;
+    useEffect(() => {
+        const allDone = uploadsRef.current.length > 0 && uploadsRef.current.every((u) => u.status !== 'uploading');
+        if (allDone) {
+            // Use a timeout to ensure state is settled
+            const timer = setTimeout(() => {
+                if (currentPath) fetchFiles(currentPath, activeShare);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [uploads]);
 
     useEffect(() => {
         if (shares.length > 0 && !activeShare) {
@@ -1087,6 +1127,205 @@ export function FileManagerAppContent() {
         document.body.removeChild(a);
     };
 
+    // ---- Upload ----
+
+    const formatSpeed = (bytesPerSecond) => {
+        if (bytesPerSecond === 0) return '-';
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        const i = Math.floor(Math.log(bytesPerSecond) / Math.log(1024));
+        return (bytesPerSecond / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+    };
+
+    const processFileList = (fileList) => {
+        const files = [];
+        for (let i = 0; i < fileList.length; i++) {
+            const file = fileList[i];
+            const relativePath = file.webkitRelativePath || file.name;
+            files.push({ file, relativePath });
+        }
+        return files;
+    };
+
+    const startUpload = (fileEntries) => {
+        if (fileEntries.length === 0 || !currentPath) return;
+
+        const canWrite = activeShare?.permission === 'readwrite';
+        if (!canWrite) {
+            setError('Write permission required to upload files');
+            return;
+        }
+
+        const newUploads = fileEntries.map(({ file, relativePath }) => ({
+            id: ++uploadIdCounter.current,
+            name: file.name,
+            relativePath,
+            size: file.size,
+            loaded: 0,
+            speed: 0,
+            percentage: 0,
+            status: 'uploading',
+            xhr: null,
+            startTime: Date.now(),
+            lastLoaded: 0,
+            lastTime: Date.now(),
+        }));
+
+        setUploads((prev) => [...prev, ...newUploads]);
+        setShowUploadPanel(true);
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        newUploads.forEach((upload) => {
+            const formData = new FormData();
+            formData.append('path', currentPath);
+            formData.append('files[]', upload.file);
+            formData.append('relative_paths[]', upload.relativePath);
+
+            const xhr = new XMLHttpRequest();
+            upload.xhr = xhr;
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const now = Date.now();
+                    const timeDiff = (now - upload.lastTime) / 1000;
+                    const loadedDiff = e.loaded - upload.lastLoaded;
+
+                    let speed = 0;
+                    if (timeDiff > 0.3) {
+                        speed = loadedDiff / timeDiff;
+                        upload.lastLoaded = e.loaded;
+                        upload.lastTime = now;
+                    }
+
+                    const percentage = Math.round((e.loaded / e.total) * 100);
+                    setUploads((prev) =>
+                        prev.map((u) =>
+                            u.id === upload.id
+                                ? { ...u, loaded: e.loaded, percentage, speed: speed || u.speed }
+                                : u
+                        )
+                    );
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    setUploads((prev) =>
+                        prev.map((u) =>
+                            u.id === upload.id
+                                ? { ...u, status: 'done', percentage: 100, speed: 0 }
+                                : u
+                        )
+                    );
+                } else {
+                    let errorMsg = 'Upload failed';
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        errorMsg = data.error || errorMsg;
+                    } catch {}
+                    setUploads((prev) =>
+                        prev.map((u) =>
+                            u.id === upload.id
+                                ? { ...u, status: 'error', errorMsg, speed: 0 }
+                                : u
+                        )
+                    );
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                setUploads((prev) =>
+                    prev.map((u) =>
+                        u.id === upload.id
+                            ? { ...u, status: 'error', errorMsg: 'Network error', speed: 0 }
+                            : u
+                    )
+                );
+            });
+
+            xhr.open('POST', '/api/filemanager/upload');
+            xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+            xhr.send(formData);
+        });
+    };
+
+    const handleUploadClick = () => {
+        setShowUploadMenu((prev) => !prev);
+    };
+
+    const handleUploadFiles = () => {
+        setShowUploadMenu(false);
+        fileInputRef.current?.click();
+    };
+
+    const handleUploadFolder = () => {
+        setShowUploadMenu(false);
+        folderInputRef.current?.click();
+    };
+
+    const handleFileInputChange = (e) => {
+        const files = processFileList(e.target.files);
+        startUpload(files);
+        e.target.value = '';
+    };
+
+    const handleFolderInputChange = (e) => {
+        const files = processFileList(e.target.files);
+        startUpload(files);
+        e.target.value = '';
+    };
+
+    const handleExternalDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only show external drop overlay for files dragged from outside the browser
+        const hasFiles = e.dataTransfer.types.includes('Files');
+        const hasInternal = e.dataTransfer.types.includes('text/plain');
+        if (hasFiles && !hasInternal) {
+            e.dataTransfer.dropEffect = 'copy';
+            setIsDragOverExternal(true);
+        }
+    };
+
+    const handleExternalDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setIsDragOverExternal(false);
+        }
+    };
+
+    const handleExternalDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOverExternal(false);
+
+        if (isDraggingItemRef.current) return;
+
+        const files = processFileList(e.dataTransfer.files);
+        if (files.length > 0) {
+            startUpload(files);
+        }
+    };
+
+    const dismissUploads = () => {
+        setUploads([]);
+        setShowUploadPanel(false);
+    };
+
+    const cancelAllUploads = () => {
+        uploads.forEach((u) => {
+            if (u.xhr && u.status === 'uploading') {
+                u.xhr.abort();
+            }
+        });
+        setUploads((prev) =>
+            prev.map((u) =>
+                u.status === 'uploading' ? { ...u, status: 'cancelled', speed: 0 } : u
+            )
+        );
+    };
+
     // ---- Context menu items ----
 
     const getContextMenuItems = () => {
@@ -1301,6 +1540,69 @@ export function FileManagerAppContent() {
                             <IconFolderPlus size={18} />
                         </ActionIcon>
                     </Tooltip>
+                    <Box style={{ position: 'relative' }} ref={uploadMenuRef}>
+                        <Tooltip label="Upload">
+                            <ActionIcon variant="subtle" color="gray" onClick={handleUploadClick} disabled={!currentPath || activeShare?.permission !== 'readwrite'}>
+                                <IconUpload size={18} />
+                            </ActionIcon>
+                        </Tooltip>
+                        {showUploadMenu && (
+                            <Box
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    marginTop: '4px',
+                                    zIndex: 10000,
+                                    minWidth: '160px',
+                                    backgroundColor: theme.colors.dark[6],
+                                    border: `1px solid ${theme.colors.dark[4]}`,
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                                    padding: '4px',
+                                }}
+                            >
+                                <UnstyledButton
+                                    onClick={handleUploadFiles}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        color: theme.colors.gray[2],
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                    <IconUpload size={16} />
+                                    <Text size="sm">Upload files</Text>
+                                </UnstyledButton>
+                                <UnstyledButton
+                                    onClick={handleUploadFolder}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        color: theme.colors.gray[2],
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.dark[5]; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                    <IconCloudUpload size={16} />
+                                    <Text size="sm">Upload folder</Text>
+                                </UnstyledButton>
+                            </Box>
+                        )}
+                    </Box>
                     {clipboard && (
                         <Tooltip label="Paste">
                             <ActionIcon variant="subtle" color="blue" onClick={handlePaste}>
@@ -1321,7 +1623,7 @@ export function FileManagerAppContent() {
                         </ActionIcon>
                     </Tooltip>
 
-                    <Box style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
                         <Breadcrumbs separator="/" size="sm">
                             {breadcrumbs.map((crumb) => (
                                 <Anchor
@@ -1467,8 +1769,33 @@ export function FileManagerAppContent() {
                     onMouseDown={handleFileListMouseDown}
                     onClick={handleBackgroundClick}
                     onContextMenu={(e) => handleContextMenu(e, null)}
+                    onDragOver={handleExternalDragOver}
+                    onDragLeave={handleExternalDragLeave}
+                    onDrop={handleExternalDrop}
                 >
                     <LoadingOverlay visible={loadingFiles} zIndex={1} />
+
+                    {/* External drop overlay */}
+                    {isDragOverExternal && (
+                        <Box
+                            style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                border: `2px dashed ${theme.colors.blue[4]}`,
+                                borderRadius: '8px',
+                                pointerEvents: 'none',
+                            }}
+                        >
+                            <IconCloudUpload size={48} color={theme.colors.blue[4]} />
+                            <Text size="lg" fw={600} c="blue" mt="sm">Drop files here to upload</Text>
+                        </Box>
+                    )}
 
                     {!currentPath && !loadingFiles && (
                         <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
@@ -1532,6 +1859,79 @@ export function FileManagerAppContent() {
                     )}
                 </Box>
 
+                {/* Upload progress panel */}
+                {showUploadPanel && uploads.length > 0 && (
+                    <Box
+                        style={{
+                            borderTop: `1px solid ${theme.colors.dark[4]}`,
+                            backgroundColor: theme.colors.dark[6],
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                        }}
+                    >
+                        <Group
+                            px="sm"
+                            py="xs"
+                            style={{
+                                borderBottom: `1px solid ${theme.colors.dark[4]}`,
+                                position: 'sticky',
+                                top: 0,
+                                backgroundColor: theme.colors.dark[6],
+                                zIndex: 1,
+                            }}
+                        >
+                            <IconUpload size={16} color={theme.colors.gray[4]} />
+                            <Text size="sm" fw={600} style={{ flex: 1 }}>
+                                Uploading {uploads.filter((u) => u.status === 'uploading').length} file{uploads.filter((u) => u.status === 'uploading').length !== 1 ? 's' : ''}
+                            </Text>
+                            {uploads.some((u) => u.status === 'uploading') && (
+                                <ActionIcon variant="subtle" color="gray" size="sm" onClick={cancelAllUploads}>
+                                    <IconX size={14} />
+                                </ActionIcon>
+                            )}
+                            <ActionIcon variant="subtle" color="gray" size="sm" onClick={dismissUploads}>
+                                <IconX size={14} />
+                            </ActionIcon>
+                        </Group>
+                        {uploads.map((upload) => (
+                            <Box key={upload.id} px="sm" py="xs" style={{ borderBottom: `1px solid ${theme.colors.dark[5]}` }}>
+                                <Group gap="xs" mb={4}>
+                                    <Text
+                                        size="xs"
+                                        fw={500}
+                                        style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                        c={upload.status === 'error' ? 'red' : upload.status === 'done' ? 'green' : upload.status === 'cancelled' ? 'dimmed' : undefined}
+                                    >
+                                        {upload.relativePath}
+                                    </Text>
+                                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                                        {formatFileSize(upload.size)}
+                                    </Text>
+                                    {upload.status === 'uploading' && (
+                                        <Text size="xs" c="dimmed" style={{ flexShrink: 0, minWidth: '60px', textAlign: 'right' }}>
+                                            {formatSpeed(upload.speed)}
+                                        </Text>
+                                    )}
+                                    {upload.status === 'done' && <IconCheck size={14} color={theme.colors.green[4]} />}
+                                    {upload.status === 'error' && <IconX size={14} color={theme.colors.red[4]} />}
+                                    {upload.status === 'cancelled' && <IconX size={14} color={theme.colors.dark[3]} />}
+                                </Group>
+                                {(upload.status === 'uploading' || upload.status === 'done') && (
+                                    <Progress
+                                        value={upload.percentage}
+                                        size="xs"
+                                        color={upload.status === 'done' ? 'green' : 'blue'}
+                                        radius="xl"
+                                    />
+                                )}
+                                {upload.status === 'error' && (
+                                    <Text size="xs" c="red">{upload.errorMsg}</Text>
+                                )}
+                            </Box>
+                        ))}
+                    </Box>
+                )}
+
                 {/* Status bar */}
                 <Box
                     style={{
@@ -1570,6 +1970,24 @@ export function FileManagerAppContent() {
                 startY={selectionBox.startY}
                 currentX={selectionBox.currentX}
                 currentY={selectionBox.currentY}
+            />
+
+            {/* Hidden file inputs for upload */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFileInputChange}
+            />
+            <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                /* @ts-ignore */
+                webkitdirectory=""
+                style={{ display: 'none' }}
+                onChange={handleFolderInputChange}
             />
         </Box>
     );

@@ -25,7 +25,7 @@ class SmartService
      */
     public function getHealthStatus(string $device): ?array
     {
-        $result = Process::run('sudo smartctl -H /dev/'.$device);
+        $result = Process::run('sudo smartctl -H /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             Log::warning('SMART health check failed for /dev/'.$device.': '.$result->errorOutput());
@@ -59,7 +59,7 @@ class SmartService
      */
     public function getTestResults(string $device): ?array
     {
-        $result = Process::run('sudo smartctl -l selftest /dev/'.$device);
+        $result = Process::run('sudo smartctl -l selftest /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             Log::warning('SMART selftest log failed for /dev/'.$device.': '.$result->errorOutput());
@@ -77,7 +77,7 @@ class SmartService
      */
     public function isTestRunning(string $device): bool
     {
-        $result = Process::run('sudo smartctl -c /dev/'.$device);
+        $result = Process::run('sudo smartctl -c /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             return false;
@@ -96,7 +96,7 @@ class SmartService
      */
     public function startShortTest(string $device): bool
     {
-        $result = Process::run('sudo smartctl -t short /dev/'.$device);
+        $result = Process::run('sudo smartctl -t short /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             Log::error('Failed to start SMART short test on /dev/'.$device.': '.$result->errorOutput());
@@ -116,7 +116,7 @@ class SmartService
      */
     public function startLongTest(string $device): bool
     {
-        $result = Process::run('sudo smartctl -t long /dev/'.$device);
+        $result = Process::run('sudo smartctl -t long /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             Log::error('Failed to start SMART long test on /dev/'.$device.': '.$result->errorOutput());
@@ -142,7 +142,7 @@ class SmartService
      */
     public function getCapabilities(string $device): ?array
     {
-        $result = Process::run('sudo smartctl -i /dev/'.$device);
+        $result = Process::run('sudo smartctl -i /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             return null;
@@ -274,7 +274,7 @@ class SmartService
      */
     public function getDetailedInfo(string $device): ?array
     {
-        $result = Process::run('sudo smartctl -ax /dev/'.$device);
+        $result = Process::run('sudo smartctl -ax /dev/'.escapeshellarg($device));
 
         if ($result->failed()) {
             Log::warning('SMART detailed info failed for /dev/'.$device.': '.$result->errorOutput());
@@ -331,7 +331,7 @@ class SmartService
     public function getLastTestTime(string $device): ?array
     {
         // Get current Power_On_Hours
-        $powerResult = Process::run('sudo smartctl -A /dev/'.$device.' | grep "Power_On_Hours"');
+        $powerResult = Process::run('sudo smartctl -A /dev/'.escapeshellarg($device).' | grep "Power_On_Hours"');
 
         if ($powerResult->failed()) {
             return null;
@@ -345,7 +345,7 @@ class SmartService
         $currentPowerOnHours = (int) $powerMatches[1];
 
         // Get selftest log
-        $selftestResult = Process::run('sudo smartctl -l selftest /dev/'.$device);
+        $selftestResult = Process::run('sudo smartctl -l selftest /dev/'.escapeshellarg($device));
 
         if ($selftestResult->failed()) {
             return null;

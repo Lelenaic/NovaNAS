@@ -21,12 +21,12 @@ class NetworkService
 
         // Get list of network interfaces from /sys/class/net
         $sysClassNet = '/sys/class/net';
-        if (!File::exists($sysClassNet)) {
+        if (! File::exists($sysClassNet)) {
             return $interfaces;
         }
 
         $devices = File::directories($sysClassNet);
-        if (!$devices) {
+        if (! $devices) {
             return $interfaces;
         }
 
@@ -148,7 +148,7 @@ class NetworkService
         }
 
         // Get IPv4 address using ip command
-        $result = Process::run("ip -4 addr show {$name} 2>/dev/null");
+        $result = Process::run('ip -4 addr show '.escapeshellarg($name).' 2>/dev/null');
         if ($result->successful()) {
             $output = $result->output();
             if (preg_match('/inet (\d+\.\d+\.\d+\.\d+)/', $output, $matches)) {
@@ -189,7 +189,7 @@ class NetworkService
         }
 
         // Fall back to main interfaces file
-        if (!$configFile && File::exists('/etc/network/interfaces')) {
+        if (! $configFile && File::exists('/etc/network/interfaces')) {
             $content = File::get('/etc/network/interfaces');
             if (str_contains($content, "iface {$interface}")) {
                 $configFile = '/etc/network/interfaces';
@@ -213,6 +213,7 @@ class NetworkService
                 if (preg_match("/iface\s+{$interface}\s+inet\s+(\w+)/", $line, $matches)) {
                     $inInterfaceBlock = true;
                     $config['method'] = $matches[1];
+
                     continue;
                 }
 
@@ -256,7 +257,7 @@ class NetworkService
 
         // Write configuration to interfaces.d
         $configDir = '/etc/network/interfaces.d';
-        if (!File::exists($configDir)) {
+        if (! File::exists($configDir)) {
             File::makeDirectory($configDir, 0755, true);
         }
 
@@ -264,16 +265,16 @@ class NetworkService
         File::put($configFile, $config);
 
         // Bring interface down, then up to apply changes
-        Process::run("ip link set {$interface} down");
+        Process::run('ip link set '.escapeshellarg($interface).' down');
         usleep(500000); // Wait 500ms
-        Process::run("ip link set {$interface} up");
+        Process::run('ip link set '.escapeshellarg($interface).' up');
         usleep(500000); // Wait 500ms
 
         // For DHCP, we may need to request a new IP
         if ($method === 'dhcp') {
-            Process::run("dhclient -r {$interface} 2>/dev/null");
+            Process::run('dhclient -r '.escapeshellarg($interface).' 2>/dev/null');
             usleep(200000); // Wait 200ms
-            Process::run("dhclient {$interface} 2>/dev/null");
+            Process::run('dhclient '.escapeshellarg($interface).' 2>/dev/null');
         }
     }
 
@@ -290,7 +291,7 @@ class NetworkService
         $configFile = "{$configDir}/{$interface}.conf";
         if (File::exists($configFile)) {
             // Create backup directory if it doesn't exist
-            if (!File::exists($backupDir)) {
+            if (! File::exists($backupDir)) {
                 File::makeDirectory($backupDir, 0755, true);
             }
 
@@ -318,7 +319,7 @@ class NetworkService
                     str_contains($content, "mapping {$interface}")) {
 
                     // Create backup directory if it doesn't exist
-                    if (!File::exists($backupDir)) {
+                    if (! File::exists($backupDir)) {
                         File::makeDirectory($backupDir, 0755, true);
                     }
 
@@ -338,7 +339,7 @@ class NetworkService
                 str_contains($content, "auto {$interface}")) {
 
                 // Create backup directory if it doesn't exist
-                if (!File::exists($backupDir)) {
+                if (! File::exists($backupDir)) {
                     File::makeDirectory($backupDir, 0755, true);
                 }
 
@@ -415,7 +416,7 @@ class NetworkService
             $interface = $matches[1];
 
             // Get the IP address of this interface
-            $result = Process::run("ip -4 addr show {$interface} 2>/dev/null");
+            $result = Process::run('ip -4 addr show '.escapeshellarg($interface).' 2>/dev/null');
             if ($result->successful()) {
                 $addrOutput = $result->output();
                 if (preg_match('/inet (\d+\.\d+\.\d+\.\d+)/', $addrOutput, $ipMatches)) {

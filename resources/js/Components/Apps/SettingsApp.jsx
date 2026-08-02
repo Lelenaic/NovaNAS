@@ -13,6 +13,7 @@ import {
     IconCpu,
     IconBrandDocker,
     IconLock,
+    IconFolder,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -24,6 +25,7 @@ import { ServicesTab } from './Settings/ServicesTab';
 import { GPUTab } from './Settings/GPUTab';
 import { DockerTab } from './Settings/DockerTab';
 import { SslTab } from './Settings/SslTab';
+import { FileManagerTab } from './Settings/FileManagerTab';
 
 const tabs = [
     { id: 'general', label: 'General', icon: IconSettings },
@@ -34,6 +36,7 @@ const tabs = [
     { id: 'docker', label: 'Docker', icon: IconBrandDocker },
     { id: 'services', label: 'Services', icon: IconServer },
     { id: 'gpus', label: 'GPUs', icon: IconCpu },
+    { id: 'filemanager', label: 'File Manager', icon: IconFolder },
     { id: 'account', label: 'Users', icon: IconUsers },
     { id: 'security', label: 'Security', icon: IconShield },
     { id: 'email', label: 'Email', icon: IconMail },
@@ -62,6 +65,8 @@ export function SettingsAppContent() {
                 return <ServicesTab />;
             case 'gpus':
                 return <GPUTab />;
+            case 'filemanager':
+                return <FileManagerTab />;
             case 'appearance':
                 return <Text c="dimmed">Appearance settings will appear here.</Text>;
             case 'account':

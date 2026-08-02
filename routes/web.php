@@ -8,6 +8,7 @@ use App\Http\Controllers\DockerSettingsController;
 use App\Http\Controllers\DynDnsController;
 use App\Http\Controllers\EmailSettingsController;
 use App\Http\Controllers\FileManagerController;
+use App\Http\Controllers\FileManagerSettingsController;
 use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\GPUController;
@@ -150,6 +151,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/storage/shares/users', [StorageController::class, 'shareUsers']);
         Route::post('/api/storage/shares/homes', [StorageController::class, 'toggleHomes']);
 
+        // File Manager settings routes
+        Route::get('/api/settings/filemanager', [FileManagerSettingsController::class, 'index']);
+        Route::put('/api/settings/filemanager', [FileManagerSettingsController::class, 'update']);
+
         // File Manager routes
         Route::get('/api/filemanager/layout', [FileManagerController::class, 'getLayout']);
         Route::put('/api/filemanager/layout', [FileManagerController::class, 'updateLayout']);
@@ -164,6 +169,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/filemanager/zip', [FileManagerController::class, 'zip']);
         Route::post('/api/filemanager/unzip', [FileManagerController::class, 'unzip']);
         Route::get('/api/filemanager/download', [FileManagerController::class, 'download']);
+        Route::post('/api/filemanager/upload', [FileManagerController::class, 'upload']);
 
         // User management routes
         Route::get('/api/users', [UserController::class, 'index']);

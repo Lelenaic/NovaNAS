@@ -67,14 +67,12 @@ class UfwService
 
         return [
             'success' => false,
-            'message' => 'Failed to enable firewall: ' . $output,
+            'message' => 'Failed to enable firewall: '.$output,
         ];
     }
 
     /**
      * Set IPV6=no in /etc/default/ufw.
-     *
-     * @return void
      */
     protected function setIpv6No(): void
     {
@@ -91,7 +89,7 @@ class UfwService
         // If IPV6 line doesn't exist, add it
         $checkAgain = $this->execute('grep -E "^IPV6=" /etc/default/ufw');
 
-        if (!str_contains($checkAgain, 'IPV6=')) {
+        if (! str_contains($checkAgain, 'IPV6=')) {
             $this->execute('echo "IPV6=no" >> /etc/default/ufw');
         }
     }
@@ -114,7 +112,7 @@ class UfwService
 
         return [
             'success' => false,
-            'message' => 'Failed to disable firewall: ' . $output,
+            'message' => 'Failed to disable firewall: '.$output,
         ];
     }
 
@@ -237,7 +235,7 @@ class UfwService
     /**
      * Add a new rule to UFW.
      *
-     * @param array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string} $rule
+     * @param  array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string}  $rule
      * @return array{success: bool, message: string}
      */
     public function addRule(array $rule): array
@@ -257,20 +255,20 @@ class UfwService
         if (str_contains($output, 'Could not open')) {
             return [
                 'success' => false,
-                'message' => 'Failed to add rule: ' . $output,
+                'message' => 'Failed to add rule: '.$output,
             ];
         }
 
         return [
             'success' => false,
-            'message' => 'Failed to add rule: ' . $output,
+            'message' => 'Failed to add rule: '.$output,
         ];
     }
 
     /**
      * Delete a rule by its number (priority).
      *
-     * @param int $ruleNumber The rule number from ufw status numbered (1-based)
+     * @param  int  $ruleNumber  The rule number from ufw status numbered (1-based)
      * @return array{success: bool, message: string}
      */
     public function deleteRule(int $ruleNumber): array
@@ -288,15 +286,15 @@ class UfwService
 
         return [
             'success' => false,
-            'message' => 'Failed to delete rule: ' . $output,
+            'message' => 'Failed to delete rule: '.$output,
         ];
     }
 
     /**
      * Insert a rule at a specific priority (position).
      *
-     * @param int $priority The position to insert the rule (1 = top)
-     * @param array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string} $rule
+     * @param  int  $priority  The position to insert the rule (1 = top)
+     * @param  array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string}  $rule
      * @return array{success: bool, message: string}
      */
     public function insertRule(int $priority, array $rule): array
@@ -311,13 +309,13 @@ class UfwService
             str_contains($output, 'Skipping')) {
             return [
                 'success' => true,
-                'message' => 'Rule inserted at position ' . $priority,
+                'message' => 'Rule inserted at position '.$priority,
             ];
         }
 
         return [
             'success' => false,
-            'message' => 'Failed to insert rule: ' . $output,
+            'message' => 'Failed to insert rule: '.$output,
         ];
     }
 
@@ -331,7 +329,7 @@ class UfwService
         $output = $this->execute('ls /sys/class/net');
         $interfaces = array_filter(
             explode("\n", trim($output)),
-            fn($iface) => !empty($iface) && $iface !== 'lo'
+            fn ($iface) => ! empty($iface) && $iface !== 'lo'
         );
 
         return array_values($interfaces);
@@ -380,8 +378,8 @@ class UfwService
     /**
      * Set default policy for a direction.
      *
-     * @param string $direction 'incoming', 'outgoing', or 'routed'
-     * @param string $policy 'allow' or 'deny'
+     * @param  string  $direction  'incoming', 'outgoing', or 'routed'
+     * @param  string  $policy  'allow' or 'deny'
      * @return array{success: bool, message: string}
      */
     public function setDefaultPolicy(string $direction, string $policy): array
@@ -392,17 +390,17 @@ class UfwService
         $direction = strtolower($direction);
         $policy = strtolower($policy);
 
-        if (!in_array($direction, $validDirections)) {
+        if (! in_array($direction, $validDirections)) {
             return [
                 'success' => false,
-                'message' => 'Invalid direction. Must be: ' . implode(', ', $validDirections),
+                'message' => 'Invalid direction. Must be: '.implode(', ', $validDirections),
             ];
         }
 
-        if (!in_array($policy, $validPolicies)) {
+        if (! in_array($policy, $validPolicies)) {
             return [
                 'success' => false,
-                'message' => 'Invalid policy. Must be: ' . implode(', ', $validPolicies),
+                'message' => 'Invalid policy. Must be: '.implode(', ', $validPolicies),
             ];
         }
 
@@ -420,19 +418,17 @@ class UfwService
 
         return [
             'success' => false,
-            'message' => 'Failed to set default policy: ' . $output,
+            'message' => 'Failed to set default policy: '.$output,
         ];
     }
 
     /**
      * Execute a UFW command with sudo.
-     *
-     * @return string
      */
     protected function execute(string $command): string
     {
         // Prepend sudo to all UFW commands
-        $sudoCommand = 'sudo ' . $command . ' 2>&1';
+        $sudoCommand = 'sudo '.$command.' 2>&1';
 
         $result = Process::run($sudoCommand);
 
@@ -442,8 +438,7 @@ class UfwService
     /**
      * Build a UFW rule command from parameters.
      *
-     * @param array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string} $rule
-     * @return string
+     * @param  array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string}  $rule
      */
     protected function buildRuleCommand(array $rule, ?int $insertAt = null): string
     {
@@ -451,7 +446,7 @@ class UfwService
 
         // Add insert position if specified
         if ($insertAt !== null) {
-            $parts[] = 'ufw insert ' . $insertAt;
+            $parts[] = 'ufw insert '.$insertAt;
         } else {
             // For regular add, action will be added separately below
             $parts[] = 'ufw';
@@ -464,9 +459,9 @@ class UfwService
         // Direction (in/out) - only needed for interface or outgoing rules
         $direction = $rule['direction'] ?? '';
         $directionLower = strtolower($direction);
-        $hasInterface = !empty($rule['interface']);
-        $hasFrom = !empty($rule['from']) && $rule['from'] !== 'any';
-        $hasTo = !empty($rule['to']) && $rule['to'] !== 'any';
+        $hasInterface = ! empty($rule['interface']);
+        $hasFrom = ! empty($rule['from']) && $rule['from'] !== 'any';
+        $hasTo = ! empty($rule['to']) && $rule['to'] !== 'any';
 
         // Only add direction if there's an interface, or it's outgoing, or there are from/to addresses
         if ($directionLower === 'out') {
@@ -479,37 +474,37 @@ class UfwService
 
         // Interface
         if ($hasInterface) {
-            $parts[] = 'on ' . $rule['interface'];
+            $parts[] = 'on '.escapeshellarg($rule['interface']);
         }
 
         // Port and Protocol
         $port = $rule['port'] ?? '';
         $protocol = strtolower($rule['protocol'] ?? 'any');
 
-        if (!empty($port)) {
+        if (! empty($port)) {
             if ($protocol !== 'any') {
-                $parts[] = "{$port}/{$protocol}";
+                $parts[] = escapeshellarg("{$port}/{$protocol}");
             } else {
-                $parts[] = $port;
+                $parts[] = escapeshellarg($port);
             }
         } elseif ($protocol !== 'any') {
-            $parts[] = "proto {$protocol}";
+            $parts[] = 'proto '.escapeshellarg($protocol);
         }
 
         // From address
-        if (!empty($rule['from']) && $rule['from'] !== 'any') {
-            $parts[] = 'from ' . $rule['from'];
+        if (! empty($rule['from']) && $rule['from'] !== 'any') {
+            $parts[] = 'from '.escapeshellarg($rule['from']);
         }
 
         // To address
-        if (!empty($rule['to']) && $rule['to'] !== 'any') {
-            $parts[] = 'to ' . $rule['to'];
+        if (! empty($rule['to']) && $rule['to'] !== 'any') {
+            $parts[] = 'to '.escapeshellarg($rule['to']);
         }
 
         // Comment
         $comment = $rule['comment'] ?? '';
-        if (!empty($comment)) {
-            $parts[] = 'comment \'' . addslashes(trim($comment)) . '\'';
+        if (! empty($comment)) {
+            $parts[] = 'comment '.escapeshellarg(trim($comment));
         }
 
         $command = implode(' ', $parts);
@@ -576,9 +571,9 @@ class UfwService
     /**
      * Parse rule details string into components.
      *
-     * @param string $details The rule details (e.g., "32400/tcp" or "22/tcp from 192.168.1.0/24")
-     * @param string $trailing Optional trailing content after the main rule (may contain comment)
-     * @param string $comment Optional comment already extracted
+     * @param  string  $details  The rule details (e.g., "32400/tcp" or "22/tcp from 192.168.1.0/24")
+     * @param  string  $trailing  Optional trailing content after the main rule (may contain comment)
+     * @param  string  $comment  Optional comment already extracted
      * @return array{port: string, protocol: string, from: string, to: string, interface: string, comment?: string}
      */
     protected function parseRuleDetails(string $details, string $trailing = '', string $comment = ''): array
@@ -592,9 +587,9 @@ class UfwService
         ];
 
         // Use provided comment if available, otherwise check trailing content
-        if (!empty($comment)) {
+        if (! empty($comment)) {
             $result['comment'] = $comment;
-        } elseif (!empty($trailing) && preg_match('/#\s+(.+)$/', $trailing, $matches)) {
+        } elseif (! empty($trailing) && preg_match('/#\s+(.+)$/', $trailing, $matches)) {
             $result['comment'] = trim($matches[1]);
         }
 

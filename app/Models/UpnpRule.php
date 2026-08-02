@@ -65,7 +65,7 @@ class UpnpRule extends Model
             return null;
         }
 
-        $result = shell_exec("ip -4 addr show {$interface} 2>/dev/null");
+        $result = shell_exec('ip -4 addr show '.escapeshellarg($interface).' 2>/dev/null');
 
         if ($result && preg_match('/inet (\d+\.\d+\.\d+\.\d+)/', $result, $matches)) {
             return $matches[1];
@@ -80,14 +80,14 @@ class UpnpRule extends Model
      */
     protected function ensureUpnpPortAllowed(): void
     {
-        $ufwService = new UfwService();
-        $networkService = new NetworkService();
+        $ufwService = new UfwService;
+        $networkService = new NetworkService;
 
         // Get the gateway IP (router IP)
         $gatewayIp = $networkService->getGatewayIp();
 
-        if (!$gatewayIp) {
-            \Illuminate\Support\Facades\Log::warning("UpnpRenewJob: Could not determine gateway IP");
+        if (! $gatewayIp) {
+            \Illuminate\Support\Facades\Log::warning('UpnpRenewJob: Could not determine gateway IP');
 
             return;
         }
@@ -108,7 +108,7 @@ class UpnpRule extends Model
             }
         }
 
-        if (!$gatewayRuleExists) {
+        if (! $gatewayRuleExists) {
             \Illuminate\Support\Facades\Log::info("UpnpRenewJob: Adding UFW rule to allow all traffic from gateway {$gatewayIp}");
 
             // Allow all traffic from the gateway IP (router) to handle UPnP responses on any port
@@ -132,7 +132,7 @@ class UpnpRule extends Model
 
         $internalIp = $this->getInternalIp();
 
-        if (!$internalIp) {
+        if (! $internalIp) {
             return [
                 'success' => false,
                 'message' => "Cannot get IP address for interface: {$this->interface}",
@@ -148,7 +148,7 @@ class UpnpRule extends Model
             $internalIp,
             $this->internal_port,
             $this->external_port,
-            $this->protocol
+            escapeshellarg($this->protocol)
         );
 
         // Debug: Log the exact command being executed
@@ -191,7 +191,7 @@ class UpnpRule extends Model
         $command = sprintf(
             'sudo upnpc -d %d %s 2>&1',
             $this->external_port,
-            $this->protocol
+            escapeshellarg($this->protocol)
         );
 
         $output = shell_exec($command);

@@ -159,7 +159,7 @@ class ApplicationsService
         $portMap = $xCasaos['port_map'] ?? null;
         $appIndex = $xCasaos['index'] ?? null;
 
-        $result = Process::timeout(120)->run("sudo docker compose -f {$composePath} up -d");
+        $result = Process::timeout(120)->run('sudo docker compose -f '.escapeshellarg($composePath).' up -d');
 
         if (! $result->successful()) {
             Log::error("Failed to install app {$appId}: {$result->errorOutput()}");
@@ -230,7 +230,7 @@ class ApplicationsService
 
         file_put_contents($installed->compose_path, $compose);
 
-        $result = Process::timeout(120)->run("sudo docker compose -f {$installed->compose_path} up -d");
+        $result = Process::timeout(120)->run('sudo docker compose -f '.escapeshellarg($installed->compose_path).' up -d');
 
         if (! $result->successful()) {
             Log::error("Failed to update app {$appId}: {$result->errorOutput()}");
@@ -273,7 +273,7 @@ class ApplicationsService
             ];
         }
 
-        $result = Process::timeout(60)->run("sudo docker compose -f {$installed->compose_path} stop");
+        $result = Process::timeout(60)->run('sudo docker compose -f '.escapeshellarg($installed->compose_path).' stop');
 
         if (! $result->successful()) {
             return [
@@ -308,7 +308,7 @@ class ApplicationsService
             ];
         }
 
-        $result = Process::timeout(60)->run("sudo docker compose -f {$installed->compose_path} start");
+        $result = Process::timeout(60)->run('sudo docker compose -f '.escapeshellarg($installed->compose_path).' start');
 
         if (! $result->successful()) {
             return [
@@ -343,7 +343,7 @@ class ApplicationsService
             ];
         }
 
-        $result = Process::timeout(60)->run("sudo docker compose -f {$installed->compose_path} down -v");
+        $result = Process::timeout(60)->run('sudo docker compose -f '.escapeshellarg($installed->compose_path).' down -v');
 
         if (! $result->successful()) {
             Log::warning("Failed to stop containers for {$appId}: {$result->errorOutput()}");
@@ -397,7 +397,7 @@ class ApplicationsService
     public function getContainerStatus(string $composePath): array
     {
         $result = Process::run(
-            "sudo docker compose -f {$composePath} ps --format json"
+            'sudo docker compose -f '.escapeshellarg($composePath).' ps --format json'
         );
 
         if (! $result->successful()) {
