@@ -118,10 +118,39 @@ if [ $? -ne 0 ]; then
 fi
 php artisan migrate --force
 
-# Run version-specific update script if it exists
-if [ -f "update-scripts/$LATEST_VERSION.sh" ]; then
-    echo "Running update script for version $LATEST_VERSION"
-    bash "update-scripts/$LATEST_VERSION.sh"
+# Run all pending update scripts in version order
+LOCK_FILE="update-scripts/.update_lock"
+touch "$LOCK_FILE"
+
+PENDING_SCRIPTS=()
+for script in update-scripts/*.sh; do
+    [ -f "$script" ] || continue
+    script_name=$(basename "$script")
+    if ! grep -qxF "$script_name" "$LOCK_FILE"; then
+        PENDING_SCRIPTS+=("$script")
+    fi
+done
+
+if [ ${#PENDING_SCRIPTS[@]} -gt 0 ]; then
+    # Sort scripts by version number extracted from filename (oldest first)
+    IFS=$'\n' SORTED_SCRIPTS=($(for s in "${PENDING_SCRIPTS[@]}"; do
+        ver=$(basename "$s" .sh)
+        echo "$ver $s"
+    done | sort -t. -k1,1n -k2,2n -k3,3n | cut -d' ' -f2-))
+    unset IFS
+
+    for script in "${SORTED_SCRIPTS[@]}"; do
+        script_name=$(basename "$script")
+        echo "Running update script: $script_name"
+        if ! bash "$script"; then
+            echo "Error: Update script $script_name failed"
+            php artisan up
+            exit 1
+        fi
+        echo "$script_name" >> "$LOCK_FILE"
+    done
+else
+    echo "No pending update scripts to run."
 fi
 
 php artisan queue:restart

@@ -187,6 +187,15 @@ if [ ! -f /var/novanas/.env ]; then
     echo "Running database migrations..."
     php artisan migrate --force
 
+    # Seed update lock file so update scripts don't run on fresh install
+    echo "Seeding update lock file..."
+    LOCK_FILE="update-scripts/.update_lock"
+    touch "$LOCK_FILE"
+    for script in update-scripts/*.sh; do
+        [ -f "$script" ] || continue
+        basename "$script" >> "$LOCK_FILE"
+    done
+
     # Set ownership
     chown -R novanas:novanas .
     chmod 770 database/database.sqlite .env

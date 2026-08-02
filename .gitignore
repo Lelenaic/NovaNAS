@@ -30,3 +30,4 @@ Thumbs.db
 /storage/framework/views
 /storage/framework/cache
 /storage/logs
+/update-scripts/.update_lock
