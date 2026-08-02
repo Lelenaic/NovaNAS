@@ -27,20 +27,45 @@ import { DockerTab } from './Settings/DockerTab';
 import { SslTab } from './Settings/SslTab';
 import { FileManagerTab } from './Settings/FileManagerTab';
 
-const tabs = [
-    { id: 'general', label: 'General', icon: IconSettings },
-    { id: 'network', label: 'Network', icon: IconNetwork },
-    { id: 'upnp', label: 'UPNP', icon: IconWifi },
-    { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
-    { id: 'ssl', label: 'SSL', icon: IconLock },
-    { id: 'docker', label: 'Docker', icon: IconBrandDocker },
-    { id: 'services', label: 'Services', icon: IconServer },
-    { id: 'gpus', label: 'GPUs', icon: IconCpu },
-    { id: 'filemanager', label: 'File Manager', icon: IconFolder },
-    { id: 'account', label: 'Users', icon: IconUsers },
-    { id: 'security', label: 'Security', icon: IconShield },
-    { id: 'email', label: 'Email', icon: IconMail },
-    { id: 'notifications', label: 'Notifications', icon: IconBell },
+const groups = [
+    {
+        label: 'General',
+        items: [
+            { id: 'general', label: 'General', icon: IconSettings },
+        ],
+    },
+    {
+        label: 'Network',
+        items: [
+            { id: 'network', label: 'Network', icon: IconNetwork },
+            { id: 'upnp', label: 'UPNP', icon: IconWifi },
+            { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
+            { id: 'ssl', label: 'SSL', icon: IconLock },
+        ],
+    },
+    {
+        label: 'Apps',
+        items: [
+            { id: 'docker', label: 'Docker', icon: IconBrandDocker },
+            { id: 'filemanager', label: 'File Manager', icon: IconFolder },
+            { id: 'services', label: 'Services', icon: IconServer },
+            { id: 'gpus', label: 'GPUs', icon: IconCpu },
+        ],
+    },
+    {
+        label: 'Access & Security',
+        items: [
+            { id: 'account', label: 'Users', icon: IconUsers },
+            { id: 'security', label: 'Security', icon: IconShield },
+        ],
+    },
+    {
+        label: 'Communication',
+        items: [
+            { id: 'email', label: 'Email', icon: IconMail },
+            { id: 'notifications', label: 'Notifications', icon: IconBell },
+        ],
+    },
 ];
 
 export function SettingsAppContent() {
@@ -105,29 +130,47 @@ export function SettingsAppContent() {
                 >
                     Settings
                 </Text>
-                {tabs.map((tab) => (
-                    <Box
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '10px 12px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            backgroundColor: activeTab === tab.id ? theme.colors.blue[6] : 'transparent',
-                            color: activeTab === tab.id ? 'white' : theme.colors.gray[4],
-                            transition: 'all 0.15s ease',
-                            marginBottom: '2px',
-                        }}
-                    >
-                        <tab.icon size={18} />
-                        <Text size="sm" fw={activeTab === tab.id ? 600 : 400}>
-                            {tab.label}
-                        </Text>
-                    </Box>
-                ))}
+                <Box style={{ overflowY: 'auto', flex: 1 }}>
+                    {groups.map((group) => (
+                        <Box key={group.label} mb="sm">
+                            <Text
+                                size="xs"
+                                fw={600}
+                                c="dimmed"
+                                mb={4}
+                                px="sm"
+                                pt="sm"
+                                pb={4}
+                                style={{ textTransform: 'uppercase', letterSpacing: '0.3px' }}
+                            >
+                                {group.label}
+                            </Text>
+                            {group.items.map((tab) => (
+                                <Box
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '8px 12px',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        backgroundColor: activeTab === tab.id ? theme.colors.blue[6] : 'transparent',
+                                        color: activeTab === tab.id ? 'white' : theme.colors.gray[4],
+                                        transition: 'all 0.15s ease',
+                                        marginBottom: '2px',
+                                    }}
+                                >
+                                    <tab.icon size={16} />
+                                    <Text size="sm" fw={activeTab === tab.id ? 600 : 400}>
+                                        {tab.label}
+                                    </Text>
+                                </Box>
+                            ))}
+                        </Box>
+                    ))}
+                </Box>
             </Box>
 
             <Box
