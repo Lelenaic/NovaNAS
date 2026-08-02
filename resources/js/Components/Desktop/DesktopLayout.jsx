@@ -114,8 +114,12 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: theme.colors.dark[9],
-                backgroundImage: 'linear-gradient(135deg, #1a1b1e 0%, #25262b 100%)',
+                backgroundColor: '#0e0e12',
+                backgroundImage: `
+                    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(30, 58, 95, 0.2) 0%, transparent 60%),
+                    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(45, 20, 60, 0.15) 0%, transparent 60%),
+                    linear-gradient(160deg, #12121a 0%, #1a1a24 40%, #16161e 100%)
+                `,
                 overflow: 'hidden',
             }}
         >
@@ -126,11 +130,12 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
             <Box
                 style={{
                     position: 'absolute',
-                    top: '48px',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    top: '76px',
+                    left: '12px',
+                    right: '12px',
+                    bottom: '12px',
                     display: 'flex',
+                    gap: '12px',
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -175,8 +180,8 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
                 c="dimmed"
                 style={{
                     position: 'absolute',
-                    bottom: '8px',
-                    right: '12px',
+                    bottom: '20px',
+                    right: '24px',
                     zIndex: 10,
                 }}
             >

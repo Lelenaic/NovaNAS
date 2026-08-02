@@ -1,14 +1,87 @@
 import { useState, useRef, useEffect } from 'react';
-import { Box, Text, Group, ActionIcon, Tooltip, useMantineTheme } from '@mantine/core';
-import { IconX, IconMaximize, IconCopy } from '@tabler/icons-react';
+import { Box, Text, Group, useMantineTheme } from '@mantine/core';
 import { useWindow } from './WindowContext';
 
 const SNAP_THRESHOLD = 20;
+
+function TrafficLightButton({ color, hoverColor, icon, onClick, onMouseEnter, onMouseLeave, isHovered }) {
+    return (
+        <Box
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick?.();
+            }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                backgroundColor: color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background-color 150ms ease, transform 100ms ease',
+                boxShadow: isHovered ? `0 0 8px ${color}40` : 'none',
+                transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                position: 'relative',
+            }}
+        >
+            <Box
+                style={{
+                    opacity: isHovered ? 1 : 0,
+                    transition: 'opacity 150ms ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 0,
+                }}
+            >
+                {icon}
+            </Box>
+        </Box>
+    );
+}
+
+function MinimizeIcon() {
+    return (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1 4h6" stroke="rgba(0,0,0,0.6)" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function MaximizeIcon() {
+    return (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1.5 1.5h5v5h-5z" stroke="rgba(0,0,0,0.6)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function RestoreIcon() {
+    return (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M2 5.5V2.5h3" stroke="rgba(0,0,0,0.6)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M6 2.5v3h-3" stroke="rgba(0,0,0,0.6)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function CloseIcon() {
+    return (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="rgba(0,0,0,0.6)" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+    );
+}
 
 export function DraggableWindow({ windowState, children }) {
     const {
         closeWindow,
         maximizeWindow,
+        minimizeWindow,
         focusWindow,
         moveWindow,
         resizeWindow,
@@ -17,6 +90,8 @@ export function DraggableWindow({ windowState, children }) {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [resizeDirection, setResizeDirection] = useState(null);
+    const [hoveredButton, setHoveredButton] = useState(null);
+    const [isHovered, setIsHovered] = useState(false);
     const dragStartPos = useRef({ x: 0, y: 0 });
     const windowPos = useRef({ x: windowState.x, y: windowState.y });
     const windowSize = useRef({ width: windowState.width, height: windowState.height });
@@ -134,69 +209,87 @@ export function DraggableWindow({ windowState, children }) {
                 zIndex: windowState.zIndex,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: theme.colors.dark[8],
-                borderRadius: windowState.maximized ? 0 : '8px',
+                borderRadius: windowState.maximized ? 0 : '12px',
+                overflow: 'hidden',
                 boxShadow: windowState.maximized
                     ? 'none'
-                    : '0 4px 20px rgba(0, 0, 0, 0.5)',
-                overflow: 'hidden',
+                    : '0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                border: windowState.maximized ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
             }}
             onMouseDown={() => focusWindow(windowState.id)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
             {/* Window Title Bar */}
             <Box
                 onMouseDown={handleMouseDown}
                 style={{
-                    height: '36px',
-                    backgroundColor: theme.colors.dark[7],
-                    borderBottom: `1px solid ${theme.colors.dark[5]}`,
+                    height: '40px',
+                    backgroundColor: 'rgba(38, 38, 45, 0.85)',
+                    backdropFilter: 'blur(16px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(150%)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                     cursor: windowState.maximized ? 'default' : 'move',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '0 8px',
+                    padding: '0 14px',
                     userSelect: 'none',
                 }}
             >
-                <Group justify="space-between" style={{ width: '100%' }}>
-                    <Group gap="xs">
-                        <Text size="sm" c="white" fw={500}>
-                            {windowState.title}
-                        </Text>
-                    </Group>
-                    <Group gap={4}>
-                        <Tooltip label={windowState.maximized ? 'Restore' : 'Maximize'}>
-                            <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    maximizeWindow(windowState.id);
-                                }}
-                            >
-                                {windowState.maximized ? (
-                                    <IconCopy size={14} />
-                                ) : (
-                                    <IconMaximize size={14} />
-                                )}
-                            </ActionIcon>
-                        </Tooltip>
-                        <Tooltip label="Close">
-                            <ActionIcon
-                                variant="subtle"
-                                color="red"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    closeWindow(windowState.id);
-                                }}
-                            >
-                                <IconX size={14} />
-                            </ActionIcon>
-                        </Tooltip>
-                    </Group>
+                {/* Traffic Light Buttons */}
+                <Group gap={7} style={{ flexShrink: 0 }}>
+                    <TrafficLightButton
+                        color="#ff5f57"
+                        hoverColor="#ff4040"
+                        icon={<CloseIcon />}
+                        isHovered={hoveredButton === 'close'}
+                        onMouseEnter={() => setHoveredButton('close')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                        onClick={() => closeWindow(windowState.id)}
+                    />
+                    <TrafficLightButton
+                        color="#febc2e"
+                        hoverColor="#ffb800"
+                        icon={<MinimizeIcon />}
+                        isHovered={hoveredButton === 'minimize'}
+                        onMouseEnter={() => setHoveredButton('minimize')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                        onClick={() => minimizeWindow(windowState.id)}
+                    />
+                    <TrafficLightButton
+                        color="#28c840"
+                        hoverColor="#20b838"
+                        icon={windowState.maximized ? <RestoreIcon /> : <MaximizeIcon />}
+                        isHovered={hoveredButton === 'maximize'}
+                        onMouseEnter={() => setHoveredButton('maximize')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                        onClick={() => maximizeWindow(windowState.id)}
+                    />
                 </Group>
+
+                {/* Window Title */}
+                <Box
+                    style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        paddingRight: '68px',
+                    }}
+                >
+                    <Text
+                        size="sm"
+                        fw={500}
+                        c="rgba(255, 255, 255, 0.85)"
+                        style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            letterSpacing: '0.01em',
+                        }}
+                    >
+                        {windowState.title}
+                    </Text>
+                </Box>
             </Box>
 
             {/* Window Content */}

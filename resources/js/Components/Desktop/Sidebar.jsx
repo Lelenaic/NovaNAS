@@ -57,9 +57,10 @@ export function DateTimeWidget({ systemInfo, loading }) {
     return (
         <Box
             style={{
-                backgroundColor: theme.colors.dark[7],
-                borderRadius: '8px',
-                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '18px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
             }}
         >
             <Stack gap="xs">
@@ -161,9 +162,10 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
     return (
         <Box
             style={{
-                backgroundColor: theme.colors.dark[7],
-                borderRadius: '8px',
-                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '18px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
             }}
         >
             <Stack gap="sm">
@@ -270,9 +272,10 @@ function StoragePoolsWidget({ systemInfo, loading }) {
     return (
         <Box
             style={{
-                backgroundColor: theme.colors.dark[7],
-                borderRadius: '8px',
-                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '18px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
             }}
         >
             <Stack gap="sm">
@@ -408,9 +411,10 @@ function GPUsWidget({ systemInfo, loading }) {
     return (
         <Box
             style={{
-                backgroundColor: theme.colors.dark[7],
-                borderRadius: '8px',
-                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '18px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
             }}
         >
             <Stack gap="sm">
@@ -492,9 +496,14 @@ export function Sidebar() {
             style={{
                 width: '280px',
                 height: '100%',
-                backgroundColor: theme.colors.dark[8],
+                backgroundColor: 'rgba(22, 22, 28, 0.65)',
+                backdropFilter: 'blur(20px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+                borderRadius: '16px',
                 padding: '16px',
                 overflowY: 'auto',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
             }}
         >
             <Stack gap="md">

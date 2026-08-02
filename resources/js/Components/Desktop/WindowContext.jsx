@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useCallback } from 'react';
 
 const WindowContext = createContext(undefined);
 
-const HEADER_HEIGHT = 48;
-const SIDEBAR_WIDTH = 280;
+const HEADER_HEIGHT = 76;
+const SIDEBAR_WIDTH = 292;
 const HEADER_Z_INDEX = 1000;
 
 export function WindowProvider({ children }) {
@@ -34,8 +34,8 @@ export function WindowProvider({ children }) {
             appId,
             title,
             icon,
-            x: 100 + windows.length * 30,
-            y: 50 + windows.length * 30,
+            x: 120 + windows.length * 30,
+            y: 80 + windows.length * 30,
             width: 1100,
             height: 650,
             minimized: false,
@@ -66,8 +66,8 @@ export function WindowProvider({ children }) {
                     return {
                         ...w,
                         maximized: false,
-                        x: w.prevPosition?.x ?? 100,
-                        y: w.prevPosition?.y ?? 50,
+                        x: w.prevPosition?.x ?? 120,
+                        y: w.prevPosition?.y ?? 80,
                         width: w.prevPosition?.width ?? 1100,
                         height: w.prevPosition?.height ?? 650,
                         zIndex: maxZIndex + 1,
@@ -79,9 +79,9 @@ export function WindowProvider({ children }) {
                     maximized: true,
                     prevPosition: { x: w.x, y: w.y, width: w.width, height: w.height },
                     x: 0,
-                    y: HEADER_HEIGHT,
-                    width: globalThis.window.innerWidth - SIDEBAR_WIDTH,
-                    height: globalThis.window.innerHeight - HEADER_HEIGHT,
+                    y: 0,
+                    width: 0,
+                    height: 0,
                     zIndex: HEADER_Z_INDEX + 1,
                 };
             })
