@@ -281,6 +281,7 @@ Route::group(['middleware' => 'auth'], function () {
 
         // Terminal routes
         Route::post('/api/terminal/session', [TerminalController::class, 'createSession']);
+        Route::delete('/api/terminal/session/{sessionId}', [TerminalController::class, 'destroySession']);
 
         // Monitor routes
         Route::post('/api/monitor/session', [MonitorController::class, 'createSession']);

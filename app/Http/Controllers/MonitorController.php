@@ -33,8 +33,10 @@ class MonitorController extends Controller
         $sessionId = Str::uuid()->toString();
 
         $tmuxSession = "monitor-{$sessionId}";
+        $cleanupCmd = base_path('artisan')." session:cleanup --type=monitor --session-id={$sessionId}";
         $command = [
-            'sudo', 'su', '-', $user->username, '-c', "tmux new-session -d -s {$tmuxSession} /usr/local/bin/ttyd -p {$port} -i 127.0.0.1 --once -W -o -H X-Terminal-User btop",
+            'sudo', 'su', '-', $user->username, '-c',
+            "tmux new-session -d -s {$tmuxSession} bash -c '/usr/local/bin/ttyd -p {$port} -i 127.0.0.1 --once -s SIGHUP -W -o -H X-Terminal-User btop ; {$cleanupCmd}'",
         ];
 
         $process = new Process($command);

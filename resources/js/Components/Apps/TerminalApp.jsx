@@ -1,14 +1,26 @@
 import { Box, Button, Loader, Text } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function TerminalAppContent() {
+export function TerminalAppContent({ windowId }) {
     const [sessionUrl, setSessionUrl] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const sessionIdRef = useRef(null);
     const iframeRef = useRef(null);
 
     useEffect(() => {
         createSession();
+
+        return () => {
+            if (sessionIdRef.current) {
+                fetch(`/api/terminal/session/${sessionIdRef.current}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    },
+                }).catch(() => {});
+            }
+        };
     }, []);
 
     const handleIframeLoad = useCallback(() => {
@@ -32,6 +44,7 @@ export function TerminalAppContent() {
             const data = await response.json();
 
             if (response.ok) {
+                sessionIdRef.current = data.session_id;
                 setSessionUrl(data.url);
             } else {
                 setError(data.error || 'Failed to create terminal session');

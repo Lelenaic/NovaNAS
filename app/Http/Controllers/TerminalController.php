@@ -34,10 +34,13 @@ class TerminalController extends Controller
         // Generate session ID
         $sessionId = Str::uuid()->toString();
 
-        // Start ttyd in tmux
+        // Start ttyd in tmux — wrap in bash -c so the cleanup runs INSIDE the tmux session
+        // after ttyd exits (tmux new-session -d returns immediately, so ; cleanup would run instantly)
         $tmuxSession = "ttyd-{$sessionId}";
+        $cleanupCmd = base_path('artisan')." session:cleanup --type=terminal --session-id={$sessionId}";
         $command = [
-            'sudo', 'su', '-', $user->username, '-c', "tmux new-session -d -s {$tmuxSession} /usr/local/bin/ttyd -p {$port} -i 127.0.0.1 -W -o -H X-Terminal-User /bin/bash"
+            'sudo', 'su', '-', $user->username, '-c',
+            "tmux new-session -d -s {$tmuxSession} bash -c '/usr/local/bin/ttyd -p {$port} -i 127.0.0.1 --exit-no-conn -s SIGHUP -W -o -H X-Terminal-User /bin/bash ; {$cleanupCmd}'",
         ];
 
         $process = new Process($command);
@@ -64,6 +67,30 @@ class TerminalController extends Controller
             'session_id' => $sessionId,
             'url' => "/terminal/{$sessionId}/",
         ]);
+    }
+
+    /**
+     * Destroy a terminal session.
+     */
+    public function destroySession(Request $request, string $sessionId)
+    {
+        $session = Cache::get("terminal_session_{$sessionId}");
+
+        if (! $session) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        $process = new Process(['sudo', 'tmux', 'kill-session', '-t', $session['tmux_session']]);
+        $process->run();
+
+        $configPath = "/etc/apache2/conf-available/terminal-{$sessionId}.conf";
+        Process::run(['sudo', 'a2disconf', "terminal-{$sessionId}"]);
+        Process::run(['sudo', 'rm', '-f', $configPath]);
+        Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
+
+        Cache::forget("terminal_session_{$sessionId}");
+
+        return response()->json(['success' => true]);
     }
 
     /**
