@@ -12,6 +12,17 @@ NovaNAS is a powerful, open-source NAS operating system designed as a comprehens
   <img src="usage.gif" alt="NovaNAS Desktop">
 </p>
 
+<p align="center">
+  <a href="#why-novanas">Why NovaNAS?</a> •
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#community">Community</a> •
+  <a href="#faq">FAQ</a> •
+  <a href="#license">License</a>
+</p>
+
 ## Why NovaNAS?
 
 CasaOS offers basic NAS functionality, but lacks the depth and completeness needed for serious home or small business storage solutions. NovaNAS fills this gap by providing enterprise-grade features comparable to commercial solutions like QNAP OS or Synology DSM, while remaining fully open-source and free.
