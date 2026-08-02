@@ -44,7 +44,7 @@ export function UsersTab() {
     const [inviteForm, setInviteForm] = useState({
         email: '',
         username: '',
-        is_admin: false,
+        is_admin: true,
     });
     const [inviteError, setInviteError] = useState(null);
     const [inviteLoading, setInviteLoading] = useState(false);
@@ -272,7 +272,7 @@ export function UsersTab() {
         setEditForm({
             name: user.name,
             email: user.email,
-            is_admin: user.is_admin,
+            is_admin: true,
         });
         setEditError(null);
         openEditModal();
@@ -282,7 +282,7 @@ export function UsersTab() {
         setInviteForm({
             email: '',
             username: '',
-            is_admin: false,
+            is_admin: true,
         });
         setInviteError(null);
         setCopiedLink(null);
@@ -610,9 +610,9 @@ export function UsersTab() {
 
                         <Switch
                             label="Admin User"
-                            description="Admin users can manage the system"
+                            description="Only admin users are supported right now. Non-admin users will be available in a future update."
                             checked={inviteForm.is_admin}
-                            onChange={(e) => setInviteForm({ ...inviteForm, is_admin: e.target.checked })}
+                            disabled
                         />
 
                         <Group justify="flex-end" mt="md">
@@ -693,9 +693,9 @@ export function UsersTab() {
 
                         <Switch
                             label="Admin User"
-                            description="Admin users can manage the system"
+                            description="Only admin users are supported right now. Non-admin users will be available in a future update."
                             checked={editForm.is_admin}
-                            onChange={(e) => setEditForm({ ...editForm, is_admin: e.target.checked })}
+                            disabled
                         />
 
                         <Group justify="flex-end" mt="md">
