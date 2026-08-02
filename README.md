@@ -6,9 +6,7 @@
 
 **An Open Source NAS Operating System - A Complete Alternative to CasaOS, Unraid and more**
 
-NovaNAS is a powerful, open-source NAS operating system designed as a comprehensive alternative to other NAS OS. Built with Laravel and React, it provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
-I wanted to build a NAS OS that is elegant is completely manageable via its web interface, without having to use the terminal and yet stay completely independant from it.
-The heart of NovaNAS is that it is managed entirely using the linux packages and configuration files on the system. You can use it for years and remove it tomorrow while keeping your system and everything you created.
+NovaNAS is a powerful, open-source NAS operating system designed as a comprehensive alternative to other NAS OS. It provides a desktop-like interface that allows you to manage your entire system through a single, intuitive web application.
 
 <p align="center">
   <img src="usage.gif" alt="NovaNAS Desktop">
@@ -17,8 +15,8 @@ The heart of NovaNAS is that it is managed entirely using the linux packages and
 ## Why NovaNAS?
 
 CasaOS offers basic NAS functionality, but lacks the depth and completeness needed for serious home or small business storage solutions. NovaNAS fills this gap by providing enterprise-grade features comparable to commercial solutions like QNAP OS or Synology DSM, while remaining fully open-source and free.
-I loved using a QNAP NAS for years because their OS is a banger. But it's not a real linux you can use however you want, it's not open source, and a QNAP NAS is expensive. I swaped to a DYI NAS and tries many OS like CasaOS that I love, but it lacks features to be really usable fully via it's web UI.
-I tried to offer a complete experience through the NovaNAS UI making you feel all powerful via a web interface, without the need of using SSH to manage and configure your system. But, you can use SSH as much as you want, and NovaNAS will see your changes and understand them. NovaNAS reads automatically the configuration files of the applications you use on your NAS, and not store the configuration in its database.
+I loved using a QNAP NAS for years because their OS is a banger. But it's not a real linux you can use however you want, it's not open source, and a QNAP NAS is expensive (and you can't upgrade components, use a GPU...). I swaped to a DYI NAS and tries many OS like CasaOS that I loved, but it lacks features to be fully usable via it's web UI.
+I tried to offer a complete experience through the NovaNAS UI making you feel all powerful via a web interface, without the need of using SSH to manage and configure your system. But, you can use SSH as much as you want though, and NovaNAS will see your changes and understand them. NovaNAS reads automatically the configuration files of the applications you use on your native OS, and does not store the configuration in its database.
 
 ### Key Philosophy
 - **Complete System Management**: Control everything from storage to networking through one unified interface
@@ -56,11 +54,11 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 - **SSL/TLS Certificates**: Automatic certificate management with Letsencrypt
 - **Network Configuration**: IP settings, UPNP
 
-### Monitoring & Analytics (coming soon)
+### Monitoring & Analytics
 - **System Health**: CPU, memory, disk, and network monitoring
-- **Log Management**: Centralized logging and log viewer
 - **Resource Usage**: Track storage, bandwidth, and system resources
-- **Alert System**: Email/SMS notifications for system events
+- **Log Management**: Centralized logging and log viewer (coming soon)
+- **Alert System**: Email/SMS notifications for system events (coming soon)
 
 ### Additional Features
 - **Scheduled Tasks**: Cron job management through the UI (coming soon)
@@ -129,6 +127,11 @@ NovaNAS is open source software licensed under the MIT License. See [LICENSE](LI
 ## Support
 
 - **Documentation**: [docs.novanas.org](https://docs.novanas.org)
+
+## FAQ
+**Will a dockerized version of NovaNAS be available?**
+
+Due to the nature of NovaNAS, it's complicated to run it in a docker container. The firewall, network configuration, the disk management, etc. It's very complicated to manage some configuration from a docker container. But we will try to make it possible in the future, though it's not a priority for now.
 
 ---
 
