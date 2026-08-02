@@ -42,7 +42,8 @@ apt install -y \
     rsync \
     sudo \
     zip \
-    unzip
+    unzip \
+    cron
 
 # Enable ZFS services
 systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target
@@ -222,7 +223,12 @@ for service in /etc/systemd/system/novanas-*.service; do
 done
 echo "Systemd services installed."
 
-# Step 5: Configure Apache
+# Step 5: Install Laravel crontab
+echo "Installing Laravel crontab..."
+(crontab -u novanas -l 2>/dev/null || true; echo "* * * * * cd /var/novanas && php artisan schedule:run >> /var/novanas/storage/logs/cron.log 2>> /var/novanas/storage/logs/cron_error.log") | crontab -u novanas -
+echo "Laravel crontab installed for novanas user."
+
+# Step 6: Configure Apache
 echo "Configuring Apache..."
 
 # Create new config
@@ -250,6 +256,7 @@ curl -fsSL https://get.acme.sh | bash
 
 echo "Apache configured and reloaded."
 
+# Step 7: Finalize
 SERVER_IP=$(hostname -I | awk '{print $1}')
 echo "NovaNAS installation completed successfully!"
 echo "You can now access NovaNAS at http://$SERVER_IP/"
