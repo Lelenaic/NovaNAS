@@ -46,7 +46,7 @@ apt install -y \
     cron
 
 # Enable ZFS services
-systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target
+systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target cron --now
 
 # Install Docker if not installed
 if ! command -v docker &> /dev/null; then
