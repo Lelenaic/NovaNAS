@@ -112,7 +112,7 @@ function GPUCard({ gpu, providerName, theme }) {
                 </Badge>
             </Group>
 
-            <Grid gutter="md">
+            <Grid gap="md">
                 <Grid.Col span={3}>
                     <MetricCard
                         icon={IconDeviceDesktop}
@@ -163,7 +163,7 @@ function GPUCard({ gpu, providerName, theme }) {
                 />
             </Box>
 
-            <Grid gutter="md" mt="md">
+            <Grid gap="md" mt="md">
                 <Grid.Col span={4}>
                     <Text size="xs" c="dimmed">Driver</Text>
                     <Text size="sm" c="white">{gpu.driver || 'N/A'}</Text>

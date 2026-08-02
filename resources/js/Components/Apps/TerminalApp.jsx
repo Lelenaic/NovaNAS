@@ -86,7 +86,7 @@ export function TerminalAppContent({ windowId }) {
                     justifyContent: 'center',
                 }}
             >
-                <Text color="red" mb="md">{error}</Text>
+                <Text c="red" mb="md">{error}</Text>
                 <Button onClick={createSession}>Retry</Button>
             </Box>
         );

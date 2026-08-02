@@ -305,7 +305,7 @@ function StoragePoolsWidget({ systemInfo, loading }) {
                                 </Text>
                             </UnstyledButton>
                         )}
-                        <Collapse in={expanded || !hasMultiplePools}>
+                        <Collapse expanded={expanded || !hasMultiplePools}>
                             <Stack gap="md">
                                 {pools.map((pool, index) => (
                                     <Box key={index}>
@@ -444,7 +444,7 @@ function GPUsWidget({ systemInfo, loading }) {
                                 </Text>
                             </UnstyledButton>
                         )}
-                        <Collapse in={expanded || !hasMultipleGpus}>
+                        <Collapse expanded={expanded || !hasMultipleGpus}>
                             <Stack gap="md">
                                 {gpus.map((gpu, index) => (
                                     <Box key={index}>
