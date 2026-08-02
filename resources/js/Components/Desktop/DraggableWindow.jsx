@@ -296,8 +296,10 @@ export function DraggableWindow({ windowState, children }) {
             <Box
                 style={{
                     flex: 1,
-                    overflow: 'auto',
+                    overflow: 'hidden',
                     backgroundColor: theme.colors.dark[8],
+                    position: 'relative',
+                    minHeight: 0,
                 }}
             >
                 {children}

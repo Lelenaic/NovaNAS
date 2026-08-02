@@ -1,27 +1,34 @@
 import { Box, Button, Loader, Text } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useWindow } from '../Desktop/WindowContext';
 
-export function TerminalAppContent() {
+export function MonitorAppContent({ windowId }) {
     const [sessionUrl, setSessionUrl] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const sessionIdRef = useRef(null);
+    const iframeLoadedRef = useRef(false);
     const iframeRef = useRef(null);
+    const { closeWindow } = useWindow();
 
     useEffect(() => {
         createSession();
-    }, []);
 
-    const handleIframeLoad = useCallback(() => {
-        setTimeout(() => {
-            try {
-                iframeRef.current?.contentWindow?.dispatchEvent(new Event('resize'));
-            } catch {}
-        }, 100);
+        return () => {
+            if (sessionIdRef.current) {
+                fetch(`/api/monitor/session/${sessionIdRef.current}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    },
+                }).catch(() => {});
+            }
+        };
     }, []);
 
     const createSession = async () => {
         try {
-            const response = await fetch('/api/terminal/session', {
+            const response = await fetch('/api/monitor/session', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -32,16 +39,41 @@ export function TerminalAppContent() {
             const data = await response.json();
 
             if (response.ok) {
+                sessionIdRef.current = data.session_id;
                 setSessionUrl(data.url);
             } else {
-                setError(data.error || 'Failed to create terminal session');
+                setError(data.error || 'Failed to create monitor session');
             }
         } catch (err) {
-            setError('Failed to create terminal session');
+            setError('Failed to create monitor session');
         } finally {
             setLoading(false);
         }
     };
+
+    const handleIframeLoad = useCallback(() => {
+        if (iframeLoadedRef.current) {
+            if (sessionIdRef.current) {
+                fetch(`/api/monitor/session/${sessionIdRef.current}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    },
+                }).catch(() => {});
+                sessionIdRef.current = null;
+            }
+            if (windowId) {
+                closeWindow(windowId);
+            }
+        }
+        iframeLoadedRef.current = true;
+
+        setTimeout(() => {
+            try {
+                iframeRef.current?.contentWindow?.dispatchEvent(new Event('resize'));
+            } catch {}
+        }, 100);
+    }, [windowId, closeWindow]);
 
     if (loading) {
         return (
@@ -56,7 +88,7 @@ export function TerminalAppContent() {
                 }}
             >
                 <Loader size="lg" />
-                <Text mt="md">Starting terminal session...</Text>
+                <Text mt="md">Starting system monitor...</Text>
             </Box>
         );
     }
@@ -73,7 +105,7 @@ export function TerminalAppContent() {
                     justifyContent: 'center',
                 }}
             >
-                <Text color="red" mb="md">{error}</Text>
+                <Text c="red" mb="md">{error}</Text>
                 <Button onClick={createSession}>Retry</Button>
             </Box>
         );
@@ -92,7 +124,7 @@ export function TerminalAppContent() {
                 height: '100%',
                 border: 'none',
             }}
-            title="Terminal"
+            title="System Monitor"
         />
     );
 }

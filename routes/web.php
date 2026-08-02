@@ -13,6 +13,7 @@ use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\GPUController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UpnpController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WizardController;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/up', fn () => response()->json([
@@ -55,7 +57,7 @@ Route::get('/invitation/{token}', [UserController::class, 'showSetPassword']);
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [HomeController::class, 'index']);
 
-    Route::withoutMiddleware(\App\Http\Middleware\HandleInertiaRequests::class)->group(function () {
+    Route::withoutMiddleware(HandleInertiaRequests::class)->group(function () {
         // Desktop apps API (for live refresh)
         Route::get('/api/desktop-apps', [HomeController::class, 'desktopApps']);
 
@@ -279,6 +281,10 @@ Route::group(['middleware' => 'auth'], function () {
 
         // Terminal routes
         Route::post('/api/terminal/session', [TerminalController::class, 'createSession']);
+
+        // Monitor routes
+        Route::post('/api/monitor/session', [MonitorController::class, 'createSession']);
+        Route::delete('/api/monitor/session/{sessionId}', [MonitorController::class, 'destroySession']);
 
         // Update routes
         Route::get('/api/updates/status', [UpdateController::class, 'status']);

@@ -13,6 +13,7 @@ import { DockerAppContent } from '../Apps/DockerApp';
 import { ApplicationsAppContent } from '../Apps/ApplicationsApp';
 import { UpdatesAppContent } from '../Apps/UpdatesApp';
 import { FileManagerAppContent } from '../Apps/FileManagerApp';
+import { MonitorAppContent } from '../Apps/MonitorApp';
 import { useCallback, useState, useEffect } from 'react';
 
 const APP_COMPONENTS = {
@@ -20,7 +21,7 @@ const APP_COMPONENTS = {
     settings: () => <SettingsAppContent />,
     terminal: () => <TerminalAppContent />,
     docker: () => <DockerAppContent />,
-    monitor: () => <SampleAppContent title="Monitor" emoji="📊" />,
+    monitor: (windowId) => <MonitorAppContent windowId={windowId} />,
     storage: () => <StorageAppContent />,
     firewall: () => <FirewallAppContent />,
     applications: () => <ApplicationsAppContent />,
@@ -167,7 +168,7 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
                         const AppComponent = APP_COMPONENTS[win.appId];
                         return (
                             <DraggableWindow key={win.id} windowState={win}>
-                                <AppComponent />
+                                <AppComponent windowId={win.id} />
                             </DraggableWindow>
                         );
                     })}
