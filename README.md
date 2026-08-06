@@ -118,6 +118,7 @@ After installation, access NovaNAS through your web browser at `http://your-serv
 - **Applications**: Install Docker apps from the marketplace
 - **Network**: Configure firewall rules, DynDNS
 - **Users**: Add users, assign permissions, manage access
+- **UPS**: Monitor and manage your UPS devices
 
 ## Architecture
 
