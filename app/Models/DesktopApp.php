@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,9 +27,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_system
  * @property bool $is_global
  * @property bool $is_admin_only
+ * @property bool $enabled
  * @property int|null $created_by
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class DesktopApp extends Model
 {
@@ -53,6 +55,7 @@ class DesktopApp extends Model
         'is_system',
         'is_global',
         'is_admin_only',
+        'enabled',
         'created_by',
     ];
 
@@ -67,6 +70,7 @@ class DesktopApp extends Model
             'is_system' => 'boolean',
             'is_global' => 'boolean',
             'is_admin_only' => 'boolean',
+            'enabled' => 'boolean',
         ];
     }
 
@@ -95,8 +99,8 @@ class DesktopApp extends Model
             return false;
         }
 
-        if ($this->is_global && !$this->isSystem()) {
-            if (!$user || !$user->is_admin) {
+        if ($this->is_global && ! $this->isSystem()) {
+            if (! $user || ! $user->is_admin) {
                 return false;
             }
         }
@@ -147,17 +151,18 @@ class DesktopApp extends Model
     /**
      * Scope to include only visible apps for a specific user.
      */
-    public function scopeVisibleFor($query, \App\Models\User $user)
+    public function scopeVisibleFor($query, User $user)
     {
-        return $query->where(function ($q) use ($user) {
-            // Include global apps
-            $q->where('is_global', true);
+        return $query->where('enabled', true)
+            ->where(function ($q) use ($user) {
+                // Include global apps
+                $q->where('is_global', true);
 
-            // Include admin-only apps for admins
-            if ($user->is_admin) {
-                $q->orWhere('is_admin_only', true);
-            }
-        });
+                // Include admin-only apps for admins
+                if ($user->is_admin) {
+                    $q->orWhere('is_admin_only', true);
+                }
+            });
     }
 
     /**
