@@ -9,22 +9,17 @@ import {
     IconUser,
 } from '@tabler/icons-react';
 import { ProfileModal } from './ProfileModal';
+import { useSystemInfo } from './Sidebar';
 
 export function Header() {
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const { systemInfo, loading } = useSystemInfo();
     const { auth } = usePage().props;
     const userName = auth?.user?.name;
     const userInitial = userName?.charAt(0).toUpperCase() || 'U';
     const [profileModalOpened, { open: openProfileModal, close: closeProfileModal }] = useDisclosure(false);
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const formatTime = (date) => {
+    const formatTime = (datetime) => {
+        const date = new Date(datetime);
         return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
@@ -32,13 +27,16 @@ export function Header() {
         });
     };
 
-    const formatDate = (date) => {
+    const formatDate = (datetime) => {
+        const date = new Date(datetime);
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
         });
     };
+
+    const currentTime = systemInfo?.datetime;
 
     return (
         <Box
@@ -76,12 +74,25 @@ export function Header() {
                     lineHeight: 1,
                 }}
             >
-                <Text size="lg" c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
-                    {formatTime(currentTime)}
-                </Text>
-                <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
-                    {formatDate(currentTime)}
-                </Text>
+                {loading || !currentTime ? (
+                    <>
+                        <Text size="lg" c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
+                            --:--
+                        </Text>
+                        <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
+                            ---
+                        </Text>
+                    </>
+                ) : (
+                    <>
+                        <Text size="lg" c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
+                            {formatTime(currentTime)}
+                        </Text>
+                        <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
+                            {formatDate(currentTime)}
+                        </Text>
+                    </>
+                )}
             </Box>
 
             {/* Right Section - System Tray */}

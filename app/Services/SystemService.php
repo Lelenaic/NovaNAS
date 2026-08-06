@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Symfony\Component\Process\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * System Service Manager
@@ -27,6 +26,19 @@ class SystemService
             'name' => 'Samba',
             'description' => 'Windows file sharing (SMB/CIFS)',
         ],
+        'nut' => [
+            'name' => 'NUT (UPS)',
+            'description' => 'Network UPS Tools - monitor and manage UPS devices for automatic shutdown',
+        ],
+    ];
+
+    /**
+     * Mapping of composite service IDs to their underlying systemd services.
+     *
+     * @var array<string, list<string>>
+     */
+    protected const COMPOSITE_SERVICES = [
+        'nut' => ['nut-server', 'nut-monitor'],
     ];
 
     /**
@@ -56,17 +68,18 @@ class SystemService
      */
     public function isEnabled(string $serviceName): bool
     {
-        $process = new Process(['sudo', 'systemctl', 'is-enabled', $serviceName]);
-        $process->run();
+        $systemdNames = self::COMPOSITE_SERVICES[$serviceName] ?? [$serviceName];
 
-        if (!$process->isSuccessful()) {
-            return false;
+        foreach ($systemdNames as $systemdName) {
+            $process = new Process(['sudo', 'systemctl', 'is-enabled', $systemdName]);
+            $process->run();
+
+            if (! $process->isSuccessful() || trim($process->getOutput()) !== 'enabled') {
+                return false;
+            }
         }
 
-        $output = trim($process->getOutput());
-
-        // is-enabled returns "enabled", "disabled", "masked", or error
-        return $output === 'enabled';
+        return true;
     }
 
     /**
@@ -74,44 +87,47 @@ class SystemService
      */
     public function isActive(string $serviceName): bool
     {
-        $process = new Process(['sudo', 'systemctl', 'is-active', $serviceName]);
-        $process->run();
+        $systemdNames = self::COMPOSITE_SERVICES[$serviceName] ?? [$serviceName];
 
-        if (!$process->isSuccessful()) {
-            return false;
+        foreach ($systemdNames as $systemdName) {
+            $process = new Process(['sudo', 'systemctl', 'is-active', $systemdName]);
+            $process->run();
+
+            if (! $process->isSuccessful() || trim($process->getOutput()) !== 'active') {
+                return false;
+            }
         }
 
-        $output = trim($process->getOutput());
-
-        // is-active returns "active", "inactive", "failed", etc.
-        return $output === 'active';
+        return true;
     }
 
     /**
      * Enable or disable a service.
      *
-     * @param string $serviceId The service ID (key from SERVICES array)
-     * @param bool $enabled True to enable, false to disable
-     * @return bool
+     * @param  string  $serviceId  The service ID (key from SERVICES array)
+     * @param  bool  $enabled  True to enable, false to disable
+     *
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
     public function setEnabled(string $serviceId, bool $enabled): bool
     {
-        if (!isset(self::SERVICES[$serviceId])) {
+        if (! isset(self::SERVICES[$serviceId])) {
             throw new \InvalidArgumentException("Unknown service: {$serviceId}");
         }
 
         $action = $enabled ? 'enable' : 'disable';
+        $systemdNames = self::COMPOSITE_SERVICES[$serviceId] ?? [$serviceId];
 
-        // Enable/disable and start/stop the service (--now flag applies immediately)
-        $process = new Process(['sudo', 'systemctl', $action, '--now', $serviceId]);
-        $process->run();
+        foreach ($systemdNames as $systemdName) {
+            $process = new Process(['sudo', 'systemctl', $action, '--now', $systemdName]);
+            $process->run();
 
-        if (!$process->isSuccessful()) {
-            throw new \RuntimeException(
-                "Failed to {$action} " . self::SERVICES[$serviceId]['name'] . ": " . $process->getErrorOutput()
-            );
+            if (! $process->isSuccessful()) {
+                throw new \RuntimeException(
+                    "Failed to {$action} ".self::SERVICES[$serviceId]['name'].': '.$process->getErrorOutput()
+                );
+            }
         }
 
         return true;
@@ -122,7 +138,7 @@ class SystemService
      */
     public function getServiceConfig(string $serviceId): ?array
     {
-        if (!isset(self::SERVICES[$serviceId])) {
+        if (! isset(self::SERVICES[$serviceId])) {
             return null;
         }
 

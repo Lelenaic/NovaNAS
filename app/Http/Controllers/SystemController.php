@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\GPU\GPUManager;
+use App\Services\NutService;
 use App\Services\Storage\StorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,8 @@ class SystemController extends Controller
 {
     public function __construct(
         protected GPUManager $gpuManager,
-        protected StorageService $storageService
+        protected StorageService $storageService,
+        protected NutService $nutService
     ) {}
 
     /**
@@ -21,7 +23,6 @@ class SystemController extends Controller
      */
     public function info(): JsonResponse
     {
-        // Get system date/time from the OS
         $dateTime = now()->format('Y-m-d H:i:s');
 
         // Get additional system info
@@ -42,6 +43,7 @@ class SystemController extends Controller
             'memory_usage' => $memoryUsage,
             'gpus' => $gpus,
             'storage_pools' => $storagePools,
+            'ups' => $this->getUpsInfo(),
         ]);
     }
 
@@ -62,6 +64,28 @@ class SystemController extends Controller
         }
 
         return $pools;
+    }
+
+    /**
+     * Get UPS information if configured.
+     */
+    protected function getUpsInfo(): ?array
+    {
+        $serviceStatus = $this->nutService->getServiceStatus();
+
+        if (! $serviceStatus['enabled']) {
+            return ['enabled' => false, 'status' => null];
+        }
+
+        $config = $this->nutService->getConfig();
+
+        if (! $config['selected_device']) {
+            return ['enabled' => true, 'status' => null];
+        }
+
+        $status = $this->nutService->getDeviceStatus();
+
+        return ['enabled' => true, 'status' => $status];
     }
 
     /**

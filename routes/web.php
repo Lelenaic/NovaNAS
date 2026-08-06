@@ -24,6 +24,7 @@ use App\Http\Controllers\SystemController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UpnpController;
+use App\Http\Controllers\UpsSettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WizardController;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -210,6 +211,13 @@ Route::group(['middleware' => 'auth'], function () {
         // General settings routes
         Route::get('/api/settings/general', [GeneralSettingsController::class, 'index']);
         Route::put('/api/settings/general', [GeneralSettingsController::class, 'update']);
+
+        // UPS settings routes
+        Route::get('/api/settings/ups', [UpsSettingsController::class, 'index']);
+        Route::get('/api/settings/ups/detect', [UpsSettingsController::class, 'detect']);
+        Route::get('/api/settings/ups/status', [UpsSettingsController::class, 'status']);
+        Route::put('/api/settings/ups', [UpsSettingsController::class, 'update']);
+        Route::post('/api/settings/ups/apply', [UpsSettingsController::class, 'apply']);
 
         // Docker settings routes
         Route::get('/api/settings/docker', [DockerSettingsController::class, 'index']);

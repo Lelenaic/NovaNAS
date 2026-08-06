@@ -1,99 +1,48 @@
 import { useState, useEffect } from 'react';
-import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton } from '@mantine/core';
-import { IconClock, IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck } from '@tabler/icons-react';
+import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton, Badge } from '@mantine/core';
+import { IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck, IconPlug } from '@tabler/icons-react';
 
-// Custom hook to fetch system info - shared by both widgets
-function useSystemInfo() {
-    const [systemInfo, setSystemInfo] = useState(null);
-    const [loading, setLoading] = useState(true);
+// Singleton hook to fetch system info - shared by all components
+let systemInfoState = { data: null, loading: true, subscribers: new Set(), intervalId: null };
 
-    useEffect(() => {
-        let timeoutId;
-
-        const fetchSystemInfo = async () => {
-            try {
-                const response = await fetch('/api/system/info');
-                const data = await response.json();
-                setSystemInfo(data);
-            } catch (error) {
-                console.error('Failed to fetch system info:', error);
-            } finally {
-                setLoading(false);
-            }
-            // Schedule next fetch after 5 seconds
-            timeoutId = setTimeout(fetchSystemInfo, 5000);
-        };
-
-        fetchSystemInfo();
-
-        return () => clearTimeout(timeoutId);
-    }, []);
-
-    return { systemInfo, loading };
+function fetchSystemInfoOnce() {
+    fetch('/api/system/info')
+        .then(res => res.json())
+        .then(data => {
+            systemInfoState.data = data;
+            systemInfoState.loading = false;
+            systemInfoState.subscribers.forEach(fn => fn());
+        })
+        .catch(() => {
+            systemInfoState.loading = false;
+            systemInfoState.subscribers.forEach(fn => fn());
+        });
 }
 
-export function DateTimeWidget({ systemInfo, loading }) {
-    const theme = useMantineTheme();
+export function useSystemInfo() {
+    const [, setUpdate] = useState(0);
 
-    const formatTime = (datetime) => {
-        const date = new Date(datetime);
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-        });
-    };
+    useEffect(() => {
+        const callback = () => setUpdate(n => n + 1);
+        systemInfoState.subscribers.add(callback);
 
-    const formatDate = (datetime) => {
-        const date = new Date(datetime);
-        return date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
-    };
+        // Start polling on first subscriber
+        if (!systemInfoState.intervalId) {
+            fetchSystemInfoOnce();
+            systemInfoState.intervalId = setInterval(fetchSystemInfoOnce, 5000);
+        }
 
-    return (
-        <Box
-            style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                borderRadius: '12px',
-                padding: '18px',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-            }}
-        >
-            <Stack gap="xs">
-                <Box style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <IconClock size={16} color={theme.colors.blue[5]} />
-                    <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                        System Time
-                    </Text>
-                </Box>
+        return () => {
+            systemInfoState.subscribers.delete(callback);
+            // Stop polling when no subscribers
+            if (systemInfoState.subscribers.size === 0 && systemInfoState.intervalId) {
+                clearInterval(systemInfoState.intervalId);
+                systemInfoState.intervalId = null;
+            }
+        };
+    }, []);
 
-                {loading ? (
-                    <>
-                        <Skeleton height={32} width="80%" />
-                        <Skeleton height={16} width="60%" />
-                    </>
-                ) : systemInfo ? (
-                    <>
-                        <Text size="xl" fw={700} c="white">
-                            {formatTime(systemInfo.datetime)}
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                            {formatDate(systemInfo.datetime)}
-                        </Text>
-                        <Text size="xs" c="dimmed" mt={4}>
-                            {systemInfo.timezone}
-                        </Text>
-                    </>
-                ) : (
-                    <Text c="dimmed">Unable to load time</Text>
-                )}
-            </Stack>
-        </Box>
-    );
+    return { systemInfo: systemInfoState.data, loading: systemInfoState.loading };
 }
 
 // Helper function to format bytes to human readable format
@@ -487,6 +436,83 @@ function GPUsWidget({ systemInfo, loading }) {
     );
 }
 
+function UpsWidget({ systemInfo, loading }) {
+    const theme = useMantineTheme();
+
+    const upsInfo = systemInfo?.ups;
+    const isEnabled = upsInfo?.enabled;
+    const status = upsInfo?.status;
+    const isOnline = status?.['ups.status'] === 'OL';
+    const batteryCharge = status?.['battery.charge'] ? parseFloat(status['battery.charge']) : null;
+    const inputVoltage = status?.['input.voltage'] ?? null;
+
+    const getBatteryColor = (charge) => {
+        if (charge > 50) return 'green';
+        if (charge > 20) return 'yellow';
+        return 'red';
+    };
+
+    return (
+        <Box
+            style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '18px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
+            }}
+        >
+            <Stack gap="sm">
+                <Box style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconPlug size={16} color={theme.colors.blue[5]} />
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                        UPS
+                    </Text>
+                    {isEnabled && status && (
+                        <Badge
+                            color={isOnline ? 'green' : 'yellow'}
+                            variant="light"
+                            size="xs"
+                            ml="auto"
+                        >
+                            {isOnline ? 'Online' : 'Battery'}
+                        </Badge>
+                    )}
+                </Box>
+
+                {loading ? (
+                    <>
+                        <Skeleton height={20} />
+                        <Skeleton height={16} width="60%" />
+                    </>
+                ) : !isEnabled ? (
+                    <Text c="dimmed" size="sm">NUT service not enabled</Text>
+                ) : status && Object.keys(status).length > 0 ? (
+                    <>
+                        {batteryCharge !== null && (
+                            <GaugeWidget
+                                icon={IconPlug}
+                                label="Battery"
+                                value={batteryCharge}
+                                color={getBatteryColor(batteryCharge)}
+                            />
+                        )}
+                        <Group gap="md">
+                            {inputVoltage && (
+                                <Box>
+                                    <Text size="xs" c="dimmed">Input</Text>
+                                    <Text size="sm" c="white" fw={500}>{inputVoltage}V</Text>
+                                </Box>
+                            )}
+                        </Group>
+                    </>
+                ) : (
+                    <Text c="dimmed" size="sm">No UPS data</Text>
+                )}
+            </Stack>
+        </Box>
+    );
+}
+
 export function Sidebar() {
     const theme = useMantineTheme();
     const { systemInfo, loading } = useSystemInfo();
@@ -507,9 +533,6 @@ export function Sidebar() {
             }}
         >
             <Stack gap="md">
-                {/* DateTime Widget */}
-                <DateTimeWidget systemInfo={systemInfo} loading={loading} />
-
                 {/* System Resources Widget */}
                 <SystemResourcesWidget systemInfo={systemInfo} loading={loading} />
 
@@ -518,6 +541,9 @@ export function Sidebar() {
 
                 {/* GPUs Widget */}
                 <GPUsWidget systemInfo={systemInfo} loading={loading} />
+
+                {/* UPS Widget */}
+                <UpsWidget systemInfo={systemInfo} loading={loading} />
             </Stack>
         </Box>
     );

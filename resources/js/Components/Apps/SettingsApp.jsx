@@ -14,6 +14,7 @@ import {
     IconBrandDocker,
     IconLock,
     IconFolder,
+    IconPlug,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -26,12 +27,14 @@ import { GPUTab } from './Settings/GPUTab';
 import { DockerTab } from './Settings/DockerTab';
 import { SslTab } from './Settings/SslTab';
 import { FileManagerTab } from './Settings/FileManagerTab';
+import { UpsTab } from './Settings/UpsTab';
 
 const groups = [
     {
         label: 'General',
         items: [
             { id: 'general', label: 'General', icon: IconSettings },
+            { id: 'ups', label: 'UPS', icon: IconPlug },
         ],
     },
     {
@@ -76,6 +79,8 @@ export function SettingsAppContent() {
         switch (activeTab) {
             case 'general':
                 return <GeneralTab />;
+            case 'ups':
+                return <UpsTab />;
             case 'network':
                 return <NetworkTab />;
             case 'upnp':
