@@ -14,6 +14,7 @@ import { ApplicationsAppContent } from '../Apps/ApplicationsApp';
 import { UpdatesAppContent } from '../Apps/UpdatesApp';
 import { FileManagerAppContent } from '../Apps/FileManagerApp';
 import { MonitorAppContent } from '../Apps/MonitorApp';
+import { SupportAppContent } from '../Apps/SupportApp';
 import { useCallback, useState, useEffect } from 'react';
 
 const APP_COMPONENTS = {
@@ -26,6 +27,7 @@ const APP_COMPONENTS = {
     firewall: () => <FirewallAppContent />,
     applications: () => <ApplicationsAppContent />,
     updates: () => <UpdatesAppContent />,
+    support: () => <SupportAppContent />,
 };
 
 function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrders = {} }) {

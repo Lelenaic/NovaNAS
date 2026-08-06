@@ -11,11 +11,16 @@ const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
     const csrfToken = getCsrfToken();
 
+    const isFormData = options.body instanceof FormData;
+
     const headers = {
-        'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
         ...options.headers,
     };
+
+    if (!isFormData && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     if (csrfToken && options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
         headers['X-CSRF-TOKEN'] = csrfToken;

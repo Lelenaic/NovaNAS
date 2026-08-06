@@ -19,6 +19,7 @@ use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
 use App\Http\Controllers\SslSettingsController;
 use App\Http\Controllers\StorageController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UpdateController;
@@ -315,6 +316,13 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/applications/{store}/apps/{app}/start', [ApplicationsController::class, 'start']);
         Route::delete('/api/applications/{store}/apps/{app}', [ApplicationsController::class, 'destroy']);
         Route::get('/api/applications/{store}/apps/{app}/status', [ApplicationsController::class, 'status']);
+
+        // Support routes
+        Route::get('/api/support/system-info', [SupportController::class, 'systemInfo']);
+        Route::post('/api/support/tickets', [SupportController::class, 'store']);
+        Route::get('/api/support/tickets/{ticketId}/messages', [SupportController::class, 'messages']);
+        Route::post('/api/support/tickets/{ticketId}/messages', [SupportController::class, 'sendMessage']);
+        Route::put('/api/support/tickets/{ticketId}/messages/{messageId}', [SupportController::class, 'editMessage']);
     });
 
     // API routes - exclude Inertia middleware
