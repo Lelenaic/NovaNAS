@@ -72,12 +72,12 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 - **Alert System**: Email/SMS notifications for system events (coming soon)
 
 ### Additional Features
-- **Scheduled Tasks**: Cron job management through the UI (coming soon)
 - **Update Management**: Automated system and app updates
-- **Power Management**: Sleep, hibernate, and shutdown controls (coming soon)
+- **UPS support**: Monitor and manage your UPS
 - **USB Device Support**: Mount and manage external drives
+- **Scheduled Tasks**: Cron job management through the UI (coming soon)
+- **Power Management**: Sleep, hibernate, and shutdown controls (coming soon)
 - **Printer Management**: Network printer configuration and sharing (coming soon)
-- **UPS support**: Monitor and manage your UPS (coming soon)
 
 ## Installation
 
@@ -118,7 +118,6 @@ After installation, access NovaNAS through your web browser at `http://your-serv
 - **Applications**: Install Docker apps from the marketplace
 - **Network**: Configure firewall rules, DynDNS
 - **Users**: Add users, assign permissions, manage access
-- **UPS**: Monitor and manage your UPS devices
 
 ## Architecture
 
