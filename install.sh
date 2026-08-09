@@ -43,7 +43,8 @@ apt install -y \
     sudo \
     zip \
     unzip \
-    cron
+    cron \
+    btop
 
 # Enable ZFS services
 systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target cron --now
