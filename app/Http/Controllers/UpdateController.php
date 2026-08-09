@@ -151,36 +151,6 @@ class UpdateController extends Controller
     }
 
     /**
-     * Restart the system.
-     */
-    public function restart(): JsonResponse
-    {
-        try {
-            $process = new Process([
-                'sudo', 'shutdown', '-r', 'now',
-            ]);
-
-            $process->run();
-
-            if ($process->isSuccessful()) {
-                return response()->json([
-                    'message' => 'System restart initiated',
-                ]);
-            } else {
-                return response()->json([
-                    'message' => 'Failed to initiate system restart',
-                    'error' => $process->getErrorOutput(),
-                ], 500);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to initiate system restart',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
      * Get NovaNAS update status including current version and availability.
      */
     public function novaNasStatus(): JsonResponse

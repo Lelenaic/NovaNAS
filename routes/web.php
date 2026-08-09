@@ -306,7 +306,8 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/updates/clean-cache', [UpdateController::class, 'cleanCache']);
         Route::get('/api/updates/reboot-status', [UpdateController::class, 'rebootStatus']);
         Route::post('/api/updates/clear-badge', [UpdateController::class, 'clearBadge']);
-        Route::post('/api/updates/restart', [UpdateController::class, 'restart']);
+        Route::post('/api/updates/restart', [SystemController::class, 'restart']);
+        Route::post('/api/updates/shutdown', [SystemController::class, 'shutdown']);
 
         // NovaNAS update routes
         Route::get('/api/updates/novanas/status', [UpdateController::class, 'novaNasStatus']);

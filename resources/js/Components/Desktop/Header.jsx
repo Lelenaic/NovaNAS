@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Group, Text, ActionIcon, Menu, Avatar } from '@mantine/core';
+import { Box, Group, Text, ActionIcon, Menu, Avatar, Modal, Button } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { usePage, router } from '@inertiajs/react';
 import {
@@ -7,6 +7,8 @@ import {
     IconSettings,
     IconLogout,
     IconUser,
+    IconPower,
+    IconRefresh,
 } from '@tabler/icons-react';
 import { ProfileModal } from './ProfileModal';
 import { useSystemInfo } from './Sidebar';
@@ -17,6 +19,18 @@ export function Header() {
     const userName = auth?.user?.name;
     const userInitial = userName?.charAt(0).toUpperCase() || 'U';
     const [profileModalOpened, { open: openProfileModal, close: closeProfileModal }] = useDisclosure(false);
+    const [shutdownModalOpened, { open: openShutdownModal, close: closeShutdownModal }] = useDisclosure(false);
+    const [restartModalOpened, { open: openRestartModal, close: closeRestartModal }] = useDisclosure(false);
+
+    const handleShutdown = () => {
+        closeShutdownModal();
+        fetch('/api/updates/shutdown', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    };
+
+    const handleRestart = () => {
+        closeRestartModal();
+        fetch('/api/updates/restart', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    };
 
     const formatTime = (datetime) => {
         const date = new Date(datetime);
@@ -156,8 +170,12 @@ export function Header() {
                         <Menu.Item leftSection={<IconUser size={14} />} onClick={openProfileModal}>
                             Profile
                         </Menu.Item>
-                        <Menu.Item leftSection={<IconSettings size={14} />}>
-                            Settings
+                        <Menu.Divider />
+                        <Menu.Item leftSection={<IconRefresh size={14} />} onClick={openRestartModal}>
+                            Restart
+                        </Menu.Item>
+                        <Menu.Item leftSection={<IconPower size={14} />} onClick={openShutdownModal}>
+                            Shutdown
                         </Menu.Item>
                         <Menu.Divider />
                         <Menu.Item
@@ -172,6 +190,22 @@ export function Header() {
             </Group>
 
             <ProfileModal opened={profileModalOpened} onClose={closeProfileModal} />
+
+            <Modal opened={shutdownModalOpened} onClose={closeShutdownModal} title="Shutdown" centered>
+                <Text size="sm">Are you sure you want to shutdown the system?</Text>
+                <Group justify="flex-end" mt="md">
+                    <Button variant="default" onClick={closeShutdownModal}>Cancel</Button>
+                    <Button color="red" onClick={handleShutdown}>Shutdown</Button>
+                </Group>
+            </Modal>
+
+            <Modal opened={restartModalOpened} onClose={closeRestartModal} title="Restart" centered>
+                <Text size="sm">Are you sure you want to restart the system?</Text>
+                <Group justify="flex-end" mt="md">
+                    <Button variant="default" onClick={closeRestartModal}>Cancel</Button>
+                    <Button color="orange" onClick={handleRestart}>Restart</Button>
+                </Group>
+            </Modal>
         </Box>
     );
 }

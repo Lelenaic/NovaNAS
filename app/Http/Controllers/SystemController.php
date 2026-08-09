@@ -712,4 +712,56 @@ class SystemController extends Controller
 
         return response()->json(['message' => 'Directory created successfully', 'path' => $path]);
     }
+
+    /**
+     * Restart the system.
+     */
+    public function restart(): JsonResponse
+    {
+        try {
+            $result = Process::run('sudo shutdown -r now');
+
+            if ($result->successful()) {
+                return response()->json([
+                    'message' => 'System restart initiated',
+                ]);
+            } else {
+                return response()->json([
+                    'message' => 'Failed to initiate system restart',
+                    'error' => $result->errorOutput(),
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to initiate system restart',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Shutdown the system.
+     */
+    public function shutdown(): JsonResponse
+    {
+        try {
+            $result = Process::run('sudo shutdown now');
+
+            if ($result->successful()) {
+                return response()->json([
+                    'message' => 'System shutdown initiated',
+                ]);
+            } else {
+                return response()->json([
+                    'message' => 'Failed to initiate system shutdown',
+                    'error' => $result->errorOutput(),
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to initiate system shutdown',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
