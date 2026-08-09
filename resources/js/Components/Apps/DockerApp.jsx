@@ -7,6 +7,7 @@ import {
     IconHierarchy2,
     IconNetwork,
     IconCloud,
+    IconStack2,
 } from '@tabler/icons-react';
 import { DashboardTab } from './Docker/DashboardTab';
 import { ContainersTab } from './Docker/ContainersTab';
@@ -14,10 +15,12 @@ import { ImagesTab } from './Docker/ImagesTab';
 import { VolumesTab } from './Docker/VolumesTab';
 import { NetworksTab } from './Docker/NetworksTab';
 import { RegistriesTab } from './Docker/RegistriesTab';
+import { ProjectsTab } from './Docker/ProjectsTab';
 
 const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: IconBrandDocker },
     { id: 'containers', label: 'Containers', icon: IconBox },
+    { id: 'projects', label: 'Projects', icon: IconStack2 },
     { id: 'images', label: 'Images', icon: IconPhoto },
     { id: 'volumes', label: 'Volumes', icon: IconHierarchy2 },
     { id: 'networks', label: 'Networks', icon: IconNetwork },
@@ -34,6 +37,8 @@ export function DockerAppContent() {
                 return <DashboardTab />;
             case 'containers':
                 return <ContainersTab />;
+            case 'projects':
+                return <ProjectsTab />;
             case 'images':
                 return <ImagesTab />;
             case 'volumes':

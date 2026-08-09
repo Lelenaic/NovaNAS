@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApplicationsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DesktopIconController;
+use App\Http\Controllers\DockerComposeController;
 use App\Http\Controllers\DockerController;
 use App\Http\Controllers\DockerSettingsController;
 use App\Http\Controllers\DynDnsController;
@@ -274,6 +275,17 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/docker/registries/{address}/login', [DockerController::class, 'loginToRegistry']);
         Route::post('/api/docker/registries/{address}/logout', [DockerController::class, 'logoutFromRegistry']);
         Route::delete('/api/docker/registries/{address}', [DockerController::class, 'removeRegistry']);
+
+        // Docker Compose Projects
+        Route::get('/api/docker/projects', [DockerComposeController::class, 'index']);
+        Route::get('/api/docker/projects/{name}', [DockerComposeController::class, 'show']);
+        Route::post('/api/docker/projects', [DockerComposeController::class, 'store']);
+        Route::put('/api/docker/projects/{name}', [DockerComposeController::class, 'update']);
+        Route::delete('/api/docker/projects/{name}', [DockerComposeController::class, 'destroy']);
+        Route::post('/api/docker/projects/{name}/start', [DockerComposeController::class, 'start']);
+        Route::post('/api/docker/projects/{name}/stop', [DockerComposeController::class, 'stop']);
+        Route::post('/api/docker/projects/{name}/restart', [DockerComposeController::class, 'restart']);
+        Route::get('/api/docker/projects/{name}/logs', [DockerComposeController::class, 'logs']);
 
         // Services routes
         Route::get('/api/services', [ServicesController::class, 'index']);

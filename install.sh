@@ -55,6 +55,7 @@ if ! command -v docker &> /dev/null; then
 else
     echo "Docker already installed."
 fi
+usermod -aG docker novanas
 
 # Install ttyd (terminal sharing over web)
 if ! command -v ttyd &> /dev/null; then
