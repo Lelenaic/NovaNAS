@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\ApplicationsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackupJobController;
+use App\Http\Controllers\BackupRepositoryController;
+use App\Http\Controllers\BackupSnapshotController;
 use App\Http\Controllers\DesktopIconController;
 use App\Http\Controllers\DockerComposeController;
 use App\Http\Controllers\DockerController;
@@ -337,6 +340,31 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/applications/{store}/apps/{app}/start', [ApplicationsController::class, 'start']);
         Route::delete('/api/applications/{store}/apps/{app}', [ApplicationsController::class, 'destroy']);
         Route::get('/api/applications/{store}/apps/{app}/status', [ApplicationsController::class, 'status']);
+
+        // Backup routes
+        Route::get('/api/backup/repositories', [BackupRepositoryController::class, 'index']);
+        Route::post('/api/backup/repositories', [BackupRepositoryController::class, 'store']);
+        Route::get('/api/backup/repositories/{repository}', [BackupRepositoryController::class, 'show']);
+        Route::put('/api/backup/repositories/{repository}', [BackupRepositoryController::class, 'update']);
+        Route::delete('/api/backup/repositories/{repository}', [BackupRepositoryController::class, 'destroy']);
+        Route::post('/api/backup/repositories/{repository}/check', [BackupRepositoryController::class, 'check']);
+        Route::get('/api/backup/repositories/{repository}/stats', [BackupRepositoryController::class, 'stats']);
+        Route::get('/api/backup/provider-fields', [BackupRepositoryController::class, 'providerFields']);
+        Route::post('/api/backup/test-connection', [BackupRepositoryController::class, 'testConnection']);
+
+        Route::get('/api/backup/jobs', [BackupJobController::class, 'index']);
+        Route::post('/api/backup/jobs', [BackupJobController::class, 'store']);
+        Route::get('/api/backup/jobs/{job}', [BackupJobController::class, 'show']);
+        Route::put('/api/backup/jobs/{job}', [BackupJobController::class, 'update']);
+        Route::delete('/api/backup/jobs/{job}', [BackupJobController::class, 'destroy']);
+        Route::post('/api/backup/jobs/{job}/run', [BackupJobController::class, 'run']);
+        Route::post('/api/backup/jobs/{job}/enable', [BackupJobController::class, 'enable']);
+        Route::post('/api/backup/jobs/{job}/disable', [BackupJobController::class, 'disable']);
+        Route::get('/api/backup/jobs/{job}/executions', [BackupJobController::class, 'executions']);
+        Route::get('/api/backup/jobs/{job}/executions/{execution}/logs', [BackupJobController::class, 'logs']);
+
+        Route::get('/api/backup/repositories/{repository}/snapshots', [BackupSnapshotController::class, 'index']);
+        Route::delete('/api/backup/repositories/{repository}/snapshots/{snapshotId}', [BackupSnapshotController::class, 'destroy']);
 
         // Support routes
         Route::get('/api/support/system-info', [SupportController::class, 'systemInfo']);

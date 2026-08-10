@@ -614,24 +614,31 @@ class SystemController extends Controller
     public function listDirectory(): JsonResponse
     {
         $path = request()->input('path', '/');
+        $useSudo = request()->input('use_sudo', 'false') === 'true';
 
-        // Security: Only allow access to specific paths
-        $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
-        $isAllowed = false;
+        // Security: Only allow access to specific paths (skipped when using sudo)
+        if (! $useSudo) {
+            $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
+            $isAllowed = false;
 
-        if ($path === '/') {
-            $isAllowed = true;
-        } else {
-            foreach ($allowedPaths as $allowed) {
-                if (str_starts_with($path, $allowed)) {
-                    $isAllowed = true;
-                    break;
+            if ($path === '/') {
+                $isAllowed = true;
+            } else {
+                foreach ($allowedPaths as $allowed) {
+                    if (str_starts_with($path, $allowed)) {
+                        $isAllowed = true;
+                        break;
+                    }
                 }
+            }
+
+            if (! $isAllowed) {
+                return response()->json(['error' => 'Access denied to this path'], 403);
             }
         }
 
-        if (! $isAllowed) {
-            return response()->json(['error' => 'Access denied to this path'], 403);
+        if ($useSudo) {
+            return $this->listDirectoryWithSudo($path);
         }
 
         if (! is_dir($path)) {
@@ -673,6 +680,53 @@ class SystemController extends Controller
         return response()->json($items);
     }
 
+    /**
+     * List directory contents using sudo to bypass permission restrictions.
+     */
+    protected function listDirectoryWithSudo(string $path): JsonResponse
+    {
+        $escapedPath = escapeshellarg($path);
+        $result = Process::run("sudo ls -1F {$escapedPath} 2>/dev/null");
+
+        if (! $result->successful()) {
+            if (! is_dir($path)) {
+                return response()->json(['error' => 'Path is not a directory'], 400);
+            }
+
+            return response()->json(['error' => 'Cannot open directory'], 500);
+        }
+
+        $lines = array_filter(explode("\n", trim($result->output())));
+        $items = [];
+
+        foreach ($lines as $entry) {
+            if ($entry === '' || $entry === './' || $entry === '../') {
+                continue;
+            }
+
+            // ls -1F appends / to dirs, * to executables, @ to symlinks, | to pipes, = to sockets
+            $isDirectory = str_ends_with($entry, '/');
+            $name = rtrim($entry, '/@*|=');
+            $fullPath = $path === '/' ? '/'.$name : $path.'/'.$name;
+
+            $items[] = [
+                'name' => $name,
+                'path' => $fullPath,
+                'type' => $isDirectory ? 'directory' : 'file',
+            ];
+        }
+
+        usort($items, function ($a, $b) {
+            if ($a['type'] !== $b['type']) {
+                return $a['type'] === 'directory' ? -1 : 1;
+            }
+
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        return response()->json($items);
+    }
+
     public function createDirectory(Request $request): JsonResponse
     {
         $request->validate([
@@ -680,20 +734,23 @@ class SystemController extends Controller
         ]);
 
         $path = $request->input('path');
+        $useSudo = $request->input('use_sudo', 'false') === 'true';
 
-        // Security: Only allow creation within specific paths
-        $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
-        $isAllowed = false;
+        // Security: Only allow creation within specific paths (skipped when using sudo)
+        if (! $useSudo) {
+            $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
+            $isAllowed = false;
 
-        foreach ($allowedPaths as $allowed) {
-            if (str_starts_with($path, $allowed)) {
-                $isAllowed = true;
-                break;
+            foreach ($allowedPaths as $allowed) {
+                if (str_starts_with($path, $allowed)) {
+                    $isAllowed = true;
+                    break;
+                }
             }
-        }
 
-        if (! $isAllowed) {
-            return response()->json(['error' => 'Access denied to this path'], 403);
+            if (! $isAllowed) {
+                return response()->json(['error' => 'Access denied to this path'], 403);
+            }
         }
 
         if (! preg_match('/^\/[a-zA-Z0-9_\-\.\/]+$/', $path)) {
