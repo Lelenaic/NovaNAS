@@ -37,3 +37,27 @@
 *::-webkit-scrollbar-corner {
     background: transparent;
 }
+
+/* Mobile touch scrolling */
+@media (max-width: 767px) {
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure tap targets are at least 44px for accessibility */
+    button,
+    a,
+    [role="button"],
+    .mantine-ActionIcon-root,
+    .mantine-UnstyledButton-root {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Prevent text selection on UI elements for mobile feel */
+    .desktop-icon {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+}

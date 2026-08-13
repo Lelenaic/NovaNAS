@@ -9,11 +9,12 @@ import {
     IconUser,
     IconPower,
     IconRefresh,
+    IconMenu2,
 } from '@tabler/icons-react';
 import { ProfileModal } from './ProfileModal';
 import { useSystemInfo } from './Sidebar';
 
-export function Header() {
+export function Header({ sidebarOpened, onToggleSidebar, isMobile }) {
     const { systemInfo, loading } = useSystemInfo();
     const { auth } = usePage().props;
     const userName = auth?.user?.name;
@@ -55,17 +56,17 @@ export function Header() {
     return (
         <Box
             style={{
-                height: '52px',
+                height: isMobile ? '48px' : '52px',
                 position: 'fixed',
-                top: '12px',
-                left: '12px',
-                right: '12px',
+                top: isMobile ? '6px' : '12px',
+                left: isMobile ? '6px' : '12px',
+                right: isMobile ? '6px' : '12px',
                 zIndex: 1000,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 20px',
-                borderRadius: '16px',
+                padding: isMobile ? '0 12px' : '0 20px',
+                borderRadius: isMobile ? '12px' : '16px',
                 backgroundColor: 'rgba(30, 30, 35, 0.72)',
                 backdropFilter: 'blur(24px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
@@ -73,9 +74,21 @@ export function Header() {
                 boxShadow: '0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
             }}
         >
-            {/* Left Section - Logo */}
-            <Group gap="sm">
-                <img src="/images/logo.png" alt="Logo" style={{ height: '28px' }} />
+            {/* Left Section - Hamburger + Logo */}
+            <Group gap={isMobile ? 'xs' : 'sm'}>
+                {isMobile && (
+                    <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="36px"
+                        radius="12px"
+                        onClick={onToggleSidebar}
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.06)' }}
+                    >
+                        <IconMenu2 size={16} color="rgba(255, 255, 255, 0.7)" />
+                    </ActionIcon>
+                )}
+                <img src={isMobile ? '/images/logo-tiny.png' : '/images/logo.png'} alt="Logo" style={{ height: isMobile ? '22px' : '28px' }} />
             </Group>
 
             {/* Center Section - Clock */}
@@ -90,21 +103,25 @@ export function Header() {
             >
                 {loading || !currentTime ? (
                     <>
-                        <Text size="lg" c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
+                        <Text size={isMobile ? 'sm' : 'lg'} c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
                             --:--
                         </Text>
-                        <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
-                            ---
-                        </Text>
+                        {!isMobile && (
+                            <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
+                                ---
+                            </Text>
+                        )}
                     </>
                 ) : (
                     <>
-                        <Text size="lg" c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
+                        <Text size={isMobile ? 'sm' : 'lg'} c="white" fw={600} style={{ letterSpacing: '0.02em' }}>
                             {formatTime(currentTime)}
                         </Text>
-                        <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
-                            {formatDate(currentTime)}
-                        </Text>
+                        {!isMobile && (
+                            <Text size="xs" c="dimmed" fw={400} style={{ marginTop: '1px' }}>
+                                {formatDate(currentTime)}
+                            </Text>
+                        )}
                     </>
                 )}
             </Box>
@@ -151,7 +168,7 @@ export function Header() {
                             }}
                         >
                             <Avatar
-                                size={32}
+                                size={isMobile ? 28 : 32}
                                 radius="10px"
                                 color="blue"
                                 style={{
@@ -160,9 +177,11 @@ export function Header() {
                             >
                                 {userInitial}
                             </Avatar>
-                            <Text size="xs" c="rgba(255,255,255,0.7)" fw={500} style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {userName}
-                            </Text>
+                            {!isMobile && (
+                                <Text size="xs" c="rgba(255,255,255,0.7)" fw={500} style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {userName}
+                                </Text>
+                            )}
                         </Box>
                     </Menu.Target>
                     <Menu.Dropdown>

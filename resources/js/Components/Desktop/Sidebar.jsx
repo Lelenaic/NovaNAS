@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton, Badge } from '@mantine/core';
+import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton, Badge, Drawer } from '@mantine/core';
 import { IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck, IconPlug } from '@tabler/icons-react';
 
 // Singleton hook to fetch system info - shared by all components
@@ -513,10 +513,60 @@ function UpsWidget({ systemInfo, loading }) {
     );
 }
 
-export function Sidebar() {
+export function Sidebar({ opened, onClose, isMobile }) {
     const theme = useMantineTheme();
     const { systemInfo, loading } = useSystemInfo();
 
+    const sidebarContent = (
+        <Stack gap="md">
+            {/* System Resources Widget */}
+            <SystemResourcesWidget systemInfo={systemInfo} loading={loading} />
+
+            {/* Storage Pools Widget */}
+            <StoragePoolsWidget systemInfo={systemInfo} loading={loading} />
+
+            {/* GPUs Widget */}
+            <GPUsWidget systemInfo={systemInfo} loading={loading} />
+
+            {/* UPS Widget */}
+            <UpsWidget systemInfo={systemInfo} loading={loading} />
+        </Stack>
+    );
+
+    // Mobile: render as a Mantine Drawer
+    if (isMobile) {
+        return (
+            <Drawer
+                opened={opened}
+                onClose={onClose}
+                position="left"
+                size="300px"
+                withCloseButton
+                styles={{
+                    body: {
+                        padding: '16px',
+                        backgroundColor: 'rgba(22, 22, 28, 0.95)',
+                        backdropFilter: 'blur(20px) saturate(150%)',
+                    },
+                    header: {
+                        backgroundColor: 'rgba(22, 22, 28, 0.95)',
+                        backdropFilter: 'blur(20px) saturate(150%)',
+                        padding: '12px 16px',
+                    },
+                    close: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                    },
+                    overlay: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    },
+                }}
+            >
+                {sidebarContent}
+            </Drawer>
+        );
+    }
+
+    // Desktop: render as fixed sidebar
     return (
         <Box
             style={{
@@ -530,21 +580,10 @@ export function Sidebar() {
                 overflowY: 'auto',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+                flexShrink: 0,
             }}
         >
-            <Stack gap="md">
-                {/* System Resources Widget */}
-                <SystemResourcesWidget systemInfo={systemInfo} loading={loading} />
-
-                {/* Storage Pools Widget */}
-                <StoragePoolsWidget systemInfo={systemInfo} loading={loading} />
-
-                {/* GPUs Widget */}
-                <GPUsWidget systemInfo={systemInfo} loading={loading} />
-
-                {/* UPS Widget */}
-                <UpsWidget systemInfo={systemInfo} loading={loading} />
-            </Stack>
+            {sidebarContent}
         </Box>
     );
 }

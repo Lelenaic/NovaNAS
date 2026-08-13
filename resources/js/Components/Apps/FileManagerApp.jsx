@@ -16,6 +16,8 @@ import {
     Divider,
     Progress,
     Collapse,
+    Drawer,
+    ScrollArea,
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import {
@@ -45,7 +47,9 @@ import {
     IconUpload,
     IconCloudUpload,
     IconArrowBackUp,
+    IconMenu2,
 } from '@tabler/icons-react';
+import { useIsMobile } from '../Desktop/useIsMobile';
 
 function formatFileSize(bytes) {
     if (bytes === 0 || bytes === undefined) return '-';
@@ -388,7 +392,9 @@ function SelectionBox({ startX, startY, currentX, currentY }) {
 
 export function FileManagerAppContent() {
     const theme = useMantineTheme();
+    const isMobile = useIsMobile();
     const fileListRef = useRef(null);
+    const [sharesDrawerOpened, setSharesDrawerOpened] = useState(false);
 
     // Shares state
     const [shares, setShares] = useState([]);
@@ -1623,62 +1629,144 @@ export function FileManagerAppContent() {
     }, [selectedPaths, clipboard, currentPath, showNewFolderInput, showZipInput]);
 
     return (
-        <Box style={{ display: 'flex', height: '100%' }}>
-            {/* Sidebar */}
-            <Box
-                style={{
-                    width: '220px',
-                    minWidth: '220px',
-                    backgroundColor: theme.colors.dark[5],
-                    borderRight: `1px solid ${theme.colors.dark[4]}`,
-                    padding: '12px 8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'auto',
-                }}
-            >
-                <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Shares
-                </Text>
-                <LoadingOverlay visible={loadingShares} zIndex={1} />
-                {shares.length === 0 && !loadingShares && (
-                    <Text size="xs" c="dimmed" px="sm">No shares available</Text>
-                )}
-                {shares.map((share) => (
-                    <ShareItem
-                        key={share.path}
-                        share={share}
-                        isActive={activeShare?.path === share.path}
-                        onClick={() => handleShareClick(share)}
-                    />
-                ))}
+        <Box style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%' }}>
+            {/* Mobile: drawer for shares sidebar */}
+            {isMobile && (
+                <>
+                    <Box
+                        style={{
+                            padding: '8px 12px',
+                            borderBottom: `1px solid ${theme.colors.dark[4]}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            onClick={() => setSharesDrawerOpened(true)}
+                        >
+                            <IconMenu2 size={18} />
+                        </ActionIcon>
+                        <Text size="sm" fw={600} c="white" style={{ flex: 1 }}>
+                            {activeShare ? activeShare.name : 'File Manager'}
+                        </Text>
+                    </Box>
+                    <Drawer
+                        opened={sharesDrawerOpened}
+                        onClose={() => setSharesDrawerOpened(false)}
+                        position="left"
+                        size="280px"
+                        withCloseButton
+                        styles={{
+                            body: { padding: 0, backgroundColor: theme.colors.dark[5] },
+                            header: { backgroundColor: theme.colors.dark[5], padding: '12px 16px' },
+                            close: { color: 'rgba(255, 255, 255, 0.7)' },
+                        }}
+                    >
+                        <Box style={{ padding: '12px 8px' }}>
+                            <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Shares
+                            </Text>
+                            <LoadingOverlay visible={loadingShares} zIndex={1} />
+                            {shares.length === 0 && !loadingShares && (
+                                <Text size="xs" c="dimmed" px="sm">No shares available</Text>
+                            )}
+                            {shares.map((share) => (
+                                <ShareItem
+                                    key={share.path}
+                                    share={share}
+                                    isActive={activeShare?.path === share.path}
+                                    onClick={() => { handleShareClick(share); setSharesDrawerOpened(false); }}
+                                />
+                            ))}
+                            <Divider my="sm" color="dark.4" />
+                            <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Trash
+                            </Text>
+                            <UnstyledButton
+                                onClick={() => { handleTrashClick(); setSharesDrawerOpened(false); }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '10px 12px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    backgroundColor: isTrashView ? theme.colors.blue[6] : 'transparent',
+                                    color: isTrashView ? 'white' : theme.colors.gray[4],
+                                    transition: 'all 0.15s ease',
+                                    marginBottom: '2px',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                }}
+                            >
+                                <IconTrash size={18} />
+                                <Text size="sm" fw={isTrashView ? 600 : 400}>Trash</Text>
+                            </UnstyledButton>
+                        </Box>
+                    </Drawer>
+                </>
+            )}
 
-                <Divider my="sm" color="dark.4" />
-
-                <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Trash
-                </Text>
-                <UnstyledButton
-                    onClick={handleTrashClick}
+            {/* Desktop: inline sidebar */}
+            {!isMobile && (
+                <Box
                     style={{
+                        width: '220px',
+                        minWidth: '220px',
+                        backgroundColor: theme.colors.dark[5],
+                        borderRight: `1px solid ${theme.colors.dark[4]}`,
+                        padding: '12px 8px',
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        backgroundColor: isTrashView ? theme.colors.blue[6] : 'transparent',
-                        color: isTrashView ? 'white' : theme.colors.gray[4],
-                        transition: 'all 0.15s ease',
-                        marginBottom: '2px',
-                        width: '100%',
-                        textAlign: 'left',
+                        flexDirection: 'column',
+                        overflow: 'auto',
                     }}
                 >
-                    <IconTrash size={18} />
-                    <Text size="sm" fw={isTrashView ? 600 : 400}>Trash</Text>
-                </UnstyledButton>
-            </Box>
+                    <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Shares
+                    </Text>
+                    <LoadingOverlay visible={loadingShares} zIndex={1} />
+                    {shares.length === 0 && !loadingShares && (
+                        <Text size="xs" c="dimmed" px="sm">No shares available</Text>
+                    )}
+                    {shares.map((share) => (
+                        <ShareItem
+                            key={share.path}
+                            share={share}
+                            isActive={activeShare?.path === share.path}
+                            onClick={() => handleShareClick(share)}
+                        />
+                    ))}
+
+                    <Divider my="sm" color="dark.4" />
+
+                    <Text size="xs" fw={700} c="dimmed" mb="xs" px="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Trash
+                    </Text>
+                    <UnstyledButton
+                        onClick={handleTrashClick}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            backgroundColor: isTrashView ? theme.colors.blue[6] : 'transparent',
+                            color: isTrashView ? 'white' : theme.colors.gray[4],
+                            transition: 'all 0.15s ease',
+                            marginBottom: '2px',
+                            width: '100%',
+                            textAlign: 'left',
+                        }}
+                    >
+                        <IconTrash size={18} />
+                        <Text size="sm" fw={isTrashView ? 600 : 400}>Trash</Text>
+                    </UnstyledButton>
+                </Box>
+            )}
 
             {/* Main content */}
             <Box

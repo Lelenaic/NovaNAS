@@ -14,6 +14,7 @@ import {
     Divider,
     Stack,
     FileInput,
+    Drawer,
     useMantineTheme,
 } from '@mantine/core';
 import {
@@ -28,7 +29,9 @@ import {
     IconCheck,
     IconX,
     IconLifebuoy,
+    IconMenu2,
 } from '@tabler/icons-react';
+import { useIsMobile } from '../Desktop/useIsMobile';
 
 const STORAGE_KEY = 'novanas_support_tickets';
 
@@ -415,6 +418,7 @@ function ConversationView({ ticket, messages, loading, error, onSendMessage, onE
 
 export function SupportAppContent() {
     const theme = useMantineTheme();
+    const isMobile = useIsMobile();
     const [view, setView] = useState('list');
     const [tickets, setTickets] = useState([]);
     const [activeTicket, setActiveTicket] = useState(null);
@@ -426,6 +430,7 @@ export function SupportAppContent() {
     const [submitting, setSubmitting] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState(null);
+    const [ticketDrawerOpened, setTicketDrawerOpened] = useState(false);
 
     // Load system info and stored tickets on mount
     useEffect(() => {
@@ -642,6 +647,11 @@ export function SupportAppContent() {
         setError(null);
     }, []);
 
+    const handleSelectTicketAndCloseDrawer = useCallback(async (ticket) => {
+        await handleSelectTicket(ticket);
+        setTicketDrawerOpened(false);
+    }, [handleSelectTicket]);
+
     if (loading) {
         return (
             <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -650,6 +660,145 @@ export function SupportAppContent() {
         );
     }
 
+    // Mobile: drawer for ticket list
+    if (isMobile) {
+        return (
+            <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Mobile header with drawer toggle */}
+                <Group justify="space-between" p="sm" style={{ borderBottom: `1px solid ${theme.colors.dark[4]}` }}>
+                    <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        onClick={() => setTicketDrawerOpened(true)}
+                    >
+                        <IconMenu2 size={18} />
+                    </ActionIcon>
+                    <Text size="sm" fw={600} c="white">
+                        {view === 'ticket' && activeTicket ? activeTicket.subject : 'Support'}
+                    </Text>
+                    <ActionIcon
+                        variant="subtle"
+                        color="blue"
+                        onClick={handleNewTicket}
+                    >
+                        <IconPlus size={18} />
+                    </ActionIcon>
+                </Group>
+
+                {/* Ticket list drawer */}
+                <Drawer
+                    opened={ticketDrawerOpened}
+                    onClose={() => setTicketDrawerOpened(false)}
+                    position="left"
+                    size="280px"
+                    withCloseButton
+                    styles={{
+                        body: { padding: 0, backgroundColor: theme.colors.dark[6] },
+                        header: { backgroundColor: theme.colors.dark[6], padding: '12px 16px' },
+                        close: { color: 'rgba(255, 255, 255, 0.7)' },
+                    }}
+                >
+                    <Box p="sm">
+                        <Button
+                            leftSection={<IconPlus size={16} />}
+                            fullWidth
+                            size="sm"
+                            onClick={() => { handleNewTicket(); setTicketDrawerOpened(false); }}
+                        >
+                            New Ticket
+                        </Button>
+                    </Box>
+                    <Divider />
+                    <ScrollArea style={{ flex: 1 }}>
+                        <Stack gap={2} p="xs">
+                            {tickets.length === 0 ? (
+                                <Text size="xs" c="dimmed" ta="center" p="md">
+                                    No tickets yet
+                                </Text>
+                            ) : (
+                                tickets.map((ticket) => (
+                                    <Box
+                                        key={ticket.id}
+                                        onClick={() => handleSelectTicketAndCloseDrawer(ticket)}
+                                        style={{
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            backgroundColor: activeTicket?.id === ticket.id
+                                                ? theme.colors.blue[7]
+                                                : 'transparent',
+                                            transition: 'background-color 0.15s ease',
+                                        }}
+                                    >
+                                        <Text size="sm" fw={600} c="white" truncate>
+                                            {ticket.subject}
+                                        </Text>
+                                        <Group gap="xs" mt={2}>
+                                            <Badge
+                                                size="xs"
+                                                color={STATUS_COLORS[ticket.status] || 'gray'}
+                                                variant="light"
+                                            >
+                                                {formatStatus(ticket.status)?.length > 20
+                                                    ? formatStatus(ticket.status).substring(0, 20) + '...'
+                                                    : formatStatus(ticket.status)}
+                                            </Badge>
+                                            <Text size="xs" c="rgba(255,255,255,0.6)">
+                                                #{ticket.id}
+                                            </Text>
+                                        </Group>
+                                    </Box>
+                                ))
+                            )}
+                        </Stack>
+                    </ScrollArea>
+                </Drawer>
+
+                {/* Main content */}
+                <Box style={{ flex: 1, padding: '12px', overflow: 'auto', backgroundColor: theme.colors.dark[7] }}>
+                    {view === 'list' && (
+                        <Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                            <IconLifebuoy size={40} color="gray" />
+                            <Text size="sm" fw={600} c="white" mt="md">
+                                NovaNAS Support
+                            </Text>
+                            <Text c="dimmed" ta="center" mb="md" size="xs">
+                                Tap the menu icon to view tickets
+                            </Text>
+                            <Button leftSection={<IconPlus size={16} />} size="sm" onClick={handleNewTicket}>
+                                New Support Ticket
+                            </Button>
+                        </Box>
+                    )}
+
+                    {view === 'new' && (
+                        <NewTicketView
+                            systemInfo={systemInfo}
+                            nasUuid={nasUuid}
+                            onSubmit={handleSubmitTicket}
+                            onCancel={handleBack}
+                            loading={submitting}
+                            error={error}
+                        />
+                    )}
+
+                    {view === 'ticket' && activeTicket && (
+                        <ConversationView
+                            ticket={activeTicket}
+                            messages={messages}
+                            loading={messagesLoading}
+                            error={error}
+                            onSendMessage={handleSendMessage}
+                            onEditMessage={handleEditMessage}
+                            sending={sending}
+                        />
+                    )}
+                </Box>
+            </Box>
+        );
+    }
+
+    // Desktop: original layout with sidebar
     return (
         <Box style={{ display: 'flex', height: '100%' }}>
             {/* Sidebar */}

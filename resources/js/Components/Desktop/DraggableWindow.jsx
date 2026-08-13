@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Text, Group, useMantineTheme } from '@mantine/core';
 import { useWindow } from './WindowContext';
+import { useIsMobile } from './useIsMobile';
 
 const SNAP_THRESHOLD = 20;
 
@@ -87,6 +88,7 @@ export function DraggableWindow({ windowState, children }) {
         resizeWindow,
     } = useWindow();
 
+    const isMobile = useIsMobile();
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [resizeDirection, setResizeDirection] = useState(null);
@@ -97,15 +99,18 @@ export function DraggableWindow({ windowState, children }) {
     const windowSize = useRef({ width: windowState.width, height: windowState.height });
     const theme = useMantineTheme();
 
+    // On mobile, force maximized
+    const forceMaximized = isMobile || windowState.maximized;
+
     useEffect(() => {
-        if (windowState.maximized) {
+        if (forceMaximized) {
             windowPos.current = { x: 0, y: 0 };
             windowSize.current = { width: windowState.width, height: windowState.height };
         }
-    }, [windowState.maximized, windowState.width, windowState.height]);
+    }, [forceMaximized, windowState.width, windowState.height]);
 
     const handleMouseDown = (e) => {
-        if (windowState.maximized) return;
+        if (forceMaximized) return;
         focusWindow(windowState.id);
         setIsDragging(true);
         dragStartPos.current = { x: e.clientX, y: e.clientY };
@@ -113,7 +118,7 @@ export function DraggableWindow({ windowState, children }) {
     };
 
     const handleResizeStart = (direction, e) => {
-        if (windowState.maximized) return;
+        if (forceMaximized) return;
         e.stopPropagation();
         focusWindow(windowState.id);
         setIsResizing(true);
@@ -202,19 +207,19 @@ export function DraggableWindow({ windowState, children }) {
         <Box
             style={{
                 position: 'absolute',
-                left: windowState.maximized ? 0 : windowState.x,
-                top: windowState.maximized ? 0 : windowState.y,
-                width: windowState.maximized ? '100%' : windowState.width,
-                height: windowState.maximized ? '100%' : windowState.height,
+                left: forceMaximized ? 0 : windowState.x,
+                top: forceMaximized ? 0 : windowState.y,
+                width: forceMaximized ? '100%' : windowState.width,
+                height: forceMaximized ? '100%' : windowState.height,
                 zIndex: windowState.zIndex,
                 display: 'flex',
                 flexDirection: 'column',
-                borderRadius: windowState.maximized ? 0 : '12px',
+                borderRadius: forceMaximized ? 0 : '12px',
                 overflow: 'hidden',
-                boxShadow: windowState.maximized
+                boxShadow: forceMaximized
                     ? 'none'
                     : '0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-                border: windowState.maximized ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+                border: forceMaximized ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
             }}
             onMouseDown={() => focusWindow(windowState.id)}
             onMouseEnter={() => setIsHovered(true)}
@@ -229,7 +234,7 @@ export function DraggableWindow({ windowState, children }) {
                     backdropFilter: 'blur(16px) saturate(150%)',
                     WebkitBackdropFilter: 'blur(16px) saturate(150%)',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                    cursor: windowState.maximized ? 'default' : 'move',
+                    cursor: forceMaximized ? 'default' : 'move',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
@@ -248,24 +253,17 @@ export function DraggableWindow({ windowState, children }) {
                         onMouseLeave={() => setHoveredButton(null)}
                         onClick={() => closeWindow(windowState.id)}
                     />
-                    <TrafficLightButton
-                        color="#febc2e"
-                        hoverColor="#ffb800"
-                        icon={<MinimizeIcon />}
-                        isHovered={hoveredButton === 'minimize'}
-                        onMouseEnter={() => setHoveredButton('minimize')}
-                        onMouseLeave={() => setHoveredButton(null)}
-                        onClick={() => minimizeWindow(windowState.id)}
-                    />
-                    <TrafficLightButton
-                        color="#28c840"
-                        hoverColor="#20b838"
-                        icon={windowState.maximized ? <RestoreIcon /> : <MaximizeIcon />}
-                        isHovered={hoveredButton === 'maximize'}
-                        onMouseEnter={() => setHoveredButton('maximize')}
-                        onMouseLeave={() => setHoveredButton(null)}
-                        onClick={() => maximizeWindow(windowState.id)}
-                    />
+                    {!isMobile && (
+                        <TrafficLightButton
+                            color="#28c840"
+                            hoverColor="#20b838"
+                            icon={forceMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+                            isHovered={hoveredButton === 'maximize'}
+                            onMouseEnter={() => setHoveredButton('maximize')}
+                            onMouseLeave={() => setHoveredButton(null)}
+                            onClick={() => maximizeWindow(windowState.id)}
+                        />
+                    )}
                 </Group>
 
                 {/* Window Title */}
@@ -273,7 +271,7 @@ export function DraggableWindow({ windowState, children }) {
                     style={{
                         flex: 1,
                         textAlign: 'center',
-                        paddingRight: '68px',
+                        paddingRight: isMobile ? '40px' : '56px',
                     }}
                 >
                     <Text
@@ -296,9 +294,11 @@ export function DraggableWindow({ windowState, children }) {
             <Box
                 style={{
                     flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
                     overflow: 'hidden',
-                    backgroundColor: theme.colors.dark[8],
                     position: 'relative',
+                    backgroundColor: theme.colors.dark[8],
                     minHeight: 0,
                 }}
             >
@@ -306,7 +306,7 @@ export function DraggableWindow({ windowState, children }) {
             </Box>
 
             {/* Resize Handles */}
-            {!windowState.maximized && (
+            {!forceMaximized && (
                 <>
                     <Box
                         style={{

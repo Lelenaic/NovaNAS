@@ -16,6 +16,7 @@ import {
     IconLifebuoy,
     IconCloudUpload,
 } from '@tabler/icons-react';
+import { useIsMobile } from './useIsMobile';
 
 // Map icon name strings to Tabler React components
 const ICON_MAP = {
@@ -35,6 +36,7 @@ const ICON_MAP = {
 export function DesktopIcons({ apps = [], onIconPositionChange }) {
     const { windows, openWindow, focusWindow } = useWindow();
     const { getBadge } = useBadges();
+    const isMobile = useIsMobile();
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef(null);
 
@@ -144,21 +146,23 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                padding: '20px',
+                padding: isMobile ? '12px' : '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignContent: 'flex-start',
-                gap: '16px',
+                gap: isMobile ? '8px' : '16px',
                 overflow: 'auto',
             }}
         >
-            <Box style={{ padding: '0 4px 16px 4px' }}>
-                <Text size="lg" fw={600} c="white" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
+            <Box style={{ padding: isMobile ? '0 4px 8px 4px' : '0 4px 16px 4px' }}>
+                <Text size={isMobile ? 'sm' : 'lg'} fw={600} c="white" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
                     Applications
                 </Text>
-                <Text size="xs" c="dimmed">
-                    Drag and drop to reorganize
-                </Text>
+                {!isMobile && (
+                    <Text size="xs" c="dimmed">
+                        Drag and drop to reorganize
+                    </Text>
+                )}
             </Box>
             <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                 <Droppable droppableId="desktop-icons" direction="horizontal">
@@ -170,7 +174,7 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                 display: 'flex',
                                 flexWrap: 'wrap',
                                 alignContent: 'flex-start',
-                                gap: '16px',
+                                gap: isMobile ? '4px' : '16px',
                                 width: '100%',
                                 height: '100%',
                             }}
@@ -208,9 +212,9 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                             >
                                                 <Box
                                                     style={{
-                                                        width: '64px',
-                                                        height: '64px',
-                                                        borderRadius: '16px',
+                                                        width: isMobile ? '52px' : '64px',
+                                                        height: isMobile ? '52px' : '64px',
+                                                        borderRadius: isMobile ? '12px' : '16px',
                                                         backgroundColor: app.color,
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -231,7 +235,7 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                                     />
                                                 ) : (() => {
                                                     const IconComponent = ICON_MAP[app.iconName] || IconFolder;
-                                                    return <IconComponent size={32} color="white" />;
+                                                     return <IconComponent size={isMobile ? 26 : 32} color="white" />;
                                                 })()}
                                                 {(() => {
                                                     const badgeCount = getBadge(app.identifier || app.id);
@@ -262,14 +266,14 @@ export function DesktopIcons({ apps = [], onIconPositionChange }) {
                                                 })()}
                                                 </Box>
                                                 <Text
-                                                    size="sm"
+                                                    size={isMobile ? 'xs' : 'sm'}
                                                     c="white"
                                                     style={{
                                                         textAlign: 'center',
                                                         textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
                                                         fontWeight: 500,
                                                         lineHeight: 1.2,
-                                                        maxWidth: '90px',
+                                                        maxWidth: isMobile ? '70px' : '90px',
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: 'nowrap',

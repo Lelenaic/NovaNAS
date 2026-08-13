@@ -16,6 +16,7 @@ import {
     Table,
     useMantineTheme,
     Tooltip,
+    ScrollArea,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -28,9 +29,11 @@ import {
     IconGripVertical,
     IconRefresh,
 } from '@tabler/icons-react';
+import { useIsMobile } from '../Desktop/useIsMobile';
 
 export function FirewallAppContent() {
     const theme = useMantineTheme();
+    const isMobile = useIsMobile();
     const [status, setStatus] = useState({ active: false, status: 'inactive' });
     const [rules, setRules] = useState([]);
     const [defaultPolicies, setDefaultPolicies] = useState({
@@ -391,19 +394,20 @@ export function FirewallAppContent() {
     }
 
     return (
-        <Box style={{ padding: '24px', height: '100%', overflow: 'auto' }}>
-            <Group justify="space-between" mb="lg">
+        <Box style={{ padding: isMobile ? '12px' : '24px', height: '100%', overflow: 'auto' }}>
+            <Group justify="space-between" mb="lg" wrap={isMobile ? 'wrap' : 'nowrap'}>
                 <div>
-                    <Title order={3} c="white">Firewall</Title>
+                    <Title order={isMobile ? 4 : 3} c="white">Firewall</Title>
                     <Text size="sm" c="dimmed">Manage UFW firewall rules</Text>
                 </div>
-                <Group gap="sm">
+                <Group gap="sm" wrap={isMobile ? 'wrap' : 'nowrap'}>
                     <Button
                         variant="light"
                         color="blue"
                         leftSection={<IconRefresh size={18} />}
                         onClick={handleRefresh}
                         loading={refreshing}
+                        size={isMobile ? 'compact-sm' : 'md'}
                     >
                         Refresh
                     </Button>
@@ -413,12 +417,14 @@ export function FirewallAppContent() {
                         leftSection={status.active ? <IconShieldCheck size={18} /> : <IconShield size={18} />}
                         onClick={handleToggleFirewall}
                         loading={toggling}
+                        size={isMobile ? 'compact-sm' : 'md'}
                     >
-                        {status.active ? 'Disable Firewall' : 'Enable Firewall'}
+                        {status.active ? 'Disable' : 'Enable'}
                     </Button>
                     <Button
                         leftSection={<IconPlus size={16} />}
                         onClick={openCreateModal}
+                        size={isMobile ? 'compact-sm' : 'md'}
                     >
                         Add Rule
                     </Button>
@@ -591,25 +597,120 @@ export function FirewallAppContent() {
                     style={{
                         backgroundColor: theme.colors.dark[6],
                         borderRadius: '12px',
-                        padding: '40px',
+                        padding: isMobile ? '24px' : '40px',
                         textAlign: 'center',
                         border: `1px solid ${theme.colors.dark[4]}`,
                     }}
                 >
                     <Group justify="center" mb="md">
-                        <IconShield size={48} color="gray" />
+                        <IconShield size={isMobile ? 36 : 48} color="gray" />
                     </Group>
-                    <Text c="dimmed" size="lg" mb="md">No firewall rules</Text>
+                    <Text c="dimmed" size={isMobile ? 'sm' : 'lg'} mb="md">No firewall rules</Text>
                     <Text c="dimmed" size="sm" mb="lg">
                         {status.active
                             ? 'Add a rule to control network traffic'
                             : 'Enable the firewall to start adding rules'}
                     </Text>
-                    <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
+                    <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal} size={isMobile ? 'compact-sm' : 'md'}>
                         Add Your First Rule
                     </Button>
                 </Box>
+            ) : isMobile ? (
+                // Mobile: card layout
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="firewall-rules">
+                        {(provided) => (
+                            <Stack
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                gap="sm"
+                            >
+                                {rules.map((rule, index) => (
+                                    <Draggable key={rule.id} draggableId={String(rule.id)} index={index}>
+                                        {(provided, snapshot) => (
+                                            <Box
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                {...provided.dragHandleProps}
+                                                style={{
+                                                    ...provided.draggableProps.style,
+                                                    backgroundColor: theme.colors.dark[6],
+                                                    borderRadius: '12px',
+                                                    padding: '14px',
+                                                    border: `1px solid ${theme.colors.dark[4]}`,
+                                                }}
+                                            >
+                                                <Group justify="space-between" mb="xs">
+                                                    <Group gap="xs">
+                                                        <Badge
+                                                            color={
+                                                                rule.action === 'ALLOW' ? 'green' :
+                                                                rule.action === 'DENY' ? 'yellow' :
+                                                                rule.action === 'REJECT' ? 'orange' : 'red'
+                                                            }
+                                                            variant="light"
+                                                            size="sm"
+                                                        >
+                                                            {rule.action}
+                                                        </Badge>
+                                                        <Badge color="blue" variant="light" size="sm">
+                                                            {rule.direction || 'IN'}
+                                                        </Badge>
+                                                        <Text size="xs" c="dimmed">
+                                                            #{rule.priority}
+                                                        </Text>
+                                                    </Group>
+                                                    <Group gap="xs">
+                                                        <ActionIcon
+                                                            variant="subtle"
+                                                            color="gray"
+                                                            size="sm"
+                                                            onClick={() => openEditModal(rule)}
+                                                        >
+                                                            <IconEdit size={14} />
+                                                        </ActionIcon>
+                                                        <ActionIcon
+                                                            variant="subtle"
+                                                            color="red"
+                                                            size="sm"
+                                                            onClick={() => setDeleteConfirm(rule.id)}
+                                                        >
+                                                            <IconTrash size={14} />
+                                                        </ActionIcon>
+                                                    </Group>
+                                                </Group>
+                                                <Group gap="md">
+                                                    <Box>
+                                                        <Text size="xs" c="dimmed">Port</Text>
+                                                        <Text size="sm" c="white">{rule.port || 'any'}</Text>
+                                                    </Box>
+                                                    <Box>
+                                                        <Text size="xs" c="dimmed">Protocol</Text>
+                                                        <Text size="sm" c="white">{rule.protocol?.toLowerCase() === 'any' ? 'any' : rule.protocol?.toUpperCase() || 'any'}</Text>
+                                                    </Box>
+                                                    <Box>
+                                                        <Text size="xs" c="dimmed">From</Text>
+                                                        <Text size="sm" c="white">{rule.from || 'any'}</Text>
+                                                    </Box>
+                                                    <Box>
+                                                        <Text size="xs" c="dimmed">To</Text>
+                                                        <Text size="sm" c="white">{rule.to || 'any'}</Text>
+                                                    </Box>
+                                                </Group>
+                                                {rule.comment && (
+                                                    <Text size="xs" c="dimmed" mt="xs">{rule.comment}</Text>
+                                                )}
+                                            </Box>
+                                        )}
+                                    </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </Stack>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             ) : (
+                // Desktop: table layout
                 <DragDropContext onDragEnd={handleDragEnd}>
                     <Droppable droppableId="firewall-rules">
                         {(provided) => (

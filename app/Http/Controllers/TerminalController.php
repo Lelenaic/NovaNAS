@@ -84,9 +84,9 @@ class TerminalController extends Controller
         $process->run();
 
         $configPath = "/etc/apache2/conf-available/terminal-{$sessionId}.conf";
-        Process::run(['sudo', 'a2disconf', "terminal-{$sessionId}"]);
-        Process::run(['sudo', 'rm', '-f', $configPath]);
-        Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
+        (new Process(['sudo', 'a2disconf', "terminal-{$sessionId}"]))->run();
+        (new Process(['sudo', 'rm', '-f', $configPath]))->run();
+        (new Process(['sudo', 'systemctl', 'reload', 'apache2']))->run();
 
         Cache::forget("terminal_session_{$sessionId}");
 

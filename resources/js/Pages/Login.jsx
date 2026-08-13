@@ -119,18 +119,18 @@ export default function Login({ version, errors, passwordSet }) {
             </Box>
 
             {/* Login Form */}
-            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '500px', maxWidth: '500px' }}>
+            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '500px', padding: '0 16px' }}>
                 <Paper
                     shadow="xl"
                     radius="lg"
-                    p={rem(50)}
+                    p={{ base: 24, sm: rem(50) }}
                     style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         width: '100%',
                         maxWidth: '500px',
-                        minHeight: '500px',
+                        minHeight: 'auto',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
@@ -138,7 +138,7 @@ export default function Login({ version, errors, passwordSet }) {
                 >
                     <Stack align="center" gap="xs">
                         {/* Logo/Icon */}
-                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px' }} />
+                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
                         <Text c="dimmed" size="sm" ta="center" maw={280}>
                             Your personal cloud storage solution
                         </Text>

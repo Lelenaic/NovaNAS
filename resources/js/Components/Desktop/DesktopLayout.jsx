@@ -17,6 +17,7 @@ import { MonitorAppContent } from '../Apps/MonitorApp';
 import { SupportAppContent } from '../Apps/SupportApp';
 import { BackupAppContent } from '../Apps/BackupApp';
 import { useCallback, useState, useEffect } from 'react';
+import { useIsMobile } from './useIsMobile';
 
 const APP_COMPONENTS = {
     filemanager: () => <FileManagerAppContent />,
@@ -35,9 +36,11 @@ const APP_COMPONENTS = {
 function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrders = {} }) {
     const theme = useMantineTheme();
     const { windows } = useWindow();
+    const isMobile = useIsMobile();
     const [savingPosition, setSavingPosition] = useState(false);
     const [desktopApps, setDesktopApps] = useState(initialDesktopApps);
     const [userIconOrders, setUserIconOrders] = useState(initialUserIconOrders);
+    const [sidebarOpened, setSidebarOpened] = useState(false);
 
     const refreshDesktop = useCallback(async () => {
         try {
@@ -129,29 +132,30 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
             }}
         >
             {/* Header */}
-            <Header />
+            <Header sidebarOpened={sidebarOpened} onToggleSidebar={() => setSidebarOpened((o) => !o)} isMobile={isMobile} />
 
             {/* Desktop Area */}
             <Box
                 style={{
                     position: 'absolute',
-                    top: '76px',
-                    left: '12px',
-                    right: '12px',
-                    bottom: '12px',
+                    top: isMobile ? '64px' : '76px',
+                    left: isMobile ? '6px' : '12px',
+                    right: isMobile ? '6px' : '12px',
+                    bottom: isMobile ? '6px' : '12px',
                     display: 'flex',
-                    gap: '12px',
+                    gap: isMobile ? '0' : '12px',
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Sidebar with widgets */}
-                <Sidebar />
+                {/* Sidebar with widgets - hidden on mobile (rendered as drawer in Sidebar) */}
+                {!isMobile && <Sidebar />}
 
                 {/* Main desktop area with icons and windows */}
                 <Box
                     style={{
                         flex: 1,
                         position: 'relative',
+                        overflow: 'hidden',
                     }}
                 >
                     {/* Desktop Icons */}
@@ -180,18 +184,29 @@ function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrder
             </Box>
 
             {/* Footer */}
-            <Text
-                size="xs"
-                c="dimmed"
-                style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    right: '24px',
-                    zIndex: 10,
-                }}
-            >
-                NovaNAS v{version}
-            </Text>
+            {!isMobile && (
+                <Text
+                    size="xs"
+                    c="dimmed"
+                    style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        right: '24px',
+                        zIndex: 10,
+                    }}
+                >
+                    NovaNAS v{version}
+                </Text>
+            )}
+
+            {/* Mobile Sidebar Drawer */}
+            {isMobile && (
+                <Sidebar
+                    opened={sidebarOpened}
+                    onClose={() => setSidebarOpened(false)}
+                    isMobile={isMobile}
+                />
+            )}
         </Box>
     );
 }

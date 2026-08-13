@@ -1,14 +1,29 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const WindowContext = createContext(undefined);
 
 const HEADER_HEIGHT = 76;
 const SIDEBAR_WIDTH = 292;
 const HEADER_Z_INDEX = 1000;
+const MOBILE_BREAKPOINT = 768;
+
+function getIsMobile() {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < MOBILE_BREAKPOINT;
+}
 
 export function WindowProvider({ children }) {
     const [windows, setWindows] = useState([]);
     const [maxZIndex, setMaxZIndex] = useState(100);
+    const [isMobile, setIsMobile] = useState(getIsMobile);
+
+    useEffect(() => {
+        const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+        const handler = (e) => setIsMobile(e.matches);
+        handler(mql);
+        mql.addEventListener('change', handler);
+        return () => mql.removeEventListener('change', handler);
+    }, []);
 
     const openWindow = useCallback((appId, title, icon = null) => {
         const existingWindow = windows.find((w) => w.appId === appId);
@@ -29,23 +44,26 @@ export function WindowProvider({ children }) {
             return;
         }
 
+        // On mobile, open windows maximized by default
+        const mobileMaximized = isMobile;
         const newWindow = {
             id: `${appId}-${Date.now()}`,
             appId,
             title,
             icon,
-            x: 120 + windows.length * 30,
-            y: 80 + windows.length * 30,
-            width: 1100,
-            height: 650,
+            x: mobileMaximized ? 0 : 120 + windows.length * 30,
+            y: mobileMaximized ? 0 : 80 + windows.length * 30,
+            width: mobileMaximized ? 0 : 1100,
+            height: mobileMaximized ? 0 : 650,
             minimized: false,
-            maximized: false,
+            maximized: mobileMaximized,
+            prevPosition: mobileMaximized ? { x: 120, y: 80, width: 1100, height: 650 } : undefined,
             zIndex: maxZIndex + 1,
         };
 
         setWindows((prev) => [...prev, newWindow]);
         setMaxZIndex((prev) => prev + 1);
-    }, [windows, maxZIndex]);
+    }, [windows, maxZIndex, isMobile]);
 
     const closeWindow = useCallback((id) => {
         setWindows((prev) => prev.filter((w) => w.id !== id));
