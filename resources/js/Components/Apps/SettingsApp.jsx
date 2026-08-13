@@ -30,21 +30,46 @@ import { FileManagerTab } from './Settings/FileManagerTab';
 import { UpsTab } from './Settings/UpsTab';
 import { AppNavTabs, AppLayout } from './AppNavTabs';
 
-const tabs = [
-    { id: 'general', label: 'General', icon: IconSettings },
-    { id: 'ups', label: 'UPS', icon: IconPlug },
-    { id: 'network', label: 'Network', icon: IconNetwork },
-    { id: 'upnp', label: 'UPNP', icon: IconWifi },
-    { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
-    { id: 'ssl', label: 'SSL', icon: IconLock },
-    { id: 'docker', label: 'Docker', icon: IconBrandDocker },
-    { id: 'filemanager', label: 'File Manager', icon: IconFolder },
-    { id: 'services', label: 'Services', icon: IconServer },
-    { id: 'gpus', label: 'GPUs', icon: IconCpu },
-    { id: 'account', label: 'Users', icon: IconUsers },
-    { id: 'security', label: 'Security', icon: IconShield },
-    { id: 'email', label: 'Email', icon: IconMail },
-    { id: 'notifications', label: 'Notifications', icon: IconBell },
+const groups = [
+    {
+        label: 'General',
+        items: [
+            { id: 'general', label: 'General', icon: IconSettings },
+            { id: 'ups', label: 'UPS', icon: IconPlug },
+        ],
+    },
+    {
+        label: 'Network',
+        items: [
+            { id: 'network', label: 'Network', icon: IconNetwork },
+            { id: 'upnp', label: 'UPNP', icon: IconWifi },
+            { id: 'dyndns', label: 'DynDNS', icon: IconCloud },
+            { id: 'ssl', label: 'SSL', icon: IconLock },
+        ],
+    },
+    {
+        label: 'Apps',
+        items: [
+            { id: 'docker', label: 'Docker', icon: IconBrandDocker },
+            { id: 'filemanager', label: 'File Manager', icon: IconFolder },
+            { id: 'services', label: 'Services', icon: IconServer },
+            { id: 'gpus', label: 'GPUs', icon: IconCpu },
+        ],
+    },
+    {
+        label: 'Access & Security',
+        items: [
+            { id: 'account', label: 'Users', icon: IconUsers },
+            { id: 'security', label: 'Security', icon: IconShield },
+        ],
+    },
+    {
+        label: 'Communication',
+        items: [
+            { id: 'email', label: 'Email', icon: IconMail },
+            { id: 'notifications', label: 'Notifications', icon: IconBell },
+        ],
+    },
 ];
 
 export function SettingsAppContent() {
@@ -93,7 +118,7 @@ export function SettingsAppContent() {
             nav={
                 <AppNavTabs
                     title="Settings"
-                    tabs={tabs}
+                    groups={groups}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                 />

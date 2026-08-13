@@ -5,12 +5,18 @@ import { useIsMobile } from '../Desktop/useIsMobile';
  * Shared responsive navigation component for app windows.
  * On desktop: renders as a fixed 220px sidebar.
  * On mobile: renders as a horizontal scrollable tab bar at the top.
+ *
+ * Supports two modes:
+ * - Flat tabs: pass `tabs` array
+ * - Grouped tabs: pass `groups` array of { label, items }
  */
-export function AppNavTabs({ title, tabs, activeTab, onTabChange }) {
+export function AppNavTabs({ title, tabs, groups, activeTab, onTabChange }) {
     const theme = useMantineTheme();
     const isMobile = useIsMobile();
 
-    // Mobile: horizontal scrollable tabs
+    const allTabs = groups ? groups.flatMap((g) => g.items) : tabs;
+
+    // Mobile: horizontal scrollable tabs (always flat)
     if (isMobile) {
         return (
             <Box
@@ -33,7 +39,7 @@ export function AppNavTabs({ title, tabs, activeTab, onTabChange }) {
                             minWidth: 'max-content',
                         }}
                     >
-                        {tabs.map((tab) => (
+                        {allTabs.map((tab) => (
                             <Box
                                 key={tab.id}
                                 onClick={() => onTabChange(tab.id)}
@@ -64,6 +70,30 @@ export function AppNavTabs({ title, tabs, activeTab, onTabChange }) {
     }
 
     // Desktop: sidebar navigation
+    const renderTabItem = (tab) => (
+        <Box
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backgroundColor: activeTab === tab.id ? theme.colors.blue[6] : 'transparent',
+                color: activeTab === tab.id ? 'white' : theme.colors.gray[4],
+                transition: 'all 0.15s ease',
+                marginBottom: '2px',
+            }}
+        >
+            <tab.icon size={18} />
+            <Text size="sm" fw={activeTab === tab.id ? 600 : 400}>
+                {tab.label}
+            </Text>
+        </Box>
+    );
+
     return (
         <Box
             style={{
@@ -74,6 +104,7 @@ export function AppNavTabs({ title, tabs, activeTab, onTabChange }) {
                 padding: '12px 8px',
                 display: 'flex',
                 flexDirection: 'column',
+                overflow: 'auto',
             }}
         >
             <Text
@@ -86,29 +117,27 @@ export function AppNavTabs({ title, tabs, activeTab, onTabChange }) {
             >
                 {title}
             </Text>
-            {tabs.map((tab) => (
-                <Box
-                    key={tab.id}
-                    onClick={() => onTabChange(tab.id)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        backgroundColor: activeTab === tab.id ? theme.colors.blue[6] : 'transparent',
-                        color: activeTab === tab.id ? 'white' : theme.colors.gray[4],
-                        transition: 'all 0.15s ease',
-                        marginBottom: '2px',
-                    }}
-                >
-                    <tab.icon size={18} />
-                    <Text size="sm" fw={activeTab === tab.id ? 600 : 400}>
-                        {tab.label}
-                    </Text>
-                </Box>
-            ))}
+
+            {groups ? (
+                groups.map((group, i) => (
+                    <Box key={group.label} mb={i < groups.length - 1 ? 'sm' : undefined}>
+                        <Text
+                            size="xs"
+                            fw={600}
+                            c="dimmed"
+                            mb="4px"
+                            px="sm"
+                            mt={i > 0 ? 'xs' : undefined}
+                            style={{ textTransform: 'uppercase', letterSpacing: '0.3px', fontSize: '10px' }}
+                        >
+                            {group.label}
+                        </Text>
+                        {group.items.map(renderTabItem)}
+                    </Box>
+                ))
+            ) : (
+                tabs.map(renderTabItem)
+            )}
         </Box>
     );
 }
