@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\Firewall\UfwService;
 use App\Services\NetworkService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 /**
  * UPNP Port Mapping Rule Model.
@@ -87,7 +88,7 @@ class UpnpRule extends Model
         $gatewayIp = $networkService->getGatewayIp();
 
         if (! $gatewayIp) {
-            \Illuminate\Support\Facades\Log::warning('UpnpRenewJob: Could not determine gateway IP');
+            Log::warning('UpnpRenewJob: Could not determine gateway IP');
 
             return;
         }
@@ -109,7 +110,7 @@ class UpnpRule extends Model
         }
 
         if (! $gatewayRuleExists) {
-            \Illuminate\Support\Facades\Log::info("UpnpRenewJob: Adding UFW rule to allow all traffic from gateway {$gatewayIp}");
+            Log::info("UpnpRenewJob: Adding UFW rule to allow all traffic from gateway {$gatewayIp}");
 
             // Allow all traffic from the gateway IP (router) to handle UPnP responses on any port
             $ufwService->addRule([
@@ -144,7 +145,7 @@ class UpnpRule extends Model
         // Duration is in seconds (3600 = 1 hour) - renewal happens every 30 minutes
         // Use -p to specify local port 12350 (must be allowed in firewall for router responses)
         $command = sprintf(
-            'sudo upnpc -a %s %d %d %s -p 12350 3600 2>&1',
+            'sudo upnpc -a %s %d %d %s 3600 2>&1',
             $internalIp,
             $this->internal_port,
             $this->external_port,
@@ -152,12 +153,12 @@ class UpnpRule extends Model
         );
 
         // Debug: Log the exact command being executed
-        \Illuminate\Support\Facades\Log::info("UpnpRenewJob: Executing command: {$command}");
+        Log::info("UpnpRenewJob: Executing command: {$command}");
 
         $output = shell_exec($command);
 
         // Debug: Log the raw output
-        \Illuminate\Support\Facades\Log::info("UpnpRenewJob: Command output: {$output}");
+        Log::info("UpnpRenewJob: Command output: {$output}");
 
         if (str_contains($output, 'is redirected to')) {
             $this->update(['last_renewed_at' => now()]);

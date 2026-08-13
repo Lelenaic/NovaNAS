@@ -41,6 +41,7 @@ export function UpnpTab() {
     const [discoverResult, setDiscoverResult] = useState(null);
     const [publishing, setPublishing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -166,6 +167,7 @@ export function UpnpTab() {
     };
 
     const handleDelete = async (id) => {
+        setDeleting(true);
         try {
             const response = await fetch(`/api/upnp/rules/${id}`, {
                 method: 'DELETE',
@@ -180,6 +182,8 @@ export function UpnpTab() {
             setDeleteConfirm(null);
         } catch (err) {
             setError(err.message);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -510,7 +514,7 @@ export function UpnpTab() {
                     <Button variant="subtle" onClick={() => setDeleteConfirm(null)}>
                         Cancel
                     </Button>
-                    <Button color="red" onClick={() => handleDelete(deleteConfirm)}>
+                    <Button color="red" onClick={() => handleDelete(deleteConfirm)} loading={deleting}>
                         Delete
                     </Button>
                 </Group>
