@@ -1179,20 +1179,20 @@ export function FileManagerAppContent() {
 
     // ---- Trash actions ----
 
-    const handleRestoreTrash = async (id) => {
+    const handleRestoreTrash = async (filename) => {
         closeContextMenu();
         try {
-            await apiRequest('/api/filemanager/trash/restore', 'POST', { id });
+            await apiRequest('/api/filemanager/trash/restore', 'POST', { filename });
             fetchTrash();
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const handleForceDeleteTrash = async (id) => {
+    const handleForceDeleteTrash = async (filename) => {
         closeContextMenu();
         try {
-            await apiRequest('/api/filemanager/trash/force-delete', 'DELETE', { id });
+            await apiRequest('/api/filemanager/trash/force-delete', 'DELETE', { filename });
             fetchTrash();
         } catch (err) {
             setError(err.message);
@@ -1449,17 +1449,17 @@ export function FileManagerAppContent() {
                 }
             } else {
                 if (hasSelection && paths.length === 1) {
-                    const trashItem = trashItems.find((i) => String(i.id) === paths[0]);
+                    const trashItem = trashItems.find((i) => i.filename === paths[0]);
                     if (trashItem) {
                         menuItems.push({
                             label: 'Restore',
                             icon: <IconRestore size={16} />,
-                            onClick: () => handleRestoreTrash(trashItem.id),
+                            onClick: () => handleRestoreTrash(trashItem.filename),
                         });
                         menuItems.push({
                             label: 'Delete Permanently',
                             icon: <IconTrash size={16} />,
-                            onClick: () => handleForceDeleteTrash(trashItem.id),
+                            onClick: () => handleForceDeleteTrash(trashItem.filename),
                             danger: true,
                         });
                     }
@@ -1469,10 +1469,10 @@ export function FileManagerAppContent() {
                         icon: <IconTrash size={16} />,
                         onClick: async () => {
                             closeContextMenu();
-                            for (const id of paths) {
-                                const trashItem = trashItems.find((i) => String(i.id) === id);
+                            for (const fn of paths) {
+                                const trashItem = trashItems.find((i) => i.filename === fn);
                                 if (trashItem) {
-                                    await handleForceDeleteTrash(trashItem.id);
+                                    await handleForceDeleteTrash(trashItem.filename);
                                 }
                             }
                         },
@@ -2106,22 +2106,22 @@ export function FileManagerAppContent() {
                             )}
                             {trashItems.map((item) => (
                                 <UnstyledButton
-                                    key={item.id}
+                                    key={item.filename}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (e.ctrlKey || e.metaKey) {
                                             setSelectedPaths((prev) => {
                                                 const next = new Set(prev);
-                                                const id = String(item.id);
-                                                if (next.has(id)) next.delete(id); else next.add(id);
+                                                const fn = item.filename;
+                                                if (next.has(fn)) next.delete(fn); else next.add(fn);
                                                 return next;
                                             });
                                         } else {
-                                            setSelectedPaths(new Set([String(item.id)]));
+                                            setSelectedPaths(new Set([item.filename]));
                                         }
                                     }}
-                                    onContextMenu={(e) => handleContextMenu(e, { ...item, path: String(item.id) })}
-                                    data-path={String(item.id)}
+                                    onContextMenu={(e) => handleContextMenu(e, { ...item, path: item.filename })}
+                                    data-path={item.filename}
                                     style={{
                                         display: 'block',
                                         width: '100%',
@@ -2129,7 +2129,7 @@ export function FileManagerAppContent() {
                                         padding: '1px 4px',
                                         borderRadius: '6px',
                                         userSelect: 'none',
-                                        backgroundColor: selectedPaths.has(String(item.id)) ? theme.colors.blue[8] : 'transparent',
+                                        backgroundColor: selectedPaths.has(item.filename) ? theme.colors.blue[8] : 'transparent',
                                         transition: 'background-color 0.1s ease',
                                         border: '2px solid transparent',
                                     }}
@@ -2164,7 +2164,7 @@ export function FileManagerAppContent() {
                                                 size="sm"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleRestoreTrash(item.id);
+                                                    handleRestoreTrash(item.filename);
                                                 }}
                                                 style={{ flexShrink: 0 }}
                                             >
@@ -2178,7 +2178,7 @@ export function FileManagerAppContent() {
                                                 size="sm"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleForceDeleteTrash(item.id);
+                                                    handleForceDeleteTrash(item.filename);
                                                 }}
                                                 style={{ flexShrink: 0 }}
                                             >

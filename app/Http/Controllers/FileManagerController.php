@@ -2,21 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TrashedFile;
 use App\Models\User;
 use App\Services\AclService;
+use App\Services\FileService;
+use App\Services\LinuxUserService;
 use App\Services\SambaService;
 use App\Services\TrashManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
+use Symfony\Component\HttpFoundation\Response;
 
 class FileManagerController extends Controller
 {
     public function __construct(
         protected SambaService $sambaService,
         protected AclService $aclService,
-        protected TrashManager $trashManager
+        protected TrashManager $trashManager,
+        protected LinuxUserService $linuxUserService,
+        protected FileService $fileService
     ) {}
 
     /**
@@ -108,7 +112,7 @@ class FileManagerController extends Controller
             // Handle homes share
             if ($share['name'] === 'homes') {
                 if ($share['enabled']) {
-                    $homePath = $this->getUserHomeDirectory($username);
+                    $homePath = $this->linuxUserService->getHomeDirectory($username);
                     $accessibleShares[] = [
                         'name' => 'Home',
                         'path' => $homePath,
@@ -174,7 +178,7 @@ class FileManagerController extends Controller
 
         // Resolve the path (handle ~ for home directory)
         if (str_starts_with($path, '~')) {
-            $path = $this->getUserHomeDirectory($username).ltrim($path, '~');
+            $path = $this->linuxUserService->getHomeDirectory($username).ltrim($path, '~');
         }
 
         // Normalize path (remove trailing slash except root)
@@ -185,49 +189,11 @@ class FileManagerController extends Controller
             return response()->json(['error' => 'Access denied to this path'], 403);
         }
 
-        if (! is_dir($path)) {
+        $items = $this->fileService->listDirectoryWithDetails($path, $username);
+
+        if ($items === [] && ! is_dir($path)) {
             return response()->json(['error' => 'Path is not a directory'], 400);
         }
-
-        $items = [];
-        $handle = opendir($path);
-
-        if (! $handle) {
-            return response()->json(['error' => 'Cannot open directory'], 500);
-        }
-
-        while (($entry = readdir($handle)) !== false) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            $fullPath = $path === '/' ? '/'.$entry : $path.'/'.$entry;
-            $isDirectory = is_dir($fullPath);
-
-            $item = [
-                'name' => $entry,
-                'path' => $fullPath,
-                'type' => $isDirectory ? 'directory' : 'file',
-            ];
-
-            if (! $isDirectory && is_file($fullPath)) {
-                $item['size'] = filesize($fullPath);
-                $item['modified'] = date('Y-m-d H:i:s', filemtime($fullPath));
-            }
-
-            $items[] = $item;
-        }
-
-        closedir($handle);
-
-        // Sort: directories first, then by name
-        usort($items, function ($a, $b) {
-            if ($a['type'] !== $b['type']) {
-                return $a['type'] === 'directory' ? -1 : 1;
-            }
-
-            return strcasecmp($a['name'], $b['name']);
-        });
 
         // Build breadcrumb data
         $pathParts = array_filter(explode('/', $path));
@@ -283,7 +249,7 @@ class FileManagerController extends Controller
             return response()->json(['error' => 'Invalid directory name'], 400);
         }
 
-        $result = \Illuminate\Support\Facades\Process::run('sudo mkdir -p '.escapeshellarg($newPath));
+        $result = Process::run('sudo mkdir -p '.escapeshellarg($newPath));
 
         if (! $result->successful()) {
             return response()->json(['error' => 'Failed to create directory: '.$result->errorOutput()], 500);
@@ -337,26 +303,18 @@ class FileManagerController extends Controller
 
     /**
      * List trashed files for the current user.
+     *
+     * Scans the filesystem and merges with DB metadata.
      */
     public function getTrash(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $trashedFiles = TrashedFile::forUser($user->id)
-            ->orderByDesc('trashed_at')
-            ->get()
-            ->map(fn (TrashedFile $file) => [
-                'id' => $file->id,
-                'filename' => $file->filename,
-                'original_path' => $file->original_path,
-                'trashed_at' => $file->trashed_at->toIso8601String(),
-                'expires_at' => $file->expires_at->toIso8601String(),
-                'is_directory' => is_dir($file->trash_path),
-            ]);
+        $items = $this->trashManager->listTrashFilesForUser($user->id, $user->username);
 
         return response()->json([
-            'items' => $trashedFiles,
+            'items' => $items,
             'retention_days' => $this->trashManager->getRetentionDays(),
         ]);
     }
@@ -370,29 +328,36 @@ class FileManagerController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'id' => 'required|integer|exists:trashed_files,id',
+            'filename' => 'required|string',
         ]);
 
-        $trashedFile = TrashedFile::findOrFail($validated['id']);
+        $username = $user->username;
+        $isAdmin = $user->is_admin;
 
-        // Only allow restoring own files (or admin can restore any)
-        if ($trashedFile->trashed_by !== $user->id && ! $user->is_admin) {
-            return response()->json(['error' => 'Access denied'], 403);
+        // Check the item exists and belongs to this user (or user is admin)
+        $item = $this->trashManager->getTrashItem($validated['filename'], $user->id, $username);
+
+        if ($item === null) {
+            return response()->json(['error' => 'File not found in trash'], 404);
+        }
+
+        // Non-admins can only restore their own files
+        if (! $isAdmin && ! $item['in_database']) {
+            // Filesystem-only item — we can't verify ownership, but since it's in
+            // the user's own Trash directory, it's implicitly theirs
         }
 
         // Validate the original path is still accessible
-        $username = $user->username;
-        $isAdmin = $user->is_admin;
-        if (! $this->isPathAccessible($trashedFile->original_path, $username, $isAdmin)) {
+        if ($item['original_path'] !== null && ! $this->isPathAccessible($item['original_path'], $username, $isAdmin)) {
             return response()->json(['error' => 'Cannot restore to original location (access denied)'], 403);
         }
 
         // Check for conflict at original path
-        if (file_exists($trashedFile->original_path)) {
+        if ($item['original_path'] !== null && file_exists($item['original_path'])) {
             return response()->json(['error' => 'A file with the same name already exists at the original location'], 409);
         }
 
-        $success = $this->trashManager->restore($trashedFile);
+        $success = $this->trashManager->restore($validated['filename'], $user->id);
 
         if (! $success) {
             return response()->json(['error' => 'Failed to restore file'], 500);
@@ -410,17 +375,10 @@ class FileManagerController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'id' => 'required|integer|exists:trashed_files,id',
+            'filename' => 'required|string',
         ]);
 
-        $trashedFile = TrashedFile::findOrFail($validated['id']);
-
-        // Only allow deleting own files (or admin can delete any)
-        if ($trashedFile->trashed_by !== $user->id && ! $user->is_admin) {
-            return response()->json(['error' => 'Access denied'], 403);
-        }
-
-        $success = $this->trashManager->forceDelete($trashedFile);
+        $success = $this->trashManager->forceDelete($validated['filename'], $user->id);
 
         if (! $success) {
             return response()->json(['error' => 'Failed to delete file'], 500);
@@ -756,7 +714,7 @@ class FileManagerController extends Controller
     /**
      * Download a file.
      */
-    public function download(Request $request): \Symfony\Component\HttpFoundation\Response
+    public function download(Request $request): Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -796,7 +754,7 @@ class FileManagerController extends Controller
             }
 
             if ($share['name'] === 'homes' && $share['enabled']) {
-                $homePath = $this->getUserHomeDirectory($username);
+                $homePath = $this->linuxUserService->getHomeDirectory($username);
                 if (str_starts_with($realPath, $homePath) || $realPath === rtrim($homePath, '/')) {
                     return $isAdmin ? 'readwrite' : 'readwrite';
                 }
@@ -831,7 +789,7 @@ class FileManagerController extends Controller
             }
 
             if ($share['name'] === 'homes' && $share['enabled']) {
-                $homePath = $this->getUserHomeDirectory($username);
+                $homePath = $this->linuxUserService->getHomeDirectory($username);
                 if ($normalized === rtrim($homePath, '/')) {
                     return true;
                 }
@@ -898,21 +856,6 @@ class FileManagerController extends Controller
     }
 
     /**
-     * Get the real home directory for a user from the system.
-     */
-    protected function getUserHomeDirectory(string $username): string
-    {
-        $userInfo = posix_getpwnam($username);
-
-        if ($userInfo && ! empty($userInfo['dir'])) {
-            return $userInfo['dir'];
-        }
-
-        // Fallback (should not happen for valid users)
-        return '/home/'.$username;
-    }
-
-    /**
      * Check if a path is accessible to the user.
      *
      * A path is accessible if it falls within one of the user's allowed share paths.
@@ -943,7 +886,7 @@ class FileManagerController extends Controller
 
             // Homes share: user's home directory
             if ($share['name'] === 'homes' && $share['enabled']) {
-                $homePath = $this->getUserHomeDirectory($username);
+                $homePath = $this->linuxUserService->getHomeDirectory($username);
                 if (str_starts_with($realPath, $homePath) || $realPath === rtrim($homePath, '/')) {
                     return true;
                 }

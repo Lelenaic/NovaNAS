@@ -308,9 +308,10 @@ class StorageController extends Controller
     /**
      * List directories in a storage pool's mountpoint.
      */
-    public function poolDirectories(string $pool): JsonResponse
+    public function poolDirectories(string $pool, Request $request): JsonResponse
     {
-        $directories = $this->settingsService->listDirectoriesInPool($pool);
+        $user = $request->user();
+        $directories = $this->settingsService->listDirectoriesInPool($pool, $user->username);
 
         return response()->json([
             'directories' => $directories,

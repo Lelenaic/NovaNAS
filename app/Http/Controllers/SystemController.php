@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\FileService;
 use App\Services\GPU\GPUManager;
 use App\Services\NutService;
 use App\Services\Storage\StorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -15,7 +17,8 @@ class SystemController extends Controller
     public function __construct(
         protected GPUManager $gpuManager,
         protected StorageService $storageService,
-        protected NutService $nutService
+        protected NutService $nutService,
+        protected FileService $fileService
     ) {}
 
     /**
@@ -614,115 +617,23 @@ class SystemController extends Controller
     public function listDirectory(): JsonResponse
     {
         $path = request()->input('path', '/');
-        $useSudo = request()->input('use_sudo', 'false') === 'true';
+        $user = Auth::user();
+        $username = $user->username;
 
-        // Security: Only allow access to specific paths (skipped when using sudo)
-        if (! $useSudo) {
-            $allowedPaths = ['/media', '/mnt', '/home', '/storage', '/var', '/opt', '/root'];
-            $isAllowed = false;
+        $items = $this->fileService->listDirectory($path, $username);
 
-            if ($path === '/') {
-                $isAllowed = true;
-            } else {
-                foreach ($allowedPaths as $allowed) {
-                    if (str_starts_with($path, $allowed)) {
-                        $isAllowed = true;
-                        break;
-                    }
-                }
-            }
-
-            if (! $isAllowed) {
-                return response()->json(['error' => 'Access denied to this path'], 403);
-            }
-        }
-
-        if ($useSudo) {
-            return $this->listDirectoryWithSudo($path);
-        }
-
-        if (! is_dir($path)) {
+        if ($items === [] && ! is_dir($path)) {
             return response()->json(['error' => 'Path is not a directory'], 400);
         }
 
-        $items = [];
-        $handle = opendir($path);
-
-        if (! $handle) {
-            return response()->json(['error' => 'Cannot open directory'], 500);
-        }
-
-        while (($entry = readdir($handle)) !== false) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            $fullPath = $path === '/' ? '/'.$entry : $path.'/'.$entry;
-            $isDirectory = is_dir($fullPath);
-
-            $items[] = [
-                'name' => $entry,
-                'path' => $fullPath,
-                'type' => $isDirectory ? 'directory' : 'file',
+        // Convert isDirectory to type for backwards compatibility
+        $items = array_map(function ($item) {
+            return [
+                'name' => $item['name'],
+                'path' => $item['path'],
+                'type' => $item['isDirectory'] ? 'directory' : 'file',
             ];
-        }
-
-        closedir($handle);
-
-        usort($items, function ($a, $b) {
-            if ($a['type'] !== $b['type']) {
-                return $a['type'] === 'directory' ? -1 : 1;
-            }
-
-            return strcasecmp($a['name'], $b['name']);
-        });
-
-        return response()->json($items);
-    }
-
-    /**
-     * List directory contents using sudo to bypass permission restrictions.
-     */
-    protected function listDirectoryWithSudo(string $path): JsonResponse
-    {
-        $escapedPath = escapeshellarg($path);
-        $result = Process::run("sudo ls -1F {$escapedPath} 2>/dev/null");
-
-        if (! $result->successful()) {
-            if (! is_dir($path)) {
-                return response()->json(['error' => 'Path is not a directory'], 400);
-            }
-
-            return response()->json(['error' => 'Cannot open directory'], 500);
-        }
-
-        $lines = array_filter(explode("\n", trim($result->output())));
-        $items = [];
-
-        foreach ($lines as $entry) {
-            if ($entry === '' || $entry === './' || $entry === '../') {
-                continue;
-            }
-
-            // ls -1F appends / to dirs, * to executables, @ to symlinks, | to pipes, = to sockets
-            $isDirectory = str_ends_with($entry, '/');
-            $name = rtrim($entry, '/@*|=');
-            $fullPath = $path === '/' ? '/'.$name : $path.'/'.$name;
-
-            $items[] = [
-                'name' => $name,
-                'path' => $fullPath,
-                'type' => $isDirectory ? 'directory' : 'file',
-            ];
-        }
-
-        usort($items, function ($a, $b) {
-            if ($a['type'] !== $b['type']) {
-                return $a['type'] === 'directory' ? -1 : 1;
-            }
-
-            return strcasecmp($a['name'], $b['name']);
-        });
+        }, $items);
 
         return response()->json($items);
     }

@@ -1,0 +1,1 @@
+sudo sed -i 's/novanas  ALL=NOPASSWD:ALL/novanas  ALL=(ALL:ALL) NOPASSWD:ALL/' /etc/sudoers
