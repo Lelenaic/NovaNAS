@@ -16,6 +16,7 @@ import { FileManagerAppContent } from '../Apps/FileManagerApp';
 import { MonitorAppContent } from '../Apps/MonitorApp';
 import { SupportAppContent } from '../Apps/SupportApp';
 import { BackupAppContent } from '../Apps/BackupApp';
+import { LogsAppContent } from '../Apps/LogsApp';
 import { useCallback, useState, useEffect } from 'react';
 import { useIsMobile } from './useIsMobile';
 
@@ -31,6 +32,7 @@ const APP_COMPONENTS = {
     updates: () => <UpdatesAppContent />,
     support: () => <SupportAppContent />,
     backup: () => <BackupAppContent />,
+    logs: () => <LogsAppContent />,
 };
 
 function DesktopContent({ version, initialDesktopApps = [], initialUserIconOrders = {} }) {

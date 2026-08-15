@@ -15,6 +15,7 @@ import {
     IconLock,
     IconFolder,
     IconPlug,
+    IconFileText,
 } from '@tabler/icons-react';
 import { GeneralTab } from './Settings/GeneralTab';
 import { NetworkTab } from './Settings/NetworkTab';
@@ -28,6 +29,7 @@ import { DockerTab } from './Settings/DockerTab';
 import { SslTab } from './Settings/SslTab';
 import { FileManagerTab } from './Settings/FileManagerTab';
 import { UpsTab } from './Settings/UpsTab';
+import { LogsTab } from './Settings/LogsTab';
 import { AppNavTabs, AppLayout } from './AppNavTabs';
 
 const groups = [
@@ -36,6 +38,7 @@ const groups = [
         items: [
             { id: 'general', label: 'General', icon: IconSettings },
             { id: 'ups', label: 'UPS', icon: IconPlug },
+            { id: 'logs', label: 'Logs', icon: IconFileText },
         ],
     },
     {
@@ -82,6 +85,8 @@ export function SettingsAppContent() {
                 return <GeneralTab />;
             case 'ups':
                 return <UpsTab />;
+            case 'logs':
+                return <LogsTab />;
             case 'network':
                 return <NetworkTab />;
             case 'upnp':

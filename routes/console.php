@@ -121,6 +121,16 @@ Schedule::job(new AutoDeleteTrashJob)
     ->name('auto-delete-trash');
 
 /**
+ * Log Auto-Deletion
+ *
+ * Removes log lines older than the configured retention period (default 30 days)
+ * from every file in the logs directory. Runs daily at 4:00 AM.
+ */
+Schedule::command('logs:prune')
+    ->dailyAt('04:00')
+    ->name('logs-prune');
+
+/**
  * Backup Scheduler
  *
  * Checks for due backup jobs every minute and launches them in tmux sessions.

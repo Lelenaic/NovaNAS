@@ -15,6 +15,7 @@ import {
     IconApps,
     IconLifebuoy,
     IconCloudUpload,
+    IconFileText,
 } from '@tabler/icons-react';
 import { useIsMobile } from './useIsMobile';
 
@@ -31,6 +32,7 @@ const ICON_MAP = {
     IconApps,
     IconLifebuoy,
     IconCloudUpload,
+    IconFileText,
 };
 
 export function DesktopIcons({ apps = [], onIconPositionChange }) {

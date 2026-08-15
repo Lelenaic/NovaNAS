@@ -17,6 +17,8 @@ use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\GeneralSettingsController;
 use App\Http\Controllers\GPUController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LogSettingsController;
+use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\ServicesController;
@@ -162,6 +164,16 @@ Route::group(['middleware' => 'auth'], function () {
         // File Manager settings routes
         Route::get('/api/settings/filemanager', [FileManagerSettingsController::class, 'index']);
         Route::put('/api/settings/filemanager', [FileManagerSettingsController::class, 'update']);
+
+        // Log auto-deletion settings routes
+        Route::get('/api/settings/logs', [LogSettingsController::class, 'index']);
+        Route::put('/api/settings/logs', [LogSettingsController::class, 'update']);
+        Route::post('/api/settings/logs/prune', [LogSettingsController::class, 'prune']);
+
+        // Log viewer routes
+        Route::get('/api/logs/files', [LogViewerController::class, 'files']);
+        Route::get('/api/logs/view', [LogViewerController::class, 'view']);
+        Route::get('/api/logs/search', [LogViewerController::class, 'search']);
 
         // File Manager routes
         Route::get('/api/filemanager/layout', [FileManagerController::class, 'getLayout']);
