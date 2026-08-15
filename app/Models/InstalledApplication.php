@@ -23,14 +23,41 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $author
  * @property string|null $developer
  * @property string|null $icon
- * @property string|null $port_map
- * @property string|null $app_index
  * @property string $compose_path
  * @property string $status
  * @property int|null $installed_by
- * @property \Carbon\Carbon $installed_at
- * @property \Carbon\Carbon|null $updated_at
- * @property \Carbon\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $installed_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property string|null $port_map
+ * @property string|null $app_index
+ * @property-read \App\Models\User|null $installer
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication running()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication stopped()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereAppId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereAppIndex($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereAuthor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereAvailableVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereCategory($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereComposePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereDeveloper($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereIcon($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereInstalledAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereInstalledBy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereInstalledVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication wherePortMap($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereStoreProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereTagline($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|InstalledApplication whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class InstalledApplication extends Model
 {

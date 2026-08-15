@@ -22,10 +22,27 @@ use Illuminate\Support\Facades\Log;
  * @property string $protocol
  * @property string|null $description
  * @property bool $is_enabled
- * @property string $remote_host
- * @property Carbon|null $last_renewed_at
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property string|null $remote_host
+ * @property \Illuminate\Support\Carbon|null $last_renewed_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule enabled()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereExternalPort($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereInterface($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereInternalPort($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereIsEnabled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereLastRenewedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereProtocol($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereRemoteHost($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UpnpRule whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class UpnpRule extends Model
 {

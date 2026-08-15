@@ -27,10 +27,38 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_system
  * @property bool $is_global
  * @property bool $is_admin_only
- * @property bool $enabled
  * @property int|null $created_by
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property bool $enabled
+ * @property-read \App\Models\User|null $creator
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserDesktopIcon> $userDesktopIcons
+ * @property-read int|null $user_desktop_icons_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp components()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp visibleFor(\App\Models\User $user)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereColor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereComponentPath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereCreatedBy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereEnabled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIconName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIconPath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIconType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIdentifier($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIsAdminOnly($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIsGlobal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereIsSystem($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DesktopApp withUserOrder(int $userId)
+ * @mixin \Eloquent
  */
 class DesktopApp extends Model
 {

@@ -20,14 +20,32 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $storage_type
  * @property string $repo_path
- * @property array<string, mixed>|null $credentials
+ * @property array<array-key, mixed>|null $credentials
  * @property bool $is_initialized
  * @property Carbon|null $last_check_at
  * @property string $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User $user
- * @property-read Collection<BackupJob> $jobs
+ * @property-read Collection<int, \App\Models\BackupExecution> $executions
+ * @property-read int|null $executions_count
+ * @property-read Collection<int, \App\Models\BackupJob> $jobs
+ * @property-read int|null $jobs_count
+ * @property-read \App\Models\User $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository initialized()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereCredentials($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereIsInitialized($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereLastCheckAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereRepoPath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereStorageType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupRepository whereUserId($value)
+ * @mixin \Eloquent
  */
 class BackupRepository extends Model
 {

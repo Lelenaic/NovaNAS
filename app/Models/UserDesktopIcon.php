@@ -16,8 +16,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $desktop_app_id
  * @property int $order
  * @property bool $is_visible
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\DesktopApp $desktopApp
+ * @property-read \App\Models\User $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereDesktopAppId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereIsVisible($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserDesktopIcon whereUserId($value)
+ * @mixin \Eloquent
  */
 class UserDesktopIcon extends Model
 {

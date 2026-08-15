@@ -17,11 +17,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $trash_path
  * @property string $filename
  * @property int $trashed_by
- * @property \Carbon\Carbon $trashed_at
- * @property \Carbon\Carbon $expires_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property \Illuminate\Support\Carbon $trashed_at
+ * @property \Illuminate\Support\Carbon $expires_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\User $user
+ * @method static Builder<static>|TrashedFile expired()
+ * @method static Builder<static>|TrashedFile forUser(int $userId)
+ * @method static Builder<static>|TrashedFile newModelQuery()
+ * @method static Builder<static>|TrashedFile newQuery()
+ * @method static Builder<static>|TrashedFile query()
+ * @method static Builder<static>|TrashedFile whereCreatedAt($value)
+ * @method static Builder<static>|TrashedFile whereExpiresAt($value)
+ * @method static Builder<static>|TrashedFile whereFilename($value)
+ * @method static Builder<static>|TrashedFile whereId($value)
+ * @method static Builder<static>|TrashedFile whereOriginalPath($value)
+ * @method static Builder<static>|TrashedFile whereTrashPath($value)
+ * @method static Builder<static>|TrashedFile whereTrashedAt($value)
+ * @method static Builder<static>|TrashedFile whereTrashedBy($value)
+ * @method static Builder<static>|TrashedFile whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class TrashedFile extends Model
 {

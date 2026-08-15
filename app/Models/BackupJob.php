@@ -20,12 +20,12 @@ use Illuminate\Support\Carbon;
  * @property string $backup_repository_id
  * @property string $name
  * @property bool $is_enabled
- * @property list<string> $source_paths
- * @property list<string>|null $exclude_patterns
+ * @property array<array-key, mixed> $source_paths
+ * @property array<array-key, mixed>|null $exclude_patterns
  * @property string|null $cron_expression
  * @property Carbon|null $next_run_at
- * @property array<string, mixed> $retention_policy
- * @property list<string>|null $tags
+ * @property array<array-key, mixed> $retention_policy
+ * @property array<array-key, mixed>|null $tags
  * @property bool $one_file_system
  * @property string $compression
  * @property string $status
@@ -35,10 +35,36 @@ use Illuminate\Support\Carbon;
  * @property string $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read BackupRepository $repository
- * @property-read User $user
- * @property-read BackupExecution|null $latestExecution
- * @property-read Collection<BackupExecution> $executions
+ * @property-read Collection<int, \App\Models\BackupExecution> $executions
+ * @property-read int|null $executions_count
+ * @property-read \App\Models\BackupExecution|null $latestExecution
+ * @property-read \App\Models\BackupRepository $repository
+ * @property-read \App\Models\User $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob due()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob enabled()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereBackupRepositoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereCompression($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereCronExpression($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereExcludePatterns($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereIsEnabled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereLastBackupAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereLastBackupSize($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereLastError($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereNextRunAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereOneFileSystem($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereRetentionPolicy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereSourcePaths($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereTags($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereUserId($value)
+ * @mixin \Eloquent
  */
 class BackupJob extends Model
 {

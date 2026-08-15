@@ -27,7 +27,24 @@ use Illuminate\Support\Carbon;
  * @property string|null $logs
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read BackupJob $job
+ * @property-read \App\Models\BackupJob|null $job
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereBackupJobId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereBytesProcessed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereDurationSeconds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereErrorMessage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereFilesProcessed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereFinishedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereLogs($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereSnapshotsCreated($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereStartedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupExecution whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class BackupExecution extends Model
 {

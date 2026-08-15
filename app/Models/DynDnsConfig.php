@@ -19,10 +19,28 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $token
  * @property int $interval_minutes
  * @property bool $is_enabled
- * @property Carbon|null $last_updated_at
+ * @property \Illuminate\Support\Carbon|null $last_updated_at
  * @property string|null $last_ip
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read string $full_domain
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig enabled()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig forProvider(string $provider)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereIntervalMinutes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereIsEnabled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereLastIp($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereLastUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereSubdomain($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class DynDnsConfig extends Model
 {
