@@ -89,12 +89,17 @@ confirm_proceed() {
     local msg=$1
     echo ""
     echo -e "  ${WARN} ${YELLOW}${BOLD}${msg}${NC}"
-    read -p "  Continue anyway? [Y/n]: " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
+    if [ -t 0 ]; then
+        read -p "  Continue anyway? [Y/n]: " -n 1 -r
         echo ""
-        echo -e "  ${CROSS} ${RED}Installation cancelled by user.${NC}"
-        exit 1
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            echo ""
+            echo -e "  ${CROSS} ${RED}Installation cancelled by user.${NC}"
+            exit 1
+        fi
+    else
+        echo -e "  ${YELLOW}${BOLD}  Non-interactive mode detected. Continuing by default.${NC}"
+        echo -e "  ${DIM}  Run this script directly (./install.sh) to get interactive prompts.${NC}"
     fi
     echo ""
 }
@@ -104,6 +109,14 @@ confirm_proceed() {
 # ══════════════════════════════════════════════════════════════════════════════
 
 print_banner
+
+if [ ! -t 0 ]; then
+    echo -e "  ${YELLOW}${BOLD}⚠ Non-interactive mode detected (piped/redirected).${NC}"
+    echo -e "  ${DIM}  Interactive prompts will be skipped. Run directly for full experience.${NC}"
+    echo ""
+    print_separator
+    echo ""
+fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pre-Checks
@@ -121,7 +134,7 @@ print_success "Running as root"
 
 # Check 2: Required ports
 PORTS_IN_USE=()
-for port in 80 443 22; do
+for port in 80 443; do
     if ss -tlnp | grep -q ":${port} "; then
         PORTS_IN_USE+=("$port")
     fi
@@ -135,7 +148,7 @@ if [ ${#PORTS_IN_USE[@]} -gt 0 ]; then
     done
     confirm_proceed "Some required ports are already in use."
 else
-    print_success "Ports 80, 443, 22 are available"
+    print_success "Ports 80 and 443 are available"
 fi
 
 # Check 3: Existing installation
@@ -153,6 +166,7 @@ fi
 
 print_separator
 echo ""
+confirm_proceed "Pre-checks complete. Ready to start installation?"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Step 1: Install System Dependencies

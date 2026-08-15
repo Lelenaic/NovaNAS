@@ -92,7 +92,9 @@ The installer is made to be run on a fresh debian 13 intall as root. Please DO N
 
 ```bash
 # Run as root
-curl https://raw.githubusercontent.com/NovaNasOrg/NovaNAS/refs/heads/main/install.sh | bash
+curl -fsSL -o install.sh https://raw.githubusercontent.com/NovaNasOrg/NovaNAS/refs/heads/main/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 ### Manual Installation
