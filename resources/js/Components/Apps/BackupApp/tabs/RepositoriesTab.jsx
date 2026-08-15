@@ -320,7 +320,7 @@ export function RepositoriesTab() {
                                 </Group>
                             </Group>
 
-                            <Collapse in={expandedRepo === repo.id}>
+                            <Collapse expanded={expandedRepo === repo.id}>
                                 <Box p="md" pt={0} style={{ borderTop: `1px solid ${theme.colors.dark[4]}` }}>
                                     <Group mt="md">
                                         <Box>
@@ -379,7 +379,7 @@ export function RepositoriesTab() {
                                 onChange={(e) => setFormData({ ...formData, repo_path: e.target.value })}
                                 required
                                 style={{ flex: 1 }}
-                                disabled
+                                disabled={!!editingRepo}
                             />
                             {!editingRepo && (
                                 <Tooltip label="Browse">

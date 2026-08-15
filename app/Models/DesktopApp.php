@@ -188,9 +188,9 @@ class DesktopApp extends Model
      */
     public function getUserOrder(int $userId): ?int
     {
-        $userIcon = $this->userDesktopIcons->firstWhere('user_id', $userId);
+        $userIcon = $this->userDesktopIcons()->where('user_id', $userId)->first();
 
-        if ($userIcon) {
+        if ($userIcon instanceof UserDesktopIcon) {
             return $userIcon->order;
         }
 

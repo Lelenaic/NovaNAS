@@ -16,6 +16,16 @@ class UpdateBackupJobRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->cron_expression === '') {
+            $this->merge(['cron_expression' => null]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -29,7 +39,7 @@ class UpdateBackupJobRequest extends FormRequest
             'source_paths.*' => ['string', 'max:500'],
             'exclude_patterns' => ['nullable', 'array'],
             'exclude_patterns.*' => ['string', 'max:500'],
-            'cron_expression' => ['sometimes', 'string', 'max:100'],
+            'cron_expression' => ['nullable', 'string', 'max:100'],
             'retention_policy' => ['sometimes', 'array'],
             'retention_policy.keep_last' => ['nullable', 'integer', 'min:0'],
             'retention_policy.keep_hourly' => ['nullable', 'integer', 'min:0'],

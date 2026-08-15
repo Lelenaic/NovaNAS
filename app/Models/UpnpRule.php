@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Firewall\UfwService;
 use App\Services\NetworkService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -12,13 +13,26 @@ use Illuminate\Support\Facades\Log;
  *
  * Represents a UPNP port forwarding rule stored in the database.
  * These rules are temporary (lease-based) and need to be renewed periodically.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $interface
+ * @property int $external_port
+ * @property int $internal_port
+ * @property string $protocol
+ * @property string|null $description
+ * @property bool $is_enabled
+ * @property string $remote_host
+ * @property Carbon|null $last_renewed_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class UpnpRule extends Model
 {
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<string>
+     * @var list<string>
      */
     protected $fillable = [
         'name',

@@ -96,11 +96,12 @@ class ResticService
             $command = $this->buildResticCommand($uri, null, $resticArgs);
 
             $logFile = $this->getLogPath($execution);
-            $command .= " 2>&1 | tee {$logFile}";
+            $command .= ' 2>&1';
 
             $result = Process::env($env)->run($command);
 
-            $output = file_get_contents($logFile) ?: '';
+            $output = $result->output();
+            file_put_contents($logFile, $output);
             $execution->appendLogs($output);
 
             if ($result->successful()) {
@@ -139,7 +140,7 @@ class ResticService
             $forgetArgs = $this->buildForgetArgs($retentionPolicy);
             $command = $this->buildResticCommand($uri, null, "forget {$forgetArgs} --prune");
 
-            $result = Process::env($env)->timeout(null)->run($command);
+            $result = Process::env($env)->run($command);
 
             if ($result->successful()) {
                 return ['success' => true, 'message' => 'Retention policy applied successfully.'];
@@ -292,10 +293,12 @@ class ResticService
     {
         $parts = ['sudo -E restic -r '.escapeshellarg($uri)];
 
+        if ($subcommand !== null) {
+            $parts[] = $subcommand;
+        }
+
         if ($extraArgs !== null) {
             $parts[] = $extraArgs;
-        } else {
-            $parts[] = $subcommand;
         }
 
         return implode(' ', $parts);

@@ -130,7 +130,7 @@ class SystemController extends Controller
     {
         if (File::exists('/proc/uptime')) {
             $uptime = trim(File::get('/proc/uptime'));
-            $uptimeSeconds = explode(' ', $uptime)[0];
+            $uptimeSeconds = (float) explode(' ', $uptime)[0];
 
             $days = floor($uptimeSeconds / 86400);
             $hours = floor(($uptimeSeconds % 86400) / 3600);

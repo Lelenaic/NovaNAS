@@ -180,10 +180,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 === pint/core rules ===
 
-# Laravel Pint Code Formatter
+# Laravel Pint Code Formatter and PHPStan
 
 - If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
 - Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
+- If you have modified any PHP files, you must run `vendor/bin/phpstan analyse --memory-limit=2G --error-format=json --no-progress` before finalizing changes to ensure your code passes static analysis and fix any issues, and rerun it until it passes. If you are unable to fix an issue, ask the user for help.
 
 === phpunit/core rules ===
 

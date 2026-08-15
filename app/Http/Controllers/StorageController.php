@@ -424,7 +424,7 @@ class StorageController extends Controller
             ]);
 
             // Apply filesystem ACLs
-            $sharePath = $validated['path'] ?? $this->sambaService->getShare($newName ?? $name)['path'] ?? null;
+            $sharePath = $validated['path'] ?? $this->sambaService->getShare($newName)['path'] ?? null;
             if ($sharePath && ! empty($userPermissions)) {
                 $this->aclService->applyPermissions($sharePath, $userPermissions);
             }

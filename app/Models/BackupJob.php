@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * Backup Job Model
@@ -20,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property bool $is_enabled
  * @property list<string> $source_paths
  * @property list<string>|null $exclude_patterns
- * @property string $cron_expression
+ * @property string|null $cron_expression
  * @property Carbon|null $next_run_at
  * @property array<string, mixed> $retention_policy
  * @property list<string>|null $tags
@@ -122,11 +124,11 @@ class BackupJob extends Model
     }
 
     /**
-     * Check if the job is currently running.
+     * Check if the job is currently running or waiting to start.
      */
     public function isRunning(): bool
     {
-        return $this->status === 'running';
+        return in_array($this->status, ['running', 'waiting']);
     }
 
     /**
@@ -144,6 +146,6 @@ class BackupJob extends Model
     {
         return $query->enabled()
             ->where('next_run_at', '<=', now())
-            ->where('status', '!=', 'running');
+            ->whereNotIn('status', ['running', 'waiting']);
     }
 }

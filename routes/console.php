@@ -129,3 +129,12 @@ Schedule::job(new AutoDeleteTrashJob)
 Schedule::command('backup:run-scheduled')
     ->everyMinute()
     ->name('backup-scheduler');
+
+/**
+ * Log deletion scheduler
+ */
+Schedule::command('model:prune', [
+    '--model' => [
+        \Yoeriboven\LaravelLogDb\Models\LogMessage::class,
+    ],
+])->daily();

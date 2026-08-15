@@ -10,6 +10,7 @@ use App\Models\BackupJob;
 use App\Services\Backup\BackupSchedulerService;
 use App\Services\Backup\ResticService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Controller for managing backup jobs.
@@ -109,9 +110,29 @@ class BackupJobController extends Controller
      */
     public function run(BackupJob $job): JsonResponse
     {
+        Log::info('BackupJobController::run() called', [
+            'job_id' => $job->id,
+            'job_name' => $job->name,
+            'current_status' => $job->status,
+            'is_running' => $job->isRunning(),
+            'user_id' => auth()->id(),
+        ]);
+
         if ($job->isRunning()) {
+            Log::warning('Backup job is already running, rejecting manual run', [
+                'job_id' => $job->id,
+                'job_name' => $job->name,
+                'current_status' => $job->status,
+            ]);
+
             return response()->json([
                 'message' => 'Backup job is already running.',
+            ], 409);
+        }
+
+        if ($job->status === 'waiting') {
+            return response()->json([
+                'message' => 'Backup job is already waiting to start.',
             ], 409);
         }
 
@@ -121,7 +142,13 @@ class BackupJobController extends Controller
             'status' => 'running',
         ]);
 
-        $job->update(['status' => 'running']);
+        $job->update(['status' => 'waiting']);
+
+        Log::info('BackupJobController::run() dispatching BackupJobExecution', [
+            'job_id' => $job->id,
+            'job_name' => $job->name,
+            'execution_id' => $execution->id,
+        ]);
 
         // Dispatch to queue for background execution
         dispatch(new BackupJobExecution($job->id, $execution->id));

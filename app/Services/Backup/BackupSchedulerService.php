@@ -17,12 +17,12 @@ class BackupSchedulerService
      */
     public function calculateNextRunAt(BackupJob $job): ?Carbon
     {
-        if (! $job->is_enabled) {
+        if (! $job->is_enabled || empty($job->cron_expression)) {
             return null;
         }
 
         try {
-            $cron = CronExpression::factory($job->cron_expression);
+            $cron = new CronExpression($job->cron_expression);
             $nextRun = $cron->getNextRunDate();
 
             return Carbon::instance($nextRun);
@@ -74,10 +74,14 @@ class BackupSchedulerService
     /**
      * Get human-readable schedule description from cron expression.
      */
-    public function describeSchedule(string $cronExpression): string
+    public function describeSchedule(?string $cronExpression): string
     {
+        if (empty($cronExpression)) {
+            return 'Manual only';
+        }
+
         try {
-            $cron = CronExpression::factory($cronExpression);
+            $cron = new CronExpression($cronExpression);
 
             if ($cron->isDue()) {
                 return 'Every minute';

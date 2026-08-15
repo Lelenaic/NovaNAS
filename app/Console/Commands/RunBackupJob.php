@@ -26,6 +26,12 @@ class RunBackupJob extends Command
         $jobId = $this->argument('jobId');
         $executionId = $this->argument('executionId');
 
+        Log::info('RunBackupJob: command started', [
+            'job_id' => $jobId,
+            'execution_id' => $executionId,
+            'pid' => getmypid(),
+        ]);
+
         $job = BackupJob::with('repository')->find($jobId);
 
         if (! $job) {
@@ -34,6 +40,15 @@ class RunBackupJob extends Command
             return self::FAILURE;
         }
 
+        Log::info('RunBackupJob: job loaded', [
+            'job_id' => $jobId,
+            'job_name' => $job->name,
+            'job_status' => $job->status,
+            'source_paths' => $job->source_paths,
+        ]);
+
+        $execution = null;
+
         // Acquire flock to prevent duplicate runs
         $lockPath = "/var/lock/novanas-backup-{$jobId}";
         $lock = @fopen($lockPath, 'c');
@@ -41,8 +56,18 @@ class RunBackupJob extends Command
         if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
             $this->warn("Backup job {$jobId} is already running, skipping.");
 
+            Log::warning('RunBackupJob: flock acquired failed - job already running', [
+                'job_id' => $jobId,
+                'lock_path' => $lockPath,
+            ]);
+
             return self::SUCCESS;
         }
+
+        Log::info('RunBackupJob: flock acquired', [
+            'job_id' => $jobId,
+            'lock_path' => $lockPath,
+        ]);
 
         try {
             // Get or create execution record
@@ -57,13 +82,34 @@ class RunBackupJob extends Command
             if (! $execution) {
                 $this->error("Execution {$executionId} not found.");
 
+                Log::error('RunBackupJob: execution not found', [
+                    'job_id' => $jobId,
+                    'execution_id' => $executionId,
+                ]);
+
                 return self::FAILURE;
             }
+
+            Log::info('RunBackupJob: execution ready, starting backup', [
+                'job_id' => $jobId,
+                'execution_id' => $execution->id,
+                'pid' => getmypid(),
+            ]);
+
+            $job->update(['status' => 'running']);
 
             $this->info("Starting backup for job '{$job->name}'...");
 
             // Run the backup
             $result = $resticService->backup($job, $execution);
+
+            Log::info('RunBackupJob: ResticService::backup() returned', [
+                'job_id' => $jobId,
+                'execution_id' => $execution->id,
+                'success' => $result['success'],
+                'message' => $result['message'] ?? null,
+                'snapshot_id' => $result['snapshot_id'] ?? null,
+            ]);
 
             if ($result['success']) {
                 // Apply retention policy
@@ -71,6 +117,13 @@ class RunBackupJob extends Command
                     $job->repository,
                     $job->retention_policy ?? []
                 );
+
+                Log::info('RunBackupJob: retention policy result', [
+                    'job_id' => $jobId,
+                    'execution_id' => $execution->id,
+                    'success' => $forgetResult['success'],
+                    'message' => $forgetResult['message'] ?? null,
+                ]);
 
                 if (! $forgetResult['success']) {
                     $this->warn("Retention policy failed: {$forgetResult['message']}");
@@ -104,17 +157,23 @@ class RunBackupJob extends Command
             // Prune old executions
             BackupExecution::pruneForJob($jobId, keep: 100);
 
-            Log::info("Backup job '{$job->name}' completed.", [
+            Log::info('RunBackupJob: completed', [
                 'job_id' => $jobId,
+                'job_name' => $job->name,
                 'execution_id' => $execution->id,
                 'status' => $execution->status,
+                'duration_seconds' => $execution->duration_seconds,
             ]);
 
             return $result['success'] ? self::SUCCESS : self::FAILURE;
         } catch (\Exception $e) {
-            Log::error("Backup job '{$job->name}' failed with exception.", [
+            Log::error('RunBackupJob: exception caught', [
                 'job_id' => $jobId,
+                'job_name' => $job->name,
+                'execution_id' => $execution?->id,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             $this->error('Backup failed: '.$e->getMessage());
@@ -123,6 +182,10 @@ class RunBackupJob extends Command
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
+
+            Log::info('RunBackupJob: lock released', [
+                'job_id' => $jobId,
+            ]);
         }
     }
 }

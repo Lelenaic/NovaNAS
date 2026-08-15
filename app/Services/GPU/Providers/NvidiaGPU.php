@@ -49,7 +49,7 @@ class NvidiaGPU implements GPUInterface
      */
     public function getDriverVersion(): ?string
     {
-        if (!$this->isDriverInstalled()) {
+        if (! $this->isDriverInstalled()) {
             return null;
         }
 
@@ -60,7 +60,7 @@ class NvidiaGPU implements GPUInterface
         ]);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return null;
         }
 
@@ -93,7 +93,7 @@ class NvidiaGPU implements GPUInterface
      */
     public function listGpus(): array
     {
-        if (!$this->isDriverInstalled()) {
+        if (! $this->isDriverInstalled()) {
             return [];
         }
 
@@ -101,13 +101,13 @@ class NvidiaGPU implements GPUInterface
         $process = new Process([
             self::NVIDIA_SMI,
             '--query-gpu=index,name,uuid,memory.total,memory.used,memory.free,'
-            . 'utilization.gpu,utilization.memory,temperature.gpu,'
-            . 'power.draw,power.limit,driver_version',
+            .'utilization.gpu,utilization.memory,temperature.gpu,'
+            .'power.draw,power.limit,driver_version',
             '--format=csv,noheader,nounits',
         ]);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return [];
         }
 
@@ -157,7 +157,7 @@ class NvidiaGPU implements GPUInterface
     /**
      * Add optional GPU information that may not be available on all GPUs.
      *
-     * @param array<int, array> $gpus
+     * @param  array<int, array>  $gpus
      * @return array<int, array>
      */
     protected function addOptionalGpuInfo(array $gpus): array
@@ -256,14 +256,14 @@ class NvidiaGPU implements GPUInterface
         ]);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return 'Unknown';
         }
 
         $output = trim($process->getOutput());
         $lines = explode("\n", $output);
 
-        if (empty($lines)) {
+        if ($lines === []) {
             return 'Unknown';
         }
 

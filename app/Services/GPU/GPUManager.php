@@ -27,7 +27,7 @@ class GPUManager extends Manager
      */
     protected function createNvidiaDriver(): GPUInterface
     {
-        return new NvidiaGPU();
+        return new NvidiaGPU;
     }
 
     /**
@@ -77,7 +77,7 @@ class GPUManager extends Manager
     /**
      * Get all GPUs from all available providers.
      *
-     * @return array<string, array<int, array>>
+     * @return array<string, array{display_name: string, gpus: list<array>}>
      */
     public function getAllGpus(): array
     {

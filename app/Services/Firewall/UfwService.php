@@ -119,7 +119,7 @@ class UfwService
     /**
      * Get all firewall rules.
      *
-     * @return array<int, array{id: int, priority: int, action: string, port: string, protocol: string, from: string, to: string, comment: string, ip_version: string}>
+     * @return array<int, array{id: int, priority: int, action: string, direction: string, port: string, protocol: string, from: string, to: string, interface: string, comment: string}>
      */
     public function getRules(): array
     {
@@ -139,7 +139,7 @@ class UfwService
     /**
      * Parse output from 'ufw show added' command.
      *
-     * @return array<int, array{id: int, priority: int, action: string, port: string, protocol: string, from: string, to: string, comment: string, ip_version: string}>
+     * @return array<int, array{id: int, priority: int, action: string, port: string, protocol: string, from: string, to: string, comment: string}>
      */
     protected function parseAddedRules(string $output): array
     {
@@ -515,7 +515,7 @@ class UfwService
     /**
      * Parse UFW status numbered output into structured rule array.
      *
-     * @return array<int, array{id: int, priority: int, action: string, port: string, protocol: string, from: string, to: string, comment: string, ip_version: string}>
+     * @return array<int, array{id: int, priority: int, action: string, direction: string, port: string, protocol: string, from: string, to: string, interface: string, comment: string}>
      */
     protected function parseRules(string $output): array
     {

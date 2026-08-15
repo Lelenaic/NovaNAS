@@ -54,7 +54,7 @@ export function JobsTab() {
         is_enabled: true,
         source_paths: [''],
         exclude_patterns: [],
-        cron_expression: '0 2 * * *',
+        cron_expression: '',
         retention_policy: {
             keep_last: 7,
             keep_daily: 7,
@@ -180,7 +180,7 @@ export function JobsTab() {
             is_enabled: true,
             source_paths: [''],
             exclude_patterns: [],
-            cron_expression: '0 2 * * *',
+            cron_expression: '',
             retention_policy: {
                 keep_last: 7,
                 keep_daily: 7,
@@ -231,6 +231,7 @@ export function JobsTab() {
     const getStatusColor = (status) => {
         switch (status) {
             case 'running': return 'blue';
+            case 'waiting': return 'yellow';
             case 'success': return 'green';
             case 'failed': return 'red';
             default: return 'gray';
@@ -294,7 +295,6 @@ export function JobsTab() {
                                 backgroundColor: theme.colors.dark[6],
                                 borderRadius: '8px',
                                 border: `1px solid ${theme.colors.dark[4]}`,
-                                overflow: 'hidden',
                             }}
                         >
                             <Group
@@ -326,7 +326,7 @@ export function JobsTab() {
                                             color="green"
                                             size="sm"
                                             onClick={(e) => { e.stopPropagation(); handleRun(job.id); }}
-                                            disabled={job.status === 'running'}
+                                            disabled={job.status === 'running' || job.status === 'waiting'}
                                         >
                                             <IconPlayerPlay size={14} />
                                         </ActionIcon>
@@ -365,7 +365,7 @@ export function JobsTab() {
                                 </Group>
                             </Group>
 
-                            <Collapse in={expandedJob === job.id}>
+                            <Collapse expanded={expandedJob === job.id}>
                                 <Box p="md" pt={0} style={{ borderTop: `1px solid ${theme.colors.dark[4]}` }}>
                                     <Group mt="md">
                                         <Box>
@@ -475,8 +475,7 @@ export function JobsTab() {
                         placeholder="0 2 * * *"
                         value={formData.cron_expression}
                         onChange={(e) => setFormData({ ...formData, cron_expression: e.target.value })}
-                        description="e.g., '0 2 * * *' for daily at 2 AM, '*/5 * * * *' for every 5 minutes"
-                        required
+                        description="Leave empty for manual-only jobs. e.g., '0 2 * * *' for daily at 2 AM, '*/5 * * * *' for every 5 minutes"
                     />
 
                     <Select

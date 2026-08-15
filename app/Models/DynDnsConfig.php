@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Contracts\DynDNSProviderInterface;
 use App\Services\DynDNS\DynDNSProviderManager;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,10 +19,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $token
  * @property int $interval_minutes
  * @property bool $is_enabled
- * @property \Carbon\Carbon|null $last_updated_at
+ * @property Carbon|null $last_updated_at
  * @property string|null $last_ip
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class DynDnsConfig extends Model
 {
@@ -61,8 +62,6 @@ class DynDnsConfig extends Model
 
     /**
      * The attributes that should be encrypted.
-     *
-     * @return array<string, string>
      */
     protected function token(): Attribute
     {
@@ -86,8 +85,8 @@ class DynDnsConfig extends Model
     public function getFullDomainAttribute(): string
     {
         return match ($this->provider) {
-            'novanas' => $this->subdomain . '.' . $this->getNovaBaseDomain(),
-            'duckdns' => $this->subdomain . '.duckdns.org',
+            'novanas' => $this->subdomain.'.'.$this->getNovaBaseDomain(),
+            'duckdns' => $this->subdomain.'.duckdns.org',
             default => $this->subdomain,
         };
     }
@@ -112,7 +111,7 @@ class DynDnsConfig extends Model
         $provider = $this->getProviderInstance();
 
         // Check if provider supports registration
-        if (!method_exists($provider, 'register')) {
+        if (! method_exists($provider, 'register')) {
             return [
                 'success' => false,
                 'message' => 'Provider does not support registration.',
@@ -162,8 +161,8 @@ class DynDnsConfig extends Model
     /**
      * Sync configuration changes to the remote provider.
      *
-     * @param string $oldSubdomain The original subdomain before the change
-     * @param array{subdomain?: string, token?: string} $changes The changes to sync
+     * @param  string  $oldSubdomain  The original subdomain before the change
+     * @param  array{subdomain?: string, token?: string}  $changes  The changes to sync
      * @return array{success: bool, message: string}
      */
     public function syncConfig(string $oldSubdomain, array $changes): array
@@ -171,7 +170,7 @@ class DynDnsConfig extends Model
         $provider = $this->getProviderInstance();
 
         // Check if provider supports update
-        if (!method_exists($provider, 'update')) {
+        if (! method_exists($provider, 'update')) {
             return [
                 'success' => false,
                 'message' => 'Provider does not support updates.',
@@ -184,7 +183,7 @@ class DynDnsConfig extends Model
         ];
 
         // If subdomain is being changed, pass it as new_subdomain
-        if (!empty($changes['subdomain'])) {
+        if (! empty($changes['subdomain'])) {
             $updateData['new_subdomain'] = $changes['subdomain'];
         }
 
@@ -203,7 +202,7 @@ class DynDnsConfig extends Model
         $provider = $this->getProviderInstance();
 
         // Check if provider supports delete
-        if (!method_exists($provider, 'delete')) {
+        if (! method_exists($provider, 'delete')) {
             return [
                 'success' => false,
                 'message' => 'Provider does not support deletion.',

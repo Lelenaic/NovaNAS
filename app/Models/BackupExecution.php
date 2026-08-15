@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Backup Execution Model
@@ -129,13 +130,15 @@ class BackupExecution extends Model
      */
     public static function pruneForJob(string $jobId, int $keep = 100): void
     {
-        $ids = self::where('backup_job_id', $jobId)
+        $keepIds = self::where('backup_job_id', $jobId)
             ->orderByDesc('started_at')
-            ->skip($keep)
+            ->limit($keep)
             ->pluck('id');
 
-        if ($ids->isNotEmpty()) {
-            self::whereIn('id', $ids)->delete();
+        if ($keepIds->isNotEmpty()) {
+            self::where('backup_job_id', $jobId)
+                ->whereNotIn('id', $keepIds)
+                ->delete();
         }
     }
 }

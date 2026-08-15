@@ -54,11 +54,38 @@ class BackupJobExecution implements ShouldQueue
             return;
         }
 
+        Log::info('BackupJobExecution: starting', [
+            'job_id' => $this->jobId,
+            'job_name' => $job->name,
+            'execution_id' => $this->executionId,
+            'queue' => $this->queue,
+            'job_status' => $job->status,
+            'source_paths' => $job->source_paths,
+        ]);
+
+        $job->update(['status' => 'running']);
+
         try {
-            $this->info("Starting backup for job '{$job->name}'...");
+            Log::info("Starting backup for job '{$job->name}'...", [
+                'job_id' => $this->jobId,
+                'execution_id' => $this->executionId,
+            ]);
 
             // Run the backup
+            Log::info('BackupJobExecution: calling ResticService::backup()', [
+                'job_id' => $this->jobId,
+                'execution_id' => $this->executionId,
+            ]);
+
             $result = $resticService->backup($job, $execution);
+
+            Log::info('BackupJobExecution: ResticService::backup() returned', [
+                'job_id' => $this->jobId,
+                'execution_id' => $this->executionId,
+                'success' => $result['success'],
+                'message' => $result['message'] ?? null,
+                'snapshot_id' => $result['snapshot_id'] ?? null,
+            ]);
 
             if ($result['success']) {
                 // Apply retention policy
@@ -67,8 +94,19 @@ class BackupJobExecution implements ShouldQueue
                     $job->retention_policy ?? []
                 );
 
+                Log::info('BackupJobExecution: retention policy result', [
+                    'job_id' => $this->jobId,
+                    'execution_id' => $this->executionId,
+                    'success' => $forgetResult['success'],
+                    'message' => $forgetResult['message'] ?? null,
+                ]);
+
                 if (! $forgetResult['success']) {
-                    $this->warn("Retention policy failed: {$forgetResult['message']}");
+                    Log::warning('BackupJobExecution: retention policy failed', [
+                        'job_id' => $this->jobId,
+                        'execution_id' => $this->executionId,
+                        'message' => $forgetResult['message'],
+                    ]);
                 }
 
                 $execution->markSuccess([
@@ -81,7 +119,10 @@ class BackupJobExecution implements ShouldQueue
                     'last_error' => null,
                 ]);
 
-                $this->info('Backup completed successfully.');
+                Log::info('BackupJobExecution: backup completed successfully', [
+                    'job_id' => $this->jobId,
+                    'execution_id' => $this->executionId,
+                ]);
             } else {
                 $execution->markFailed($result['message']);
 
@@ -90,7 +131,11 @@ class BackupJobExecution implements ShouldQueue
                     'last_error' => $result['message'],
                 ]);
 
-                $this->error("Backup failed: {$result['message']}");
+                Log::error('BackupJobExecution: backup failed', [
+                    'job_id' => $this->jobId,
+                    'execution_id' => $this->executionId,
+                    'message' => $result['message'],
+                ]);
             }
 
             // Update next run time
@@ -99,15 +144,21 @@ class BackupJobExecution implements ShouldQueue
             // Prune old executions
             BackupExecution::pruneForJob($this->jobId, keep: 100);
 
-            Log::info("Backup job '{$job->name}' completed.", [
+            Log::info('BackupJobExecution: completed', [
                 'job_id' => $this->jobId,
+                'job_name' => $job->name,
                 'execution_id' => $execution->id,
                 'status' => $execution->status,
+                'duration_seconds' => $execution->duration_seconds,
             ]);
         } catch (\Exception $e) {
-            Log::error("Backup job '{$job->name}' failed with exception.", [
+            Log::error('BackupJobExecution: exception caught', [
                 'job_id' => $this->jobId,
+                'job_name' => $job->name,
+                'execution_id' => $this->executionId,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             $execution->markFailed($e->getMessage());
@@ -131,5 +182,18 @@ class BackupJobExecution implements ShouldQueue
             'execution_id' => $this->executionId,
             'error' => $exception->getMessage(),
         ]);
+
+        $execution = BackupExecution::find($this->executionId);
+        if ($execution && $execution->status === 'running') {
+            $execution->markFailed($exception->getMessage());
+        }
+
+        $job = BackupJob::find($this->jobId);
+        if ($job && in_array($job->status, ['running', 'waiting'])) {
+            $job->update([
+                'status' => 'failed',
+                'last_error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

@@ -346,7 +346,10 @@ class StorageService
     public function zfs(): ?ZfsStorage
     {
         if (isset($this->backends['zfs']) && $this->backends['zfs']->isAvailable()) {
-            return $this->backends['zfs'];
+            /** @var ZfsStorage $backend */
+            $backend = $this->backends['zfs'];
+
+            return $backend;
         }
 
         return null;

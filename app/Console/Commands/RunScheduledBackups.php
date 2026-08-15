@@ -66,7 +66,7 @@ class RunScheduledBackups extends Command
             'status' => 'running',
         ]);
 
-        $job->update(['status' => 'running']);
+        $job->update(['status' => 'waiting']);
 
         // Launch in tmux
         $command = sprintf(
