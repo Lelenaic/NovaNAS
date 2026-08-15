@@ -177,7 +177,7 @@ class UserController extends Controller
 
         // Generate invitation token
         $token = Str::uuid()->toString();
-        $expiresInHours = (int) $this->settingsService->get('users.invitation_lifetime_hours', 48);
+        $expiresInHours = (int) $this->settingsService->get('users.invitation_lifetime_hours', '48');
         $expiresAt = now()->addHours($expiresInHours);
 
         // Get the home directory base path

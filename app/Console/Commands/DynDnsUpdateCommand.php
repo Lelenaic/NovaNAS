@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\DynDnsConfig;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Command to update DynDNS configurations.
@@ -37,7 +36,7 @@ class DynDnsUpdateCommand extends Command
         $updateAll = $this->option('all');
 
         if ($configId) {
-            return $this->updateSingle($configId);
+            return $this->updateSingle((int) $configId);
         }
 
         if ($updateAll) {
@@ -58,7 +57,7 @@ class DynDnsUpdateCommand extends Command
     {
         $config = DynDnsConfig::find($id);
 
-        if (!$config) {
+        if (! $config) {
             $this->error("DynDNS configuration with ID {$id} not found.");
 
             return self::FAILURE;
@@ -69,12 +68,12 @@ class DynDnsUpdateCommand extends Command
         $result = $config->updateDns();
 
         if ($result['success']) {
-            $this->info('✓ ' . $result['message']);
+            $this->info('✓ '.$result['message']);
 
             return self::SUCCESS;
         }
 
-        $this->error('✗ ' . $result['message']);
+        $this->error('✗ '.$result['message']);
 
         return self::FAILURE;
     }
@@ -98,7 +97,7 @@ class DynDnsUpdateCommand extends Command
         $failureCount = 0;
 
         foreach ($configs as $config) {
-            $this->line("");
+            $this->line('');
             $this->line("Updating: {$config->name} ({$config->full_domain})");
 
             $result = $config->updateDns();
@@ -112,7 +111,7 @@ class DynDnsUpdateCommand extends Command
             }
         }
 
-        $this->line("");
+        $this->line('');
         $this->info("Update complete: {$successCount} success, {$failureCount} failure(s).");
 
         return $failureCount > 0 ? self::FAILURE : self::SUCCESS;

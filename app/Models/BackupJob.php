@@ -35,11 +35,12 @@ use Illuminate\Support\Carbon;
  * @property string $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Collection<int, \App\Models\BackupExecution> $executions
+ * @property-read Collection<int, BackupExecution> $executions
  * @property-read int|null $executions_count
- * @property-read \App\Models\BackupExecution|null $latestExecution
- * @property-read \App\Models\BackupRepository $repository
- * @property-read \App\Models\User $user
+ * @property-read BackupExecution|null $latestExecution
+ * @property-read BackupRepository $repository
+ * @property-read User $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob due()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob enabled()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob newModelQuery()
@@ -64,6 +65,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereTags($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BackupJob whereUserId($value)
+ *
  * @mixin \Eloquent
  */
 class BackupJob extends Model

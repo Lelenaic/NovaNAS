@@ -235,7 +235,7 @@ class UfwService
     /**
      * Add a new rule to UFW.
      *
-     * @param  array{action: string, direction?: string, port: string, protocol: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string}  $rule
+     * @param  array{action: string, direction?: string, port?: string, protocol?: string, from: string, to: string, interface?: string, comment?: string, ip_version?: string}  $rule
      * @return array{success: bool, message: string}
      */
     public function addRule(array $rule): array

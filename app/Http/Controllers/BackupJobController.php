@@ -9,6 +9,7 @@ use App\Models\BackupExecution;
 use App\Models\BackupJob;
 use App\Services\Backup\BackupSchedulerService;
 use App\Services\Backup\ResticService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -188,6 +189,7 @@ class BackupJobController extends Controller
      */
     public function executions(BackupJob $job): JsonResponse
     {
+        /** @var Collection<int, BackupExecution> $executions */
         $executions = $job->executions()
             ->orderByDesc('started_at')
             ->limit(100)
