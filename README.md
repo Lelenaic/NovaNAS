@@ -50,7 +50,7 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 - **RAID Management**: Configure and monitor storage pools
 - **Shared Folders**: SMB/CIFS and NFS sharing with access controls
 - **File Manager**: Web-based file browser with upload/download capabilities
-- **Backup Solutions**: Automated backup to external drives or cloud storage (coming soon)
+- **Backup Solutions**: Automated backup to external drives or cloud storage
 
 ### Application Management
 - **Docker Integration**: Install and manage Docker containers through the UI
