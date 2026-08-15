@@ -12,9 +12,7 @@ use Illuminate\Http\Request;
  */
 class FirewallController extends Controller
 {
-    public function __construct(public UfwService $ufwService)
-    {
-    }
+    public function __construct(public UfwService $ufwService) {}
 
     /**
      * Get firewall status and rules.
@@ -173,9 +171,9 @@ class FirewallController extends Controller
 
         // First delete the old rule
         $deleteResult = $this->ufwService->deleteRule($priority);
-        if (!$deleteResult['success']) {
+        if (! $deleteResult['success']) {
             return response()->json([
-                'message' => 'Failed to delete old rule: ' . $deleteResult['message'],
+                'message' => 'Failed to delete old rule: '.$deleteResult['message'],
                 'error' => true,
             ], 500);
         }
@@ -211,9 +209,9 @@ class FirewallController extends Controller
 
         return response()->json([
             'message' => $addResult['success']
-                ? 'Rule updated but position changed: ' . $addResult['message']
-                : 'Failed to update rule: ' . ($insertResult['message'] ?? 'Unknown error'),
-            'error' => !$addResult['success'],
+                ? 'Rule updated but position changed: '.$addResult['message']
+                : 'Failed to update rule: '.$insertResult['message'],
+            'error' => ! $addResult['success'],
             'rules' => $this->ufwService->getRules(),
         ], $addResult['success'] ? 200 : 500);
     }
@@ -249,7 +247,7 @@ class FirewallController extends Controller
             }
         }
 
-        if (!$ruleToMove) {
+        if (! $ruleToMove) {
             return response()->json([
                 'message' => 'Rule not found at specified position',
             ], 404);
@@ -257,9 +255,9 @@ class FirewallController extends Controller
 
         // Delete the rule from its current position
         $deleteResult = $this->ufwService->deleteRule($fromPriority);
-        if (!$deleteResult['success']) {
+        if (! $deleteResult['success']) {
             return response()->json([
-                'message' => 'Failed to remove rule from original position: ' . $deleteResult['message'],
+                'message' => 'Failed to remove rule from original position: '.$deleteResult['message'],
             ], 500);
         }
 
@@ -270,13 +268,13 @@ class FirewallController extends Controller
         // Prepare rule data
         $ruleData = [
             'action' => $ruleToMove['action'],
-            'direction' => $ruleToMove['direction'] ?? 'IN',
+            'direction' => $ruleToMove['direction'],
             'port' => $ruleToMove['port'],
             'protocol' => $ruleToMove['protocol'],
             'from' => $ruleToMove['from'],
             'to' => $ruleToMove['to'],
-            'interface' => $ruleToMove['interface'] ?? null,
-            'comment' => $ruleToMove['comment'] ?? null,
+            'interface' => $ruleToMove['interface'],
+            'comment' => $ruleToMove['comment'],
         ];
 
         // If moving to a position beyond current rules, use addRule (appends to end)
@@ -295,7 +293,7 @@ class FirewallController extends Controller
             $insertResult = $this->ufwService->insertRule($insertPosition, $ruleData);
 
             // If insert failed, try adding at the end
-            if (!$insertResult['success']) {
+            if (! $insertResult['success']) {
                 $insertResult = $this->ufwService->addRule($ruleData);
             }
         }
@@ -312,17 +310,17 @@ class FirewallController extends Controller
         // If insert failed, try to add it back at original position
         $this->ufwService->addRule([
             'action' => $ruleToMove['action'],
-            'direction' => $ruleToMove['direction'] ?? 'IN',
+            'direction' => $ruleToMove['direction'],
             'port' => $ruleToMove['port'],
             'protocol' => $ruleToMove['protocol'],
             'from' => $ruleToMove['from'],
             'to' => $ruleToMove['to'],
-            'interface' => $ruleToMove['interface'] ?? null,
-            'comment' => $ruleToMove['comment'] ?? null,
+            'interface' => $ruleToMove['interface'],
+            'comment' => $ruleToMove['comment'],
         ]);
 
         return response()->json([
-            'message' => 'Failed to reorder rule: ' . $insertResult['message'],
+            'message' => 'Failed to reorder rule: '.$insertResult['message'],
             'error' => true,
         ], 500);
     }

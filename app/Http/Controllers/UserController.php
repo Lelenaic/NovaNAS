@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class UserController extends Controller
 {
@@ -343,7 +344,7 @@ class UserController extends Controller
         $invitationUrl = "{$appUrl}/invitation/{$user->invitation_token}";
 
         // Get the current admin user's name
-        $invitedByName = auth()->user()?->name ?? config('app.name', 'NovaNAS');
+        $invitedByName = auth()->user()->name ?? config('app.name', 'NovaNAS');
 
         try {
             $emailService->configureMailer();
@@ -375,7 +376,7 @@ class UserController extends Controller
     /**
      * Show the set password page for invited users.
      */
-    public function showSetPassword(string $token): \Inertia\Response
+    public function showSetPassword(string $token): Response
     {
         $user = User::where('invitation_token', $token)->first();
 

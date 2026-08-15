@@ -95,13 +95,11 @@ class ResticService
             $resticArgs = $this->buildBackupArgs($uri, $job);
             $command = $this->buildResticCommand($uri, null, $resticArgs);
 
-            $logFile = $this->getLogPath($execution);
             $command .= ' 2>&1';
 
             $result = Process::env($env)->run($command);
 
             $output = $result->output();
-            file_put_contents($logFile, $output);
             $execution->appendLogs($output);
 
             if ($result->successful()) {
@@ -410,20 +408,6 @@ class ResticService
         if (file_exists($passwordFile)) {
             @unlink($passwordFile);
         }
-    }
-
-    /**
-     * Get the log file path for an execution.
-     */
-    protected function getLogPath(BackupExecution $execution): string
-    {
-        $dir = storage_path('logs/backup');
-
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        return "{$dir}/{$execution->id}.log";
     }
 
     /**

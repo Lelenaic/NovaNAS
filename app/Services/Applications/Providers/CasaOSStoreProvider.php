@@ -41,7 +41,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
 
     public function getMaintainer(): ?string
     {
-        return $this->getStoreConfig()['maintainer'] ?? null;
+        return $this->getStoreConfig()['maintainer'];
     }
 
     public function getUrl(): ?string
@@ -59,9 +59,9 @@ class CasaOSStoreProvider implements StoreProviderInterface
         $categories = [];
 
         foreach ($index as $entry) {
-            $cat = $entry['category'] ?? null;
+            $cat = $entry['category'];
 
-            if ($cat !== null && ! isset($seen[$cat])) {
+            if (! isset($seen[$cat])) {
                 $seen[$cat] = true;
                 $categories[] = [
                     'id' => $cat,
@@ -84,11 +84,11 @@ class CasaOSStoreProvider implements StoreProviderInterface
         $apps = [];
 
         foreach ($index as $entry) {
-            if ($category !== null && ($entry['category'] ?? '') !== $category) {
+            if ($category !== null && ($entry['category']) !== $category) {
                 continue;
             }
 
-            $title = $entry['title'] ?? '';
+            $title = $entry['title'];
             $tagline = $entry['tagline'] ?? null;
 
             if ($search !== null) {
@@ -103,13 +103,13 @@ class CasaOSStoreProvider implements StoreProviderInterface
                 'id' => $entry['id'],
                 'title' => $title,
                 'tagline' => $tagline,
-                'category' => $entry['category'] ?? '',
-                'version' => $entry['version'] ?? '',
+                'category' => $entry['category'],
+                'version' => $entry['version'],
                 'author' => $entry['author'] ?? null,
                 'developer' => $entry['developer'] ?? null,
                 'icon' => $this->resolveAssetUrl($entry['icon'] ?? null),
                 'thumbnail' => $this->resolveAssetUrl($entry['thumbnail'] ?? null),
-                'architectures' => $entry['architectures'] ?? [],
+                'architectures' => $entry['architectures'],
             ];
         }
 
@@ -130,7 +130,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
         // Icon and thumbnail are in the index, not in meta.json
         $indexEntry = null;
         foreach ($this->getIndex() as $entry) {
-            if (($entry['id'] ?? '') === $appId) {
+            if (($entry['id']) === $appId) {
                 $indexEntry = $entry;
                 break;
             }

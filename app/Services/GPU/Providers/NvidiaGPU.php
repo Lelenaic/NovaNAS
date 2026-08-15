@@ -261,11 +261,12 @@ class NvidiaGPU implements GPUInterface
         }
 
         $output = trim($process->getOutput());
-        $lines = explode("\n", $output);
 
-        if ($lines === []) {
+        if ($output === '') {
             return 'Unknown';
         }
+
+        $lines = explode("\n", $output);
 
         // Convert compute capability to CUDA version (approximate)
         $computeCap = trim($lines[0]);

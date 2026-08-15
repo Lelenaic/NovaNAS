@@ -104,6 +104,7 @@ class DockerSettingsController extends Controller
             'seconds' => $intervalValue,
             'minutes' => $intervalValue * 60,
             'hours' => $intervalValue * 3600,
+            default => $intervalValue,
         };
 
         // Check if container exists and has correct settings
@@ -114,6 +115,7 @@ class DockerSettingsController extends Controller
                 'seconds' => $currentValue,
                 'minutes' => $currentValue * 60,
                 'hours' => $currentValue * 3600,
+                default => $currentValue,
             };
 
             // If settings match, do nothing

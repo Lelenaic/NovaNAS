@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Contracts\DynDNSProviderInterface;
 use App\Services\DynDNS\DynDNSProviderManager;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read string $full_domain
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig enabled()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig forProvider(string $provider)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig newModelQuery()
@@ -40,6 +40,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereSubdomain($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereToken($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class DynDnsConfig extends Model
@@ -128,14 +129,6 @@ class DynDnsConfig extends Model
     {
         $provider = $this->getProviderInstance();
 
-        // Check if provider supports registration
-        if (! method_exists($provider, 'register')) {
-            return [
-                'success' => false,
-                'message' => 'Provider does not support registration.',
-            ];
-        }
-
         $result = $provider->register([
             'subdomain' => $this->subdomain,
         ]);
@@ -187,14 +180,6 @@ class DynDnsConfig extends Model
     {
         $provider = $this->getProviderInstance();
 
-        // Check if provider supports update
-        if (! method_exists($provider, 'update')) {
-            return [
-                'success' => false,
-                'message' => 'Provider does not support updates.',
-            ];
-        }
-
         $updateData = [
             'subdomain' => $oldSubdomain,
             'token' => $this->token,
@@ -218,14 +203,6 @@ class DynDnsConfig extends Model
     public function deleteDns(): array
     {
         $provider = $this->getProviderInstance();
-
-        // Check if provider supports delete
-        if (! method_exists($provider, 'delete')) {
-            return [
-                'success' => false,
-                'message' => 'Provider does not support deletion.',
-            ];
-        }
 
         $result = $provider->delete([
             'subdomain' => $this->subdomain,

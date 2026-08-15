@@ -213,12 +213,9 @@ class BackupJobController extends Controller
      */
     public function logs(BackupJob $job, BackupExecution $execution): JsonResponse
     {
-        $logFile = storage_path("logs/backup/{$execution->id}.log");
-        $logs = file_exists($logFile) ? file_get_contents($logFile) : ($execution->logs ?? '');
-
         return response()->json([
             'status' => $execution->status,
-            'logs' => $logs,
+            'logs' => $execution->logs ?? '',
             'bytes_processed' => $execution->bytes_processed,
             'files_processed' => $execution->files_processed,
         ]);
@@ -236,7 +233,7 @@ class BackupJobController extends Controller
         return [
             'id' => $job->id,
             'backup_repository_id' => $job->backup_repository_id,
-            'repository_name' => $job->repository?->name,
+            'repository_name' => $job->repository->name,
             'name' => $job->name,
             'is_enabled' => $job->is_enabled,
             'source_paths' => $job->source_paths,

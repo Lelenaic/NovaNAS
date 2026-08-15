@@ -90,28 +90,28 @@ class NovaNasApiService
                 ['name' => 'body', 'contents' => $data['body']],
             ];
 
-            if (isset($data['debian_version']) && $data['debian_version'] !== null) {
+            if (isset($data['debian_version'])) {
                 $multipart[] = ['name' => 'debian_version', 'contents' => $data['debian_version']];
             }
-            if (isset($data['novanas_version']) && $data['novanas_version'] !== null) {
+            if (isset($data['novanas_version'])) {
                 $multipart[] = ['name' => 'novanas_version', 'contents' => $data['novanas_version']];
             }
-            if (isset($data['storage_info']) && $data['storage_info'] !== null) {
+            if (isset($data['storage_info'])) {
                 foreach ($data['storage_info'] as $index => $info) {
                     $multipart[] = ['name' => "storage_info[{$index}]", 'contents' => $info];
                 }
             }
-            if (isset($data['installed_software']) && $data['installed_software'] !== null) {
+            if (isset($data['installed_software'])) {
                 foreach ($data['installed_software'] as $index => $software) {
                     $multipart[] = ['name' => "installed_software[{$index}]", 'contents' => $software];
                 }
             }
-            if (isset($data['apt_updates_count']) && $data['apt_updates_count'] !== null) {
+            if (isset($data['apt_updates_count'])) {
                 $multipart[] = ['name' => 'apt_updates_count', 'contents' => (string) $data['apt_updates_count']];
             }
 
             // Handle file attachments (max 10)
-            if (isset($data['attachments']) && is_array($data['attachments'])) {
+            if (isset($data['attachments'])) {
                 foreach (array_slice($data['attachments'], 0, 10) as $attachment) {
                     $multipart[] = [
                         'name' => 'attachments[]',
@@ -208,7 +208,7 @@ class NovaNasApiService
                 ['name' => 'body', 'contents' => $data['body']],
             ];
 
-            if (isset($data['attachments']) && is_array($data['attachments'])) {
+            if (isset($data['attachments'])) {
                 foreach (array_slice($data['attachments'], 0, 10) as $attachment) {
                     $multipart[] = [
                         'name' => 'attachments[]',

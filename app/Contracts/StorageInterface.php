@@ -30,7 +30,9 @@ interface StorageInterface
      *     allocated: int,
      *     free: int,
      *     health: string,
-     *     mountpoint: string|null
+     *     mountpoint: string|null,
+     *     isSystem: bool|null,
+     *     device: string|null
      * }>
      */
     public function listPools(): array;

@@ -107,7 +107,7 @@ class RunBackupJob extends Command
                 'job_id' => $jobId,
                 'execution_id' => $execution->id,
                 'success' => $result['success'],
-                'message' => $result['message'] ?? null,
+                'message' => $result['message'],
                 'snapshot_id' => $result['snapshot_id'] ?? null,
             ]);
 
@@ -122,7 +122,7 @@ class RunBackupJob extends Command
                     'job_id' => $jobId,
                     'execution_id' => $execution->id,
                     'success' => $forgetResult['success'],
-                    'message' => $forgetResult['message'] ?? null,
+                    'message' => $forgetResult['message'],
                 ]);
 
                 if (! $forgetResult['success']) {

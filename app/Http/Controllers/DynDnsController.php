@@ -61,7 +61,7 @@ class DynDnsController extends Controller
             // Delete the config if registration failed
             $config->delete();
 
-            $statusCode = $registrationResult['error_code'] ?? 400;
+            $statusCode = 400;
 
             return response()->json([
                 'message' => $registrationResult['message'],

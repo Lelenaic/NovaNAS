@@ -252,7 +252,7 @@ class DockerComposeController extends Controller
         $composeFile = $this->getComposeFilePath($name);
         $composeContent = null;
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             if (is_readable($composeFile)) {
                 $composeContent = File::get($composeFile);
             } else {
@@ -427,7 +427,7 @@ class DockerComposeController extends Controller
 
         $args = ['compose'];
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $args[] = '-f';
             $args[] = $composeFile;
         }
@@ -449,7 +449,7 @@ class DockerComposeController extends Controller
             ], 500);
         }
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $projectDir = dirname($composeFile);
             $projectsStorage = $this->getProjectsStoragePath();
 
@@ -475,7 +475,7 @@ class DockerComposeController extends Controller
 
         $args = ['compose'];
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $args[] = '-f';
             $args[] = $composeFile;
         }
@@ -508,7 +508,7 @@ class DockerComposeController extends Controller
 
         $args = ['compose'];
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $args[] = '-f';
             $args[] = $composeFile;
         }
@@ -540,7 +540,7 @@ class DockerComposeController extends Controller
 
         $args = ['compose'];
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $args[] = '-f';
             $args[] = $composeFile;
         }
@@ -572,7 +572,7 @@ class DockerComposeController extends Controller
 
         $args = ['compose'];
 
-        if ($composeFile && File::exists($composeFile)) {
+        if (File::exists($composeFile)) {
             $args[] = '-f';
             $args[] = $composeFile;
         }

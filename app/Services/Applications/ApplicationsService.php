@@ -6,6 +6,7 @@ use App\Contracts\StoreProviderInterface;
 use App\Models\DesktopApp;
 use App\Models\InstalledApplication;
 use App\Services\SettingsService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -19,8 +20,6 @@ use Illuminate\Support\Facades\Request;
  */
 class ApplicationsService
 {
-    private const COMPOSE_DIR = 'applications';
-
     public function __construct(
         protected StoreManager $storeManager,
         protected SettingsService $settings,
@@ -367,7 +366,7 @@ class ApplicationsService
     /**
      * Get all installed applications.
      *
-     * @return array<int, array{id: int, app_id: string, store_provider: string, title: string, tagline: string|null, category: string, installed_version: string, author: string|null, developer: string|null, icon: string|null, status: string, installed_at: \Carbon\Carbon}>
+     * @return array<int, array{id: int, app_id: string, store_provider: string, title: string, tagline: string|null, category: string, installed_version: string, author: string|null, developer: string|null, icon: string|null, status: string, installed_at: Carbon}>
      */
     public function getInstalledApps(): array
     {

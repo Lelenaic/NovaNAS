@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\LinuxUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -11,9 +10,7 @@ use Symfony\Component\Process\Process;
 
 class TerminalController extends Controller
 {
-    public function __construct(
-        private LinuxUserService $linuxUserService
-    ) {}
+    public function __construct() {}
 
     /**
      * Create a new terminal session.

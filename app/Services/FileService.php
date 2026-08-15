@@ -34,7 +34,7 @@ class FileService
         $items = [];
 
         foreach ($lines as $entry) {
-            if ($entry === '' || $entry === './' || $entry === '../') {
+            if ($entry === './' || $entry === '../') {
                 continue;
             }
 
@@ -81,7 +81,7 @@ class FileService
         $items = [];
 
         foreach ($lines as $entry) {
-            if ($entry === '' || $entry === './' || $entry === '../') {
+            if ($entry === './' || $entry === '../') {
                 continue;
             }
 

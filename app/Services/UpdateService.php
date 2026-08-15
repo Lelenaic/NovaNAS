@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\SystemUpdateJob;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -73,11 +76,11 @@ class UpdateService
         $jobId = 'upgrade_'.time().'_'.uniqid();
 
         try {
-            $job = new \App\Jobs\SystemUpdateJob('upgrade', $jobId);
-            \Illuminate\Support\Facades\Bus::dispatch($job);
+            $job = new SystemUpdateJob('upgrade', $jobId);
+            Bus::dispatch($job);
 
             // Store job info in cache for tracking
-            \Illuminate\Support\Facades\Cache::put("upgrade_job_{$jobId}", [
+            Cache::put("upgrade_job_{$jobId}", [
                 'job_id' => $jobId,
                 'started_at' => now(),
                 'operation' => 'upgrade',
@@ -107,7 +110,7 @@ class UpdateService
         $jobCacheKey = "upgrade_job_{$jobId}";
         $resultCacheKey = "job_result_{$jobId}";
 
-        $jobData = \Illuminate\Support\Facades\Cache::get($jobCacheKey);
+        $jobData = Cache::get($jobCacheKey);
 
         if (! $jobData) {
             return [
@@ -118,12 +121,12 @@ class UpdateService
         }
 
         // Check if job result is available
-        $result = \Illuminate\Support\Facades\Cache::get($resultCacheKey);
+        $result = Cache::get($resultCacheKey);
 
         if ($result) {
             // Job completed - clean up and return result
-            \Illuminate\Support\Facades\Cache::forget($jobCacheKey);
-            \Illuminate\Support\Facades\Cache::forget($resultCacheKey);
+            Cache::forget($jobCacheKey);
+            Cache::forget($resultCacheKey);
 
             $output = $result['success']
                 ? 'System upgrade completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
@@ -205,9 +208,9 @@ class UpdateService
         // Store in database/cache for persistence
         $key = "app_badge_{$appIdentifier}";
         if ($count > 0) {
-            \Illuminate\Support\Facades\Cache::put($key, $count, now()->addDays(7)); // 7 days expiry
+            Cache::put($key, $count, now()->addDays(7)); // 7 days expiry
         } else {
-            \Illuminate\Support\Facades\Cache::forget($key);
+            Cache::forget($key);
         }
     }
 
@@ -221,7 +224,7 @@ class UpdateService
     {
         $key = "app_badge_{$appIdentifier}";
 
-        return \Illuminate\Support\Facades\Cache::get($key, 0);
+        return Cache::get($key, 0);
     }
 
     /**
@@ -234,11 +237,11 @@ class UpdateService
         $jobId = 'check_'.time().'_'.uniqid();
 
         try {
-            $job = new \App\Jobs\SystemUpdateJob('check', $jobId);
-            \Illuminate\Support\Facades\Bus::dispatch($job);
+            $job = new SystemUpdateJob('check', $jobId);
+            Bus::dispatch($job);
 
             // Store job info in cache for tracking
-            \Illuminate\Support\Facades\Cache::put("check_job_{$jobId}", [
+            Cache::put("check_job_{$jobId}", [
                 'job_id' => $jobId,
                 'started_at' => now(),
                 'operation' => 'check',
@@ -268,7 +271,7 @@ class UpdateService
         $jobCacheKey = "check_job_{$jobId}";
         $resultCacheKey = "job_result_{$jobId}";
 
-        $jobData = \Illuminate\Support\Facades\Cache::get($jobCacheKey);
+        $jobData = Cache::get($jobCacheKey);
 
         if (! $jobData) {
             return [
@@ -279,12 +282,12 @@ class UpdateService
         }
 
         // Check if job result is available
-        $result = \Illuminate\Support\Facades\Cache::get($resultCacheKey);
+        $result = Cache::get($resultCacheKey);
 
         if ($result) {
             // Job completed - clean up and return result
-            \Illuminate\Support\Facades\Cache::forget($jobCacheKey);
-            \Illuminate\Support\Facades\Cache::forget($resultCacheKey);
+            Cache::forget($jobCacheKey);
+            Cache::forget($resultCacheKey);
 
             $output = $result['success']
                 ? 'Update check completed successfully at '.now()->format('Y-m-d H:i:s')."\n"
@@ -350,7 +353,7 @@ class UpdateService
                 $lines = explode("\n", trim($output));
 
                 // Remove header line if present
-                if (count($lines) > 0 && str_contains($lines[0], 'Listing...')) {
+                if (str_contains($lines[0], 'Listing...')) {
                     array_shift($lines);
                 }
 

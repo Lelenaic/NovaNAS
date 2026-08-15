@@ -83,7 +83,7 @@ class BackupJobExecution implements ShouldQueue
                 'job_id' => $this->jobId,
                 'execution_id' => $this->executionId,
                 'success' => $result['success'],
-                'message' => $result['message'] ?? null,
+                'message' => $result['message'],
                 'snapshot_id' => $result['snapshot_id'] ?? null,
             ]);
 
@@ -98,7 +98,7 @@ class BackupJobExecution implements ShouldQueue
                     'job_id' => $this->jobId,
                     'execution_id' => $this->executionId,
                     'success' => $forgetResult['success'],
-                    'message' => $forgetResult['message'] ?? null,
+                    'message' => $forgetResult['message'],
                 ]);
 
                 if (! $forgetResult['success']) {

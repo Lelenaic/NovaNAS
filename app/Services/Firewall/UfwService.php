@@ -453,7 +453,7 @@ class UfwService
         }
 
         // Action
-        $action = strtolower($rule['action'] ?? 'allow');
+        $action = strtolower($rule['action']);
         $parts[] = $action;
 
         // Direction (in/out) - only needed for interface or outgoing rules
@@ -478,8 +478,8 @@ class UfwService
         }
 
         // Port and Protocol
-        $port = $rule['port'] ?? '';
-        $protocol = strtolower($rule['protocol'] ?? 'any');
+        $port = $rule['port'];
+        $protocol = strtolower($rule['protocol']);
 
         if (! empty($port)) {
             if ($protocol !== 'any') {

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -296,7 +297,7 @@ class SambaService
      */
     public function updateShare(string $originalName, array $config): bool
     {
-        \Illuminate\Support\Facades\Log::info('[updateShare] Called with originalName: '.$originalName.', config: '.json_encode($config));
+        Log::info('[updateShare] Called with originalName: '.$originalName.', config: '.json_encode($config));
 
         $shares = $this->getShares();
         $shareIndex = null;
@@ -332,30 +333,20 @@ class SambaService
 
         // Merge config - always include all fields from the request
         $currentShare = $shares[$shareIndex];
-        \Illuminate\Support\Facades\Log::info('[updateShare] Current share before merge: '.json_encode($currentShare));
+        Log::info('[updateShare] Current share before merge: '.json_encode($currentShare));
 
-        // Keys that are explicitly provided (even if empty/null) should be updated
-        // This allows clearing fields like 'valid users' by setting them to empty string
-        $explicitKeys = ['valid users', 'path', 'comment', 'guest', 'user_permissions'];
-
+        // Keys provided in the config (even if empty/null) are updated,
+        // allowing fields to be explicitly cleared by setting them to an empty string.
         foreach ($config as $key => $value) {
             if ($key !== 'name' && array_key_exists($key, $currentShare)) {
                 // For fields that can be explicitly cleared (like valid users),
-                // we update if the key was explicitly provided in the config
-                if (in_array($key, $explicitKeys, true)) {
-                    // If value is null or empty, set to empty string to clear the field
-                    // Otherwise use the provided value
-                    $currentShare[$key] = ($value === null || $value === '') ? '' : $value;
-                } else {
-                    // For other fields, preserve existing value if incoming is null
-                    if ($value !== null && $value !== '') {
-                        $currentShare[$key] = $value;
-                    }
-                }
+                // update when the key was explicitly provided in the config.
+                // If value is null or empty, set to empty string to clear the field.
+                $currentShare[$key] = ($value === null || $value === '') ? '' : $value;
             }
         }
 
-        \Illuminate\Support\Facades\Log::info('[updateShare] Current share after merge: '.json_encode($currentShare));
+        Log::info('[updateShare] Current share after merge: '.json_encode($currentShare));
 
         // Update the shares array with the modified share
         $shares[$shareIndex] = $currentShare;
@@ -417,23 +408,23 @@ class SambaService
      */
     public function setHomesEnabled(bool $enabled): bool
     {
-        \Illuminate\Support\Facades\Log::info('[SambaService] setHomesEnabled called with enabled: '.($enabled ? 'true' : 'false'));
+        Log::info('[SambaService] setHomesEnabled called with enabled: '.($enabled ? 'true' : 'false'));
 
         $shares = $this->getShares();
-        \Illuminate\Support\Facades\Log::info('[SambaService] Current shares count: '.count($shares));
+        Log::info('[SambaService] Current shares count: '.count($shares));
 
         $homesIndex = null;
 
         foreach ($shares as $index => $share) {
             if ($share['name'] === 'homes') {
                 $homesIndex = $index;
-                \Illuminate\Support\Facades\Log::info('[SambaService] Found homes share at index: '.$index);
+                Log::info('[SambaService] Found homes share at index: '.$index);
                 break;
             }
         }
 
         if ($enabled) {
-            \Illuminate\Support\Facades\Log::info('[SambaService] Enabling homes share');
+            Log::info('[SambaService] Enabling homes share');
             // Enable: Add [homes] section if it doesn't exist in config
             // Check if homes is in the actual config file, not just in the shares array
             // (getShares() always adds homes with enabled:false when not in config)
@@ -454,7 +445,7 @@ class SambaService
                     'comment' => 'Home Directories',
                     'enabled' => true,
                 ];
-                \Illuminate\Support\Facades\Log::info('[SambaService] Adding homes to shares array and writing config');
+                Log::info('[SambaService] Adding homes to shares array and writing config');
 
                 return $this->writeSharesConfig($shares);
             }
@@ -464,29 +455,29 @@ class SambaService
             foreach ($shares as &$share) {
                 if ($share['name'] === 'homes') {
                     $share['enabled'] = true;
-                    \Illuminate\Support\Facades\Log::info('[SambaService] Updating homes enabled status and writing config');
+                    Log::info('[SambaService] Updating homes enabled status and writing config');
 
                     return $this->writeSharesConfig($shares);
                 }
             }
 
-            \Illuminate\Support\Facades\Log::info('[SambaService] Homes already enabled, returning true');
+            Log::info('[SambaService] Homes already enabled, returning true');
 
             return true;
         }
 
-        \Illuminate\Support\Facades\Log::info('[SambaService] Disabling homes share');
+        Log::info('[SambaService] Disabling homes share');
         // Disable: Remove [homes] section entirely
         if ($homesIndex !== null) {
-            \Illuminate\Support\Facades\Log::info('[SambaService] Unsetting homes at index: '.$homesIndex);
+            Log::info('[SambaService] Unsetting homes at index: '.$homesIndex);
             unset($shares[$homesIndex]);
-            \Illuminate\Support\Facades\Log::info('[SambaService] Shares count after unset: '.count($shares));
-            \Illuminate\Support\Facades\Log::info('[SambaService] Calling writeSharesConfig');
+            Log::info('[SambaService] Shares count after unset: '.count($shares));
+            Log::info('[SambaService] Calling writeSharesConfig');
 
             return $this->writeSharesConfig(array_values($shares));
         }
 
-        \Illuminate\Support\Facades\Log::info('[SambaService] Homes not found, nothing to do');
+        Log::info('[SambaService] Homes not found, nothing to do');
 
         return true;
     }
@@ -497,7 +488,7 @@ class SambaService
      * Uses user_permissions to derive valid users, read list, and write list.
      * Always sets writable=yes since filesystem ACLs control actual access.
      *
-     * @param  array{comment?: string, path?: string, guest?: string, user_permissions?: array<string,string>}  $config
+     * @param  array{comment?: string, path?: string, guest?: string, user_permissions?: array<string,string>, 'create mask'?: string, 'directory mask'?: string}  $config
      */
     protected function buildShareConfig(array $config): string
     {
@@ -583,12 +574,12 @@ class SambaService
      */
     protected function writeSharesConfig(array $shares): bool
     {
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Called with '.count($shares).' shares');
+        Log::info('[writeSharesConfig] Called with '.count($shares).' shares');
 
         // DEBUG: Log the actual share data being passed
         foreach ($shares as $s) {
             if ($s['name'] === 'share') {
-                \Illuminate\Support\Facades\Log::info('[writeSharesConfig] DEBUG share data: '.json_encode($s));
+                Log::info('[writeSharesConfig] DEBUG share data: '.json_encode($s));
             }
         }
 
@@ -598,7 +589,7 @@ class SambaService
             throw new \RuntimeException('Unable to read smb.conf');
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Existing config size: '.strlen($existingContent));
+        Log::info('[writeSharesConfig] Existing config size: '.strlen($existingContent));
 
         // Parse the existing config into sections
         $sections = [];
@@ -624,12 +615,12 @@ class SambaService
             }
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Parsed sections: '.implode(', ', array_keys($sections)));
+        Log::info('[writeSharesConfig] Parsed sections: '.implode(', ', array_keys($sections)));
 
         // Update or add share sections
         foreach ($shares as $share) {
             $shareName = $share['name'];
-            \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Processing share: '.$shareName.' (type: '.$share['type'].')');
+            Log::info('[writeSharesConfig] Processing share: '.$shareName.' (type: '.$share['type'].')');
             $shareConfig = [];
 
             // Add configured options
@@ -699,7 +690,7 @@ class SambaService
             }
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Sections after cleanup: '.implode(', ', array_keys($sections)));
+        Log::info('[writeSharesConfig] Sections after cleanup: '.implode(', ', array_keys($sections)));
 
         // Reconstruct the config file
         $output = '';
@@ -719,7 +710,7 @@ class SambaService
             $output .= "\n";
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Output size: '.strlen($output));
+        Log::info('[writeSharesConfig] Output size: '.strlen($output));
 
         // Write to temp file
         $tempFile = '/tmp/smb.conf.'.uniqid();
@@ -727,11 +718,11 @@ class SambaService
             throw new \RuntimeException('Unable to write temporary config');
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Written to temp file: '.$tempFile);
+        Log::info('[writeSharesConfig] Written to temp file: '.$tempFile);
 
         // DEBUG: Log temp file content
         $tempContent = file_get_contents($tempFile);
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Temp file [share] section: '.(preg_match('/\[share\](.*?)(?=\[|$)/s', $tempContent, $m) ? $m[0] : 'NOT FOUND'));
+        Log::info('[writeSharesConfig] Temp file [share] section: '.(preg_match('/\[share\](.*?)(?=\[|$)/s', $tempContent, $m) ? $m[0] : 'NOT FOUND'));
 
         // Validate
         $process = new Process(['sudo', 'testparm', '-s', $tempFile]);
@@ -739,11 +730,11 @@ class SambaService
 
         if (! $process->isSuccessful()) {
             unlink($tempFile);
-            \Illuminate\Support\Facades\Log::error('[writeSharesConfig] testparm failed: '.$process->getErrorOutput());
+            Log::error('[writeSharesConfig] testparm failed: '.$process->getErrorOutput());
             throw new \RuntimeException('Invalid smb.conf: '.$process->getErrorOutput());
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] testparm passed');
+        Log::info('[writeSharesConfig] testparm passed');
 
         // Move to actual location
         $process = new Process(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
@@ -754,20 +745,20 @@ class SambaService
         $stderr = $process->getErrorOutput();
         $exitCode = $process->getExitCode();
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv stdout: "'.$stdout.'"');
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv stderr: "'.$stderr.'"');
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] mv exitCode: '.$exitCode);
+        Log::info('[writeSharesConfig] mv stdout: "'.$stdout.'"');
+        Log::info('[writeSharesConfig] mv stderr: "'.$stderr.'"');
+        Log::info('[writeSharesConfig] mv exitCode: '.$exitCode);
 
         if (! $process->isSuccessful()) {
-            \Illuminate\Support\Facades\Log::error('[writeSharesConfig] mv failed: '.$process->getErrorOutput());
+            Log::error('[writeSharesConfig] mv failed: '.$process->getErrorOutput());
             throw new \RuntimeException('Failed to update smb.conf: '.$process->getErrorOutput());
         }
 
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] File moved successfully');
+        Log::info('[writeSharesConfig] File moved successfully');
 
         // DEBUG: Verify the file was actually written
         $verifyContent = file_get_contents(self::SMBCONF_PATH);
-        \Illuminate\Support\Facades\Log::info('[writeSharesConfig] Verified file content (first 200 chars): '.substr($verifyContent, 0, 200));
+        Log::info('[writeSharesConfig] Verified file content (first 200 chars): '.substr($verifyContent, 0, 200));
 
         return $this->restartSmb();
     }
@@ -777,15 +768,15 @@ class SambaService
      */
     public function restartSmb(): bool
     {
-        \Illuminate\Support\Facades\Log::info('[restartSmb] Starting restart...');
+        Log::info('[restartSmb] Starting restart...');
 
         // Try to restart smbd first, then nmbd
         $process = new Process(['sudo', 'systemctl', 'restart', 'smbd']);
         $process->run();
 
-        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart stdout: '.$process->getOutput());
-        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart stderr: '.$process->getErrorOutput());
-        \Illuminate\Support\Facades\Log::info('[restartSmb] smbd restart exitCode: '.$process->getExitCode());
+        Log::info('[restartSmb] smbd restart stdout: '.$process->getOutput());
+        Log::info('[restartSmb] smbd restart stderr: '.$process->getErrorOutput());
+        Log::info('[restartSmb] smbd restart exitCode: '.$process->getExitCode());
 
         if (! $process->isSuccessful()) {
             // Try alternative service names
@@ -803,7 +794,7 @@ class SambaService
         $process = new Process(['sudo', 'systemctl', 'restart', 'nmbd']);
         $process->run();
 
-        \Illuminate\Support\Facades\Log::info('[restartSmb] nmbd restart exitCode: '.$process->getExitCode());
+        Log::info('[restartSmb] nmbd restart exitCode: '.$process->getExitCode());
 
         return true;
     }
@@ -830,7 +821,7 @@ class SambaService
                 continue;
             }
             $parts = explode(':', $trimmed);
-            if (isset($parts[0]) && $parts[0] === $username) {
+            if ($parts[0] === $username) {
                 return true;
             }
         }

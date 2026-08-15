@@ -116,9 +116,9 @@ class Ext4Storage implements StorageInterface
                     $volumes[$device] = [
                         'name' => $device,
                         'device' => $device,
-                        'size' => (int) ($dev['size'] ?? 0),
+                        'size' => (int) $dev['size'],
                         'allocated' => 0,
-                        'free' => (int) ($dev['size'] ?? 0),
+                        'free' => (int) $dev['size'],
                         'health' => 'UNMOUNTED',
                         'mountpoint' => null,
                         'isSystem' => false,
@@ -208,8 +208,8 @@ class Ext4Storage implements StorageInterface
      */
     public function createPool(array $config): array
     {
-        $device = $config['device'] ?? '';
-        $mountpoint = $config['mountpoint'] ?? '';
+        $device = $config['device'];
+        $mountpoint = $config['mountpoint'];
         $persistFstab = (bool) ($config['persist_fstab'] ?? true);
 
         if (empty($device)) {

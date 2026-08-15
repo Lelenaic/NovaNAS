@@ -32,7 +32,9 @@ class ZfsStorage implements StorageInterface
      *     allocated: int,
      *     free: int,
      *     health: string,
-     *     mountpoint: string|null
+     *     mountpoint: string|null,
+     *     isSystem: bool|null,
+     *     device: string|null
      * }>
      */
     public function listPools(): array
@@ -69,6 +71,7 @@ class ZfsStorage implements StorageInterface
                     'health' => $parts[4],
                     'mountpoint' => $mountpoint,
                     'isSystem' => false,
+                    'device' => null,
                 ];
             }
         }
@@ -299,9 +302,9 @@ class ZfsStorage implements StorageInterface
      */
     public function createPool(array $config): array
     {
-        $name = $config['name'] ?? '';
-        $disks = $config['disks'] ?? [];
-        $vdevType = $config['vdev_type'] ?? 'stripe';
+        $name = $config['name'];
+        $disks = $config['disks'];
+        $vdevType = $config['vdev_type'];
         $mountpoint = $config['mountpoint'] ?? null;
 
         if (empty($name)) {
