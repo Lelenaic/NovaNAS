@@ -21,6 +21,7 @@ use App\Http\Controllers\LogSettingsController;
 use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\PasskeyController;
 use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SmartController;
 use App\Http\Controllers\SslSettingsController;
@@ -208,6 +209,12 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/api/profile', [UserController::class, 'showProfile']);
         Route::put('/api/profile', [UserController::class, 'profile']);
 
+        // Passkey management routes
+        Route::get('/api/passkeys', [PasskeyController::class, 'index']);
+        Route::post('/api/passkeys', [PasskeyController::class, 'store']);
+        Route::get('/api/passkeys/generate-options', [PasskeyController::class, 'generateOptions']);
+        Route::delete('/api/passkeys/{id}', [PasskeyController::class, 'destroy']);
+
         // User invitation routes
         Route::get('/api/users/pending', [UserController::class, 'pending']);
         Route::post('/api/users/invite', [UserController::class, 'invite']);
@@ -389,3 +396,4 @@ Route::group(['middleware' => 'auth'], function () {
 
     // API routes - exclude Inertia middleware
 });
+Route::passkeys();

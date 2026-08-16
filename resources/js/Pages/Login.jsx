@@ -12,9 +12,12 @@ import {
     Title,
     rem,
     Alert,
+    Divider,
 } from '@mantine/core';
-import { IconLock, IconMail, IconCheck } from '@tabler/icons-react';
+import { IconLock, IconMail, IconCheck, IconKey } from '@tabler/icons-react';
 import { useForm } from '@inertiajs/react';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { useRef, useState } from 'react';
 
 export default function Login({ version, errors, passwordSet }) {
     const { data, setData, post, processing } = useForm({
@@ -23,9 +26,37 @@ export default function Login({ version, errors, passwordSet }) {
         remember: false,
     });
 
+    const passkeyFormRef = useRef(null);
+    const [passkeyLoading, setPasskeyLoading] = useState(false);
+    const [passkeyError, setPasskeyError] = useState(null);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         post('/login');
+    };
+
+    const handlePasskeyLogin = async () => {
+        setPasskeyLoading(true);
+        setPasskeyError(null);
+
+        try {
+            const response = await fetch('/passkeys/authentication-options');
+            const options = await response.json();
+
+            const startAuthenticationResponse = await startAuthentication({ optionsJSON: options });
+
+            // Fill hidden form and submit
+            const form = passkeyFormRef.current;
+            form.querySelector('[name="start_authentication_response"]').value = JSON.stringify(startAuthenticationResponse);
+            form.submit();
+        } catch (err) {
+            if (err.name !== 'NotAllowedError') {
+                console.error('Passkey login failed:', err);
+                setPasskeyError('Passkey login failed. Please try again.');
+            }
+        } finally {
+            setPasskeyLoading(false);
+        }
     };
 
     return (
@@ -254,6 +285,48 @@ export default function Login({ version, errors, passwordSet }) {
                         </Stack>
                     </form>
 
+                    <Divider
+                        label="or"
+                        labelPosition="center"
+                        my="lg"
+                        styles={{
+                            label: { color: 'rgba(255, 255, 255, 0.4)' },
+                            root: { '&::before': { borderColor: 'rgba(255, 255, 255, 0.1)' }, '&::after': { borderColor: 'rgba(255, 255, 255, 0.1)' } },
+                        }}
+                    />
+
+                    <Button
+                        variant="outline"
+                        size="md"
+                        fullWidth
+                        leftSection={<IconKey size={18} />}
+                        onClick={handlePasskeyLogin}
+                        loading={passkeyLoading}
+                        style={{
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            height: rem(44),
+                        }}
+                        styles={{
+                            root: {
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                                },
+                            },
+                        }}
+                    >
+                        Login with Passkey
+                    </Button>
+
+                    {passkeyError && (
+                        <Alert color="red" variant="light" onClose={() => setPasskeyError(null)} withCloseButton mt="sm">
+                            {passkeyError}
+                        </Alert>
+                    )}
+
                     <Text size="xs" c="dimmed" ta="center" mt="xl">
                         Secure access to your NAS
                     </Text>
@@ -264,6 +337,12 @@ export default function Login({ version, errors, passwordSet }) {
                     NovaNAS v{version}
                 </Text>
             </Container>
+
+            {/* Hidden form for passkey authentication */}
+            <form ref={passkeyFormRef} method="POST" action="/passkeys/authenticate" style={{ display: 'none' }}>
+                <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.content} />
+                <input type="hidden" name="start_authentication_response" value="" />
+            </form>
 
             {/* Keyframe Animations */}
             <style>{`

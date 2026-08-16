@@ -59,6 +59,7 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 - **Virtualization Support**: Support for VM management (coming soon)
 
 ### Network & Security
+- **Passkey Authentication**: Passwordless login using WebAuthn/FIDO2 passkeys
 - **Firewall Management**: Advanced firewall rules and port management using UFW
 - **DynDNS**: Free Dynamic DNS configuration for remote access
 - **SSL/TLS Certificates**: Automatic certificate management with Letsencrypt

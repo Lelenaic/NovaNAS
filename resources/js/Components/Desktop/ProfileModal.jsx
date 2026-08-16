@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Modal,
     TextInput,
@@ -9,9 +9,14 @@ import {
     Text,
     Alert,
     Divider,
+    List,
+    ActionIcon,
+    ThemeIcon,
+    Skeleton,
 } from '@mantine/core';
 import { router } from '@inertiajs/react';
-import { IconUser, IconLock, IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { IconUser, IconLock, IconAlertCircle, IconCheck, IconKey, IconTrash } from '@tabler/icons-react';
+import { startRegistration } from '@simplewebauthn/browser';
 
 export function ProfileModal({ opened, onClose }) {
     const [loading, setLoading] = useState(false);
@@ -26,12 +31,11 @@ export function ProfileModal({ opened, onClose }) {
         password_confirmation: '',
     });
 
-    // Fetch profile data when modal opens
-    useEffect(() => {
-        if (opened) {
-            fetchProfile();
-        }
-    }, [opened]);
+    const [passkeys, setPasskeys] = useState([]);
+    const [passkeysLoading, setPasskeysLoading] = useState(false);
+    const [passkeyError, setPasskeyError] = useState(null);
+    const [registeringPasskey, setRegisteringPasskey] = useState(false);
+    const [passkeyName, setPasskeyName] = useState('');
 
     const fetchProfile = async () => {
         try {
@@ -49,6 +53,26 @@ export function ProfileModal({ opened, onClose }) {
             setError('Failed to load profile data');
         }
     };
+
+    const fetchPasskeys = useCallback(async () => {
+        setPasskeysLoading(true);
+        try {
+            const response = await fetch('/api/passkeys');
+            const data = await response.json();
+            setPasskeys(data.passkeys || []);
+        } catch (err) {
+            setPasskeyError('Failed to load passkeys');
+        } finally {
+            setPasskeysLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (opened) {
+            fetchProfile();
+            fetchPasskeys();
+        }
+    }, [opened, fetchPasskeys]);
 
     const handleChange = (field) => (event) => {
         setFormData((prev) => ({
@@ -91,7 +115,6 @@ export function ProfileModal({ opened, onClose }) {
                 password_confirmation: '',
             }));
 
-            // Use Inertia's router to reload page data without full refresh
             router.reload();
         } catch (err) {
             setError(err.message);
@@ -100,9 +123,87 @@ export function ProfileModal({ opened, onClose }) {
         }
     };
 
+    const handleAddPasskey = async () => {
+        if (!passkeyName.trim()) {
+            setPasskeyError('Please enter a name for the passkey.');
+            return;
+        }
+
+        setRegisteringPasskey(true);
+        setPasskeyError(null);
+
+        try {
+            const optionsResponse = await fetch('/api/passkeys/generate-options', {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+            });
+
+            if (!optionsResponse.ok) {
+                throw new Error('Failed to generate passkey options');
+            }
+
+            const options = await optionsResponse.json();
+            const startRegistrationResponse = await startRegistration({ optionsJSON: options });
+
+            const storeResponse = await fetch('/api/passkeys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify({
+                    options: JSON.stringify(options),
+                    passkey: JSON.stringify(startRegistrationResponse),
+                    name: passkeyName.trim(),
+                }),
+            });
+
+            if (!storeResponse.ok) {
+                const data = await storeResponse.json();
+                throw new Error(data.errors?.passkey?.[0] || 'Failed to register passkey');
+            }
+
+            setPasskeyName('');
+            await fetchPasskeys();
+        } catch (err) {
+            if (err.name === 'NotAllowedError') {
+                setPasskeyError('Passkey registration was cancelled.');
+            } else if (err.name === 'InvalidStateError') {
+                setPasskeyError('A passkey for this device already exists.');
+            } else {
+                setPasskeyError(err.message || 'Failed to register passkey');
+            }
+        } finally {
+            setRegisteringPasskey(false);
+        }
+    };
+
+    const handleDeletePasskey = async (passkeyId) => {
+        setPasskeyError(null);
+
+        try {
+            const response = await fetch(`/api/passkeys/${passkeyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete passkey');
+            }
+
+            await fetchPasskeys();
+        } catch (err) {
+            setPasskeyError(err.message || 'Failed to delete passkey');
+        }
+    };
+
     const handleClose = () => {
         setError(null);
         setSuccess(null);
+        setPasskeyError(null);
         setFormData((prev) => ({
             ...prev,
             current_password: '',
@@ -194,6 +295,70 @@ export function ProfileModal({ opened, onClose }) {
                     </Group>
                 </Stack>
             </form>
+
+            <Divider label="Passkeys" labelPosition="center" my="md" />
+
+            <Stack gap="md">
+                {passkeyError && (
+                    <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setPasskeyError(null)} withCloseButton>
+                        {passkeyError}
+                    </Alert>
+                )}
+
+                {passkeysLoading ? (
+                    <Stack gap="xs">
+                        <Skeleton height={36} />
+                        <Skeleton height={36} />
+                    </Stack>
+                ) : passkeys.length > 0 ? (
+                    <Stack gap="xs">
+                        {passkeys.map((passkey) => (
+                            <Group key={passkey.id} justify="space-between" p="xs" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-sm)' }}>
+                                <Group gap="xs">
+                                    <ThemeIcon variant="light" size="sm">
+                                        <IconKey size={14} />
+                                    </ThemeIcon>
+                                    <Stack gap={0}>
+                                        <Text size="sm" fw={500}>{passkey.name}</Text>
+                                        <Text size="xs" c="dimmed">
+                                            Last used: {passkey.last_used_at ? new Date(passkey.last_used_at).toLocaleDateString() : 'Never'}
+                                        </Text>
+                                    </Stack>
+                                </Group>
+                                <ActionIcon
+                                    variant="subtle"
+                                    color="red"
+                                    size="sm"
+                                    onClick={() => handleDeletePasskey(passkey.id)}
+                                >
+                                    <IconTrash size={14} />
+                                </ActionIcon>
+                            </Group>
+                        ))}
+                    </Stack>
+                ) : (
+                    <Text size="sm" c="dimmed" ta="center">
+                        No passkeys registered yet.
+                    </Text>
+                )}
+
+                <TextInput
+                    placeholder="e.g. My iPhone, Hardware Key..."
+                    value={passkeyName}
+                    onChange={(e) => setPasskeyName(e.target.value)}
+                    leftSection={<IconKey size={16} />}
+                />
+
+                <Button
+                    variant="light"
+                    leftSection={<IconKey size={16} />}
+                    onClick={handleAddPasskey}
+                    loading={registeringPasskey}
+                    fullWidth
+                >
+                    Register New Passkey
+                </Button>
+            </Stack>
         </Modal>
     );
 }
