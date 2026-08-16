@@ -108,7 +108,7 @@ fi
 echo "Backing up current app..."
 cp -r . "$TEMP_DIR/backup"
 # Update files, excluding those in the new .gitignore
-rsync -a --delete --exclude-from="$TEMP_DIR/update/.gitignore" "$TEMP_DIR/update/" .
+rsync -a --delete --include='public/build/***' --exclude-from="$TEMP_DIR/update/.gitignore" "$TEMP_DIR/update/" .
 if [ $? -ne 0 ]; then
     echo "Error: Failed to update files"
     # Restore backup
