@@ -190,7 +190,7 @@ apt update
 # Install packages
 print_info "Installing system packages..."
 apt install -y \
-    linux-headers-amd64 \
+    linux-headers-generic \
     zfs-dkms \
     zfsutils-linux \
     ca-certificates \
@@ -214,10 +214,11 @@ apt install -y \
     btop
 print_success "System packages installed"
 
-# Enable ZFS services
-print_info "Enabling ZFS services..."
-systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target cron --now
-print_success "ZFS services enabled"
+# Enable ZFS and cronservices
+print_info "Enabling ZFS and cron services..."
+systemctl enable zfs-import-cache zfs-import-scan zfs-mount zfs.target
+systemctl enable  cron --now
+print_success "ZFS and cron services enabled"
 
 # Install Docker if not installed
 if ! command -v docker &> /dev/null; then
@@ -227,7 +228,6 @@ if ! command -v docker &> /dev/null; then
 else
     print_success "Docker already installed"
 fi
-usermod -aG docker novanas
 
 # Install ttyd (terminal sharing over web)
 if ! command -v ttyd &> /dev/null; then
@@ -309,6 +309,7 @@ if ! id novanas &>/dev/null; then
 else
     print_success "User novanas already exists"
 fi
+usermod -aG docker novanas
 
 # Set Apache user and group to novanas
 print_info "Configuring Apache to run as novanas..."
@@ -493,3 +494,18 @@ echo ""
 echo -e "  ${DIM}Run ${WHITE}btop${DIM} to monitor system resources${NC}"
 echo -e "  ${DIM}Run ${WHITE}novanas-update${DIM} to update NovaNAS${NC}"
 echo ""
+print_separator
+echo ""
+echo -e "  ${WARN} ${YELLOW}${BOLD}A reboot is required to complete the installation${NC}"
+echo -e "  ${DIM}  (enables the new kernel with ZFS modules)${NC}"
+echo ""
+if [ -t 0 ]; then
+    read -p "  Press Enter to reboot now, or Ctrl+C to reboot later: " -r
+    echo ""
+    echo -e "  ${ARROW} ${BOLD}Rebooting...${NC}"
+    reboot
+else
+    echo -e "  ${YELLOW}${BOLD}  Non-interactive mode detected. Please reboot manually when ready.${NC}"
+    echo ""
+    exit 0
+fi
