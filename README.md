@@ -41,9 +41,9 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 
 ### Core System Management
 - **Desktop Interface**: Window-based UI with drag-and-drop functionality
-- **User Management**: Role-based access control with permissions (powered by Spatie Laravel Permission)
 - **System Monitoring**: Real-time performance metrics and health monitoring
 - **Terminal Access**: Direct command-line interface for advanced users
+- **User Management**: Role-based access control with permissions (coming soon, admins only for now)
 
 ### Storage & File Management
 - **Multi-Filesystem Support**: ZFS and EXT4 support for optimal data protection
@@ -61,22 +61,22 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 ### Network & Security
 - **Firewall Management**: Advanced firewall rules and port management using UFW
 - **DynDNS**: Free Dynamic DNS configuration for remote access
-- **VPN Server**: Built-in VPN for secure remote connections (coming soon)
 - **SSL/TLS Certificates**: Automatic certificate management with Letsencrypt
 - **Network Configuration**: IP settings, UPNP
+- **VPN Server**: Built-in VPN for secure remote connections (coming soon)
 
 ### Monitoring & Analytics
 - **System Health**: CPU, memory, disk, and network monitoring
 - **Resource Usage**: Track storage, bandwidth, and system resources
-- **Log Management**: Centralized logging and log viewer (coming soon)
+- **Log Management**: Centralized logging and log viewer
 - **Alert System**: Email/SMS notifications for system events (coming soon)
 
 ### Additional Features
 - **Update Management**: Automated system and app updates
 - **UPS support**: Monitor and manage your UPS
 - **USB Device Support**: Mount and manage external drives
+- **Power Management**: Restart and shutdown controls
 - **Scheduled Tasks**: Cron job management through the UI (coming soon)
-- **Power Management**: Sleep, hibernate, and shutdown controls (coming soon)
 - **Printer Management**: Network printer configuration and sharing (coming soon)
 
 ## Installation
