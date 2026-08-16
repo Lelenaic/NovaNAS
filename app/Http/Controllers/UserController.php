@@ -92,6 +92,13 @@ class UserController extends Controller
     {
         $validated = $request->validated();
 
+        // Check if username is a reserved NovaNAS system account
+        if ($this->linuxUserService->isReservedUsername($validated['username'])) {
+            return response()->json([
+                'error' => 'Cannot create user. The username is a NovaNAS system user and cannot be used.',
+            ], 422);
+        }
+
         // Check if username is a system user
         if ($this->linuxUserService->userExists($validated['username'])) {
             if ($this->linuxUserService->isUidBelow1000($validated['username'])) {
@@ -164,6 +171,13 @@ class UserController extends Controller
         $validated = $request->validated();
 
         $username = $validated['username'];
+
+        // Check if username is a reserved NovaNAS system account
+        if ($this->linuxUserService->isReservedUsername($username)) {
+            return response()->json([
+                'error' => 'Cannot use this username. It is a NovaNAS system user and cannot be used.',
+            ], 422);
+        }
 
         // Check if username is a system user
         if ($this->linuxUserService->userExists($username)) {

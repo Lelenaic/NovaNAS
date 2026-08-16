@@ -6,13 +6,10 @@ use App\Models\User;
 use App\Services\LinuxUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class WizardController extends Controller
 {
-    public function __construct(public LinuxUserService $linuxUserService)
-    {
-    }
+    public function __construct(public LinuxUserService $linuxUserService) {}
 
     /**
      * Check if the wizard should run (no users exist).
@@ -27,7 +24,7 @@ class WizardController extends Controller
      */
     public function index()
     {
-        if (!$this->shouldRun()) {
+        if (! $this->shouldRun()) {
             return redirect('/');
         }
 
@@ -39,7 +36,7 @@ class WizardController extends Controller
      */
     public function account()
     {
-        if (!$this->shouldRun()) {
+        if (! $this->shouldRun()) {
             return redirect('/');
         }
 
@@ -51,7 +48,7 @@ class WizardController extends Controller
      */
     public function storeAccount(Request $request)
     {
-        if (!$this->shouldRun()) {
+        if (! $this->shouldRun()) {
             return redirect('/');
         }
 
@@ -107,7 +104,7 @@ class WizardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect('/wizard');
         }
 
@@ -119,8 +116,13 @@ class WizardController extends Controller
             'username.max' => 'The username must not exceed 32 characters.',
         ]);
 
+        // Reject NovaNAS system accounts (e.g. 'novanas')
+        if ($this->linuxUserService->isReservedUsername($validated['username'])) {
+            return back()->withErrors(['username' => 'This username is a NovaNAS system user and cannot be used.']);
+        }
+
         // Verify the Linux user exists using the service
-        if (!$this->linuxUserService->userExists($validated['username'])) {
+        if (! $this->linuxUserService->userExists($validated['username'])) {
             return back()->withErrors(['username' => 'This Linux user does not exist on the system.']);
         }
 
@@ -142,7 +144,7 @@ class WizardController extends Controller
      */
     public function skip()
     {
-        if (!$this->shouldRun()) {
+        if (! $this->shouldRun()) {
             return redirect('/');
         }
 

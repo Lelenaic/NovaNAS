@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\Process;
 class LinuxUserService
 {
     /**
+     * System usernames that must never be managed or linked to NovaNAS accounts.
+     * The 'novanas' user is the appliance's runtime/system user.
+     *
+     * @var array<int, string>
+     */
+    public const SYSTEM_USERNAMES = ['novanas', 'nobody', 'root'];
+
+    /**
      * Get Linux users from the system (UID >= 1000).
      *
      * @return array<int, array{value: string, label: string}>
@@ -39,8 +47,8 @@ class LinuxUserService
                 $uid = (int) $parts[2];
 
                 // Only include users with UID >= 1000 (regular users)
-                // Exclude system accounts like 'nobody'
-                if ($uid >= 1000 && $username !== 'nobody') {
+                // Exclude NovaNAS system users and other reserved accounts
+                if ($uid >= 1000 && ! $this->isReservedUsername($username)) {
                     $users[] = [
                         'value' => $username,
                         'label' => $username.' (UID: '.$uid.')',
@@ -50,6 +58,14 @@ class LinuxUserService
         }
 
         return $users;
+    }
+
+    /**
+     * Check if a username is a reserved NovaNAS system account.
+     */
+    public function isReservedUsername(string $username): bool
+    {
+        return in_array($username, self::SYSTEM_USERNAMES, true);
     }
 
     /**

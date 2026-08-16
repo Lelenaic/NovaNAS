@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Services\LinuxUserService;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -18,7 +20,7 @@ class StoreUserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -31,6 +33,7 @@ class StoreUserRequest extends FormRequest
                 'regex:/^[a-z_][a-z0-9_-]*$/i',
                 'max:32',
                 'unique:users',
+                'not_in:'.implode(',', LinuxUserService::SYSTEM_USERNAMES),
             ],
             'is_admin' => ['boolean'],
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
