@@ -56,6 +56,7 @@ Schedule::call(function () {
 
     foreach ($rules as $rule) {
         // Skip if never renewed or if enough time has passed since last renewal
+        // It's to make sure the rule isn't added twice in a short period of time, which can happen if the job is delayed or if the system is restarted.
         if (! $rule->last_renewed_at) {
             // First time publish - run synchronously
             dispatch(new UpnpRenewJob($rule->id));
