@@ -124,7 +124,7 @@ After installation, access NovaNAS through your web browser at `http://your-serv
 ## Architecture
 
 NovaNAS is built with modern web technologies:
-- **Backend**: Laravel 12 (PHP 8.5) with SQLite database (lightweight and suitable for NAS environments)
+- **Backend**: Laravel with SQLite database (lightweight and suitable for NAS environments)
 - **Frontend**: React with Inertia.js and Mantine UI
 - **Desktop System**: Custom window manager for app organization
 

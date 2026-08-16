@@ -11,13 +11,13 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 - php - 8.5
 - inertiajs/inertia-laravel (INERTIA_LARAVEL) - v2
-- laravel/framework (LARAVEL) - v12
+- laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
 - laravel/pint (PINT) - v1
-- phpunit/phpunit (PHPUNIT) - v11
+- phpunit/phpunit (PHPUNIT) - v12
 - @inertiajs/react (INERTIA_REACT) - v2
 - react (REACT) - v19
 - tailwindcss (TAILWINDCSS) - v4
