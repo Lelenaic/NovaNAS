@@ -10,14 +10,42 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { IconCloudComputing, IconArrowRight, IconUser } from '@tabler/icons-react';
-import { useForm } from '@inertiajs/react';
+import { IconArrowLeft, IconArrowRight, IconUser } from '@tabler/icons-react';
+import { Link, useForm } from '@inertiajs/react';
 
 const STEPS = [
     { id: 1, title: 'Welcome', description: 'Get started' },
     { id: 2, title: 'Account', description: 'Create admin account' },
-    { id: 3, title: 'Linux User', description: 'Bind to system user' },
+    { id: 3, title: 'Bind User', description: 'Finish setup' },
 ];
+
+const inputStyles = {
+    input: {
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        '&::placeholder': {
+            color: 'rgba(255, 255, 255, 0.4)',
+        },
+        '&:focus': {
+            borderColor: '#2099f0',
+        },
+    },
+    dropdown: {
+        background: 'rgba(30, 30, 40, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+    },
+    option: {
+        color: 'white',
+        '&[dataSelected]': {
+            background: '#2099f0',
+        },
+        '&:hover': {
+            background: 'rgba(32, 153, 240, 0.2)',
+        },
+    },
+};
 
 export default function WizardBindUser({ errors, linuxUsers = [] }) {
     const { data, setData, post, processing } = useForm({
@@ -88,7 +116,7 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                         width: '300px',
                         height: '300px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(32, 153, 240, 0.15) 0%, transparent 70%)',
                         animation: 'float 8s ease-in-out infinite',
                     }}
                 />
@@ -100,7 +128,7 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                         width: '400px',
                         height: '400px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(21, 101, 192, 0.12) 0%, transparent 70%)',
                         animation: 'float 10s ease-in-out infinite reverse',
                     }}
                 />
@@ -112,7 +140,7 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                         width: '500px',
                         height: '500px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(13, 71, 161, 0.08) 0%, transparent 70%)',
                         transform: 'translate(-50%, -50%)',
                         animation: 'pulse 15s ease-in-out infinite',
                     }}
@@ -120,52 +148,49 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
             </Box>
 
             {/* Wizard Content */}
-            <Container size={500} style={{ position: 'relative', zIndex: 1 }}>
+            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '500px', padding: '0 16px' }}>
                 <Paper
                     shadow="xl"
                     radius="lg"
-                    p={rem(40)}
+                    p={{ base: 24, sm: rem(48) }}
                     style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
+                        width: '100%',
+                        maxWidth: '500px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
                     }}
                 >
-                    <Stack align="center" gap="lg">
-                        {/* Logo/Icon */}
-                        <Box
-                            style={{
-                                width: rem(80),
-                                height: rem(80),
-                                borderRadius: '20px',
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-                            }}
-                        >
-                            <IconCloudComputing size={40} color="white" stroke={1.5} />
-                        </Box>
+                    <Stack align="center" gap="xs">
+                        {/* Logo */}
+                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
+                        <Text c="dimmed" size="sm" ta="center" maw={300}>
+                            Your personal cloud storage solution
+                        </Text>
+                    </Stack>
 
+                    <Stack align="center" gap="md" mt={rem(28)}>
                         <Title order={2} ta="center" fw={700} c="white" style={{ fontSize: rem(24), letterSpacing: '-0.5px' }}>
                             Bind Linux User
                         </Title>
-                        <Text c="dimmed" size="sm" ta="center">
+                        <Text c="dimmed" size="sm" ta="center" maw={320}>
                             Link your NovaNAS account to an existing Linux user on this system.
                         </Text>
 
                         {/* Steps Indicator */}
-                        <Group gap="xl">
+                        <Group gap="xl" mt="xs">
                             {STEPS.map((step, index) => (
                                 <Group key={step.id} gap="sm">
                                     <Box
                                         style={{
-                                            width: rem(28),
-                                            height: rem(28),
+                                            width: rem(26),
+                                            height: rem(26),
                                             borderRadius: '50%',
                                             background: index <= 2
-                                                ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                                                ? 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)'
                                                 : 'rgba(255, 255, 255, 0.1)',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -173,6 +198,7 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                                             fontWeight: 600,
                                             fontSize: rem(12),
                                             color: index <= 2 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                            boxShadow: index <= 2 ? '0 4px 12px rgba(32, 153, 240, 0.4)' : 'none',
                                         }}
                                     >
                                         {index + 1}
@@ -182,8 +208,9 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                                             style={{
                                                 width: rem(30),
                                                 height: rem(2),
+                                                borderRadius: rem(1),
                                                 background: index < 2
-                                                    ? 'rgba(255, 255, 255, 0.3)'
+                                                    ? 'linear-gradient(90deg, rgba(32, 153, 240, 0.8) 0%, rgba(32, 153, 240, 0.3) 100%)'
                                                     : 'rgba(255, 255, 255, 0.1)',
                                             }}
                                         />
@@ -207,32 +234,7 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                                     required
                                     searchable
                                     nothingFoundMessage="No users found"
-                                    styles={{
-                                        input: {
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            '&::placeholder': {
-                                                color: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                            '&:focus': {
-                                                borderColor: '#6366f1',
-                                            },
-                                        },
-                                        dropdown: {
-                                            background: 'rgba(30, 30, 40, 0.95)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        },
-                                        option: {
-                                            color: 'white',
-                                            '&[dataSelected]': {
-                                                background: '#6366f1',
-                                            },
-                                            '&:hover': {
-                                                background: 'rgba(99, 102, 241, 0.2)',
-                                            },
-                                        },
-                                    }}
+                                    styles={inputStyles}
                                 />
 
                                 <Text c="dimmed" size="xs" ta="center">
@@ -242,27 +244,27 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
 
                                 <Button
                                     type="submit"
-                                    size="lg"
+                                    size="md"
                                     fullWidth
                                     mt="md"
                                     loading={processing}
                                     rightSection={<IconArrowRight size={18} />}
                                     disabled={!data.username}
                                     style={{
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                        background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
                                         border: 'none',
                                         fontWeight: 600,
-                                        height: rem(48),
+                                        height: rem(44),
                                     }}
                                     styles={{
                                         root: {
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
                                                 transform: 'translateY(-2px)',
-                                                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+                                                boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
                                             },
                                             '&:disabled': {
-                                                background: 'rgba(99, 102, 241, 0.5)',
+                                                background: 'rgba(32, 153, 240, 0.5)',
                                             },
                                         },
                                     }}
@@ -272,10 +274,21 @@ export default function WizardBindUser({ errors, linuxUsers = [] }) {
                             </Stack>
                         </form>
 
-                        {/* Navigation Info */}
-                        <Text c="dimmed" size="xs" ta="center">
-                            You can change this binding later in Settings.
-                        </Text>
+                        {/* Navigation Buttons */}
+                        <Group w="100%" mt="sm">
+                            <Button
+                                component={Link}
+                                href="/wizard/account"
+                                variant="subtle"
+                                size="sm"
+                                leftSection={<IconArrowLeft size={16} />}
+                                style={{
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                }}
+                            >
+                                Back
+                            </Button>
+                        </Group>
                     </Stack>
                 </Paper>
             </Container>

@@ -11,14 +11,28 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { IconCloudComputing, IconArrowLeft, IconArrowRight, IconUser, IconMail, IconLock } from '@tabler/icons-react';
+import { IconArrowLeft, IconArrowRight, IconUser, IconMail, IconLock } from '@tabler/icons-react';
 import { Link, useForm } from '@inertiajs/react';
 
 const STEPS = [
     { id: 1, title: 'Welcome', description: 'Get started' },
     { id: 2, title: 'Account', description: 'Create admin account' },
-    { id: 3, title: 'Complete', description: 'Finish setup' },
+    { id: 3, title: 'Bind User', description: 'Finish setup' },
 ];
+
+const inputStyles = {
+    input: {
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        '&::placeholder': {
+            color: 'rgba(255, 255, 255, 0.4)',
+        },
+        '&:focus': {
+            borderColor: '#2099f0',
+        },
+    },
+};
 
 export default function WizardAccount({ errors }) {
     const { data, setData, post, processing } = useForm({
@@ -92,7 +106,7 @@ export default function WizardAccount({ errors }) {
                         width: '300px',
                         height: '300px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(32, 153, 240, 0.15) 0%, transparent 70%)',
                         animation: 'float 8s ease-in-out infinite',
                     }}
                 />
@@ -104,7 +118,7 @@ export default function WizardAccount({ errors }) {
                         width: '400px',
                         height: '400px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(21, 101, 192, 0.12) 0%, transparent 70%)',
                         animation: 'float 10s ease-in-out infinite reverse',
                     }}
                 />
@@ -116,7 +130,7 @@ export default function WizardAccount({ errors }) {
                         width: '500px',
                         height: '500px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(13, 71, 161, 0.08) 0%, transparent 70%)',
                         transform: 'translate(-50%, -50%)',
                         animation: 'pulse 15s ease-in-out infinite',
                     }}
@@ -124,52 +138,49 @@ export default function WizardAccount({ errors }) {
             </Box>
 
             {/* Wizard Content */}
-            <Container size={500} style={{ position: 'relative', zIndex: 1 }}>
+            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '500px', padding: '0 16px' }}>
                 <Paper
                     shadow="xl"
                     radius="lg"
-                    p={rem(40)}
+                    p={{ base: 24, sm: rem(48) }}
                     style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
+                        width: '100%',
+                        maxWidth: '500px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
                     }}
                 >
-                    <Stack align="center" gap="lg">
-                        {/* Logo/Icon */}
-                        <Box
-                            style={{
-                                width: rem(80),
-                                height: rem(80),
-                                borderRadius: '20px',
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-                            }}
-                        >
-                            <IconCloudComputing size={40} color="white" stroke={1.5} />
-                        </Box>
+                    <Stack align="center" gap="xs">
+                        {/* Logo */}
+                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
+                        <Text c="dimmed" size="sm" ta="center" maw={300}>
+                            Your personal cloud storage solution
+                        </Text>
+                    </Stack>
 
+                    <Stack align="center" gap="md" mt={rem(28)}>
                         <Title order={2} ta="center" fw={700} c="white" style={{ fontSize: rem(24), letterSpacing: '-0.5px' }}>
                             Create Admin Account
                         </Title>
-                        <Text c="dimmed" size="sm" ta="center">
+                        <Text c="dimmed" size="sm" ta="center" maw={320}>
                             This account will have full administrative privileges.
                         </Text>
 
                         {/* Steps Indicator */}
-                        <Group gap="xl">
+                        <Group gap="xl" mt="xs">
                             {STEPS.map((step, index) => (
                                 <Group key={step.id} gap="sm">
                                     <Box
                                         style={{
-                                            width: rem(28),
-                                            height: rem(28),
+                                            width: rem(26),
+                                            height: rem(26),
                                             borderRadius: '50%',
                                             background: index <= 1
-                                                ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                                                ? 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)'
                                                 : 'rgba(255, 255, 255, 0.1)',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -177,6 +188,7 @@ export default function WizardAccount({ errors }) {
                                             fontWeight: 600,
                                             fontSize: rem(12),
                                             color: index <= 1 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                            boxShadow: index <= 1 ? '0 4px 12px rgba(32, 153, 240, 0.4)' : 'none',
                                         }}
                                     >
                                         {index + 1}
@@ -186,8 +198,9 @@ export default function WizardAccount({ errors }) {
                                             style={{
                                                 width: rem(30),
                                                 height: rem(2),
+                                                borderRadius: rem(1),
                                                 background: index < 1
-                                                    ? 'rgba(255, 255, 255, 0.3)'
+                                                    ? 'linear-gradient(90deg, rgba(32, 153, 240, 0.8) 0%, rgba(32, 153, 240, 0.3) 100%)'
                                                     : 'rgba(255, 255, 255, 0.1)',
                                             }}
                                         />
@@ -209,19 +222,7 @@ export default function WizardAccount({ errors }) {
                                     leftSection={<IconUser size={18} stroke={1.5} />}
                                     error={errors?.name}
                                     required
-                                    styles={{
-                                        input: {
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            '&::placeholder': {
-                                                color: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                            '&:focus': {
-                                                borderColor: '#6366f1',
-                                            },
-                                        },
-                                    }}
+                                    styles={inputStyles}
                                 />
 
                                 <TextInput
@@ -234,19 +235,7 @@ export default function WizardAccount({ errors }) {
                                     leftSection={<IconMail size={18} stroke={1.5} />}
                                     error={errors?.email}
                                     required
-                                    styles={{
-                                        input: {
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            '&::placeholder': {
-                                                color: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                            '&:focus': {
-                                                borderColor: '#6366f1',
-                                            },
-                                        },
-                                    }}
+                                    styles={inputStyles}
                                 />
 
                                 <PasswordInput
@@ -258,19 +247,7 @@ export default function WizardAccount({ errors }) {
                                     leftSection={<IconLock size={18} stroke={1.5} />}
                                     error={errors?.password}
                                     required
-                                    styles={{
-                                        input: {
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            '&::placeholder': {
-                                                color: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                            '&:focus': {
-                                                borderColor: '#6366f1',
-                                            },
-                                        },
-                                    }}
+                                    styles={inputStyles}
                                 />
 
                                 <PasswordInput
@@ -282,40 +259,28 @@ export default function WizardAccount({ errors }) {
                                     leftSection={<IconLock size={18} stroke={1.5} />}
                                     error={errors?.password_confirmation}
                                     required
-                                    styles={{
-                                        input: {
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            '&::placeholder': {
-                                                color: 'rgba(255, 255, 255, 0.4)',
-                                            },
-                                            '&:focus': {
-                                                borderColor: '#6366f1',
-                                            },
-                                        },
-                                    }}
+                                    styles={inputStyles}
                                 />
 
                                 <Button
                                     type="submit"
-                                    size="lg"
+                                    size="md"
                                     fullWidth
                                     mt="md"
                                     loading={processing}
                                     rightSection={<IconArrowRight size={18} />}
                                     style={{
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                        background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
                                         border: 'none',
                                         fontWeight: 600,
-                                        height: rem(48),
+                                        height: rem(44),
                                     }}
                                     styles={{
                                         root: {
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
                                                 transform: 'translateY(-2px)',
-                                                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+                                                boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
                                             },
                                         },
                                     }}
@@ -326,12 +291,13 @@ export default function WizardAccount({ errors }) {
                         </form>
 
                         {/* Navigation Buttons */}
-                        <Group justify="space-between" w="100%">
+                        <Group w="100%" mt="sm">
                             <Button
                                 component={Link}
                                 href="/wizard"
                                 variant="subtle"
-                                leftSection={<IconArrowLeft size={18} />}
+                                size="sm"
+                                leftSection={<IconArrowLeft size={16} />}
                                 style={{
                                     color: 'rgba(255, 255, 255, 0.6)',
                                 }}

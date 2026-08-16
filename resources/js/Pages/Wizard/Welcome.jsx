@@ -1,7 +1,6 @@
 import {
     Box,
     Button,
-    Center,
     Container,
     Group,
     Paper,
@@ -10,13 +9,27 @@ import {
     Title,
     rem,
 } from '@mantine/core';
-import { IconCloudComputing, IconArrowRight } from '@tabler/icons-react';
+import {
+    IconArrowRight,
+    IconCheck,
+    IconDroplet,
+    IconContainer,
+    IconActivity,
+    IconFolder,
+} from '@tabler/icons-react';
 import { Link } from '@inertiajs/react';
 
 const STEPS = [
     { id: 1, title: 'Welcome', description: 'Get started' },
     { id: 2, title: 'Account', description: 'Create admin account' },
-    { id: 3, title: 'Complete', description: 'Finish setup' },
+    { id: 3, title: 'Bind User', description: 'Finish setup' },
+];
+
+const FEATURES = [
+    { icon: IconFolder, title: 'File Manager', description: 'Manage your files with a powerful file manager' },
+    { icon: IconContainer, title: 'Docker', description: 'Deploy and manage Docker containers' },
+    { icon: IconActivity, title: 'Monitoring', description: 'Monitor system performance in real-time' },
+    { icon: IconDroplet, title: 'Storage', description: 'Control your storage with ZFS or EXT4' },
 ];
 
 export default function WizardWelcome() {
@@ -79,7 +92,7 @@ export default function WizardWelcome() {
                         width: '300px',
                         height: '300px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(32, 153, 240, 0.15) 0%, transparent 70%)',
                         animation: 'float 8s ease-in-out infinite',
                     }}
                 />
@@ -91,7 +104,7 @@ export default function WizardWelcome() {
                         width: '400px',
                         height: '400px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(21, 101, 192, 0.12) 0%, transparent 70%)',
                         animation: 'float 10s ease-in-out infinite reverse',
                     }}
                 />
@@ -103,7 +116,7 @@ export default function WizardWelcome() {
                         width: '500px',
                         height: '500px',
                         borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(13, 71, 161, 0.08) 0%, transparent 70%)',
                         transform: 'translate(-50%, -50%)',
                         animation: 'pulse 15s ease-in-out infinite',
                     }}
@@ -111,59 +124,57 @@ export default function WizardWelcome() {
             </Box>
 
             {/* Wizard Content */}
-            <Container size={560} style={{ position: 'relative', zIndex: 1 }}>
+            <Container size={500} style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '500px', padding: '0 16px' }}>
                 <Paper
                     shadow="xl"
                     radius="lg"
-                    p={rem(48)}
+                    p={{ base: 24, sm: rem(48) }}
                     style={{
                         background: 'rgba(255, 255, 255, 0.03)',
                         backdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
+                        width: '100%',
+                        maxWidth: '500px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
                     }}
                 >
-                    <Stack align="center" gap="lg">
-                        {/* Logo/Icon */}
-                        <Box
-                            style={{
-                                width: rem(100),
-                                height: rem(100),
-                                borderRadius: '24px',
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-                            }}
-                        >
-                            <IconCloudComputing size={50} color="white" stroke={1.5} />
-                        </Box>
+                    <Stack align="center" gap="xs">
+                        {/* Logo */}
+                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
+                        <Text c="dimmed" size="sm" ta="center" maw={300}>
+                            Your personal cloud storage solution
+                        </Text>
+                    </Stack>
 
-                        <Title order={1} ta="center" fw={700} c="white" style={{ fontSize: rem(32), letterSpacing: '-0.5px' }}>
+                    <Stack align="center" gap="md" mt={rem(28)}>
+                        <Title order={1} ta="center" fw={700} c="white" style={{ fontSize: rem(28), letterSpacing: '-0.5px' }}>
                             Welcome to NovaNAS
                         </Title>
-                        <Text c="dimmed" size="lg" ta="center" maw={400}>
-                            Your personal cloud storage solution. Let's get your system set up in just a few steps.
+                        <Text c="dimmed" size="md" ta="center" maw={380}>
+                            Let's get your system set up in just a few steps.
                         </Text>
 
                         {/* Steps Indicator */}
-                        <Group gap="xl" mt="md">
+                        <Group gap="xl" mt="sm">
                             {STEPS.map((step, index) => (
                                 <Group key={step.id} gap="sm">
                                     <Box
                                         style={{
-                                            width: rem(32),
-                                            height: rem(32),
+                                            width: rem(28),
+                                            height: rem(28),
                                             borderRadius: '50%',
                                             background: index === 0
-                                                ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                                                ? 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)'
                                                 : 'rgba(255, 255, 255, 0.1)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             fontWeight: 600,
-                                            fontSize: rem(14),
+                                            fontSize: rem(13),
                                             color: index === 0 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                            boxShadow: index === 0 ? '0 4px 12px rgba(32, 153, 240, 0.4)' : 'none',
                                         }}
                                     >
                                         {index + 1}
@@ -171,9 +182,10 @@ export default function WizardWelcome() {
                                     {index < STEPS.length - 1 && (
                                         <Box
                                             style={{
-                                                width: rem(40),
+                                                width: rem(36),
                                                 height: rem(2),
                                                 background: 'rgba(255, 255, 255, 0.1)',
+                                                borderRadius: rem(1),
                                             }}
                                         />
                                     )}
@@ -182,113 +194,68 @@ export default function WizardWelcome() {
                         </Group>
 
                         {/* Feature Highlights */}
-                        <Stack gap="md" mt="lg" w="100%">
-                            <Group gap="md" align="flex-start">
-                                <Box
-                                    style={{
-                                        width: rem(24),
-                                        height: rem(24),
-                                        borderRadius: '50%',
-                                        background: 'rgba(99, 102, 241, 0.2)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <Text size="xs" c="indigo" fw={700}>✓</Text>
-                                </Box>
-                                <Text c="rgba(255, 255, 255, 0.7)" size="sm">
-                                    Manage your files with a powerful file manager
-                                </Text>
-                            </Group>
-                            <Group gap="md" align="flex-start">
-                                <Box
-                                    style={{
-                                        width: rem(24),
-                                        height: rem(24),
-                                        borderRadius: '50%',
-                                        background: 'rgba(99, 102, 241, 0.2)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <Text size="xs" c="indigo" fw={700}>✓</Text>
-                                </Box>
-                                <Text c="rgba(255, 255, 255, 0.7)" size="sm">
-                                    Deploy and manage Docker containers
-                                </Text>
-                            </Group>
-                            <Group gap="md" align="flex-start">
-                                <Box
-                                    style={{
-                                        width: rem(24),
-                                        height: rem(24),
-                                        borderRadius: '50%',
-                                        background: 'rgba(99, 102, 241, 0.2)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <Text size="xs" c="indigo" fw={700}>✓</Text>
-                                </Box>
-                                <Text c="rgba(255, 255, 255, 0.7)" size="sm">
-                                    Monitor system performance in real-time
-                                </Text>
-                            </Group>
-                            <Group gap="md" align="flex-start">
-                                <Box
-                                    style={{
-                                        width: rem(24),
-                                        height: rem(24),
-                                        borderRadius: '50%',
-                                        background: 'rgba(99, 102, 241, 0.2)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <Text size="xs" c="indigo" fw={700}>✓</Text>
-                                </Box>
-                                <Text c="rgba(255, 255, 255, 0.7)" size="sm">
-                                    Control your storage with ZFS or EXT4
-                                </Text>
-                            </Group>
+                        <Stack gap="sm" mt="md" w="100%">
+                            {FEATURES.map(({ icon: Icon, title, description }) => (
+                                <Group key={title} gap="md" align="center" wrap="nowrap">
+                                    <Box
+                                        style={{
+                                            width: rem(36),
+                                            height: rem(36),
+                                            borderRadius: '10px',
+                                            background: 'rgba(32, 153, 240, 0.15)',
+                                            border: '1px solid rgba(32, 153, 240, 0.25)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <Icon size={18} color="#2099f0" stroke={1.5} />
+                                    </Box>
+                                    <Stack gap={0}>
+                                        <Text size="sm" fw={600} c="white">
+                                            {title}
+                                        </Text>
+                                        <Text size="xs" c="rgba(255, 255, 255, 0.6)">
+                                            {description}
+                                        </Text>
+                                    </Stack>
+                                </Group>
+                            ))}
                         </Stack>
 
-                        {/* Navigation Buttons */}
-                        <Group justify="space-between" w="100%" mt="xl">
-                            <Box />
-                            <Button
-                                component={Link}
-                                href="/wizard/account"
-                                size="lg"
-                                rightSection={<IconArrowRight size={18} />}
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                    border: 'none',
-                                    fontWeight: 600,
-                                    height: rem(48),
-                                    paddingLeft: rem(24),
-                                    paddingRight: rem(24),
-                                }}
-                                styles={{
-                                    root: {
-                                        transition: 'all 0.3s ease',
-                                        '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
-                                        },
+                        {/* Navigation Button */}
+                        <Button
+                            component={Link}
+                            href="/wizard/account"
+                            size="md"
+                            fullWidth
+                            mt="md"
+                            rightSection={<IconArrowRight size={18} />}
+                            style={{
+                                background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
+                                border: 'none',
+                                fontWeight: 600,
+                                height: rem(44),
+                            }}
+                            styles={{
+                                root: {
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
                                     },
-                                }}
-                            >
-                                Get Started
-                            </Button>
+                                },
+                            }}
+                        >
+                            Get Started
+                        </Button>
+
+                        <Group gap="xs" justify="center">
+                            <IconCheck size={14} color="rgba(255, 255, 255, 0.4)" stroke={1.5} />
+                            <Text size="xs" c="dimmed" ta="center">
+                                Setup takes less than a minute
+                            </Text>
                         </Group>
                     </Stack>
                 </Paper>
