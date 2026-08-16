@@ -75,8 +75,10 @@ export function NovaNASUpdatesTab() {
             const data = await response.json();
 
             if (response.ok) {
-                // Refresh the window immediately so the update starts right away
-                window.location.reload();
+                // Refresh the window after a short delay to allow the update to start
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
             } else {
                 setError(data.message || 'Failed to start update');
             }
