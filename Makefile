@@ -7,6 +7,10 @@ release:
 		echo "Error: missing version. Usage: make release VERSION=x.y.z"; \
 		exit 1; \
 	fi
+	@if [ "$$(git branch --show-current)" != "main" ]; then \
+		echo "Error: you must be on the main branch"; \
+		exit 1; \
+	fi
 	@if git tag -l | grep -qx "v$(VERSION)"; then \
 		echo "Error: tag v$(VERSION) already exists"; \
 		exit 1; \
