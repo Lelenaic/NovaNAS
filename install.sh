@@ -190,7 +190,7 @@ apt update
 # Install packages
 print_info "Installing system packages..."
 apt install -y \
-    linux-headers-generic \
+    linux-headers-amd64 \
     zfs-dkms \
     zfsutils-linux \
     ca-certificates \
