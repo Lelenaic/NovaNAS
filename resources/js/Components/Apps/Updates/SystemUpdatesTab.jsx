@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useBadges } from '../../Desktop/BadgeContext';
+import { useConfirmModal } from '../../ConfirmModal';
 import {
     Box,
     Title,
@@ -41,6 +42,8 @@ export function SystemUpdatesTab() {
     const [checkJobId, setCheckJobId] = useState(null);
     const [checkPolling, setCheckPolling] = useState(false);
     const terminalRef = useRef(null);
+    const [confirmRestart, restartConfirmModal] = useConfirmModal();
+    const [confirmUpgrade, upgradeConfirmModal] = useConfirmModal();
 
     useEffect(() => {
         fetchStatus();
@@ -149,7 +152,13 @@ export function SystemUpdatesTab() {
     };
 
     const handleRestart = async () => {
-        if (!window.confirm('Are you sure you want to restart the system now? This will disconnect all users and stop all services.')) {
+        const confirmed = await confirmRestart({
+            title: 'Restart System',
+            message: 'Are you sure you want to restart the system now? This will disconnect all users and stop all services.',
+            confirmLabel: 'Restart',
+            color: 'orange',
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -249,7 +258,13 @@ export function SystemUpdatesTab() {
     };
 
     const handleUpgrade = async () => {
-        if (!window.confirm('Are you sure you want to upgrade the system? This may take several minutes and could require a restart.')) {
+        const confirmed = await confirmUpgrade({
+            title: 'Upgrade System',
+            message: 'Are you sure you want to upgrade the system? This may take several minutes and could require a restart.',
+            confirmLabel: 'Upgrade',
+            color: 'green',
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -485,6 +500,9 @@ export function SystemUpdatesTab() {
                     </Group>
                 </Alert>
             )}
+
+            {restartConfirmModal}
+            {upgradeConfirmModal}
         </Box>
     );
 }

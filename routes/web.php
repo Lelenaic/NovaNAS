@@ -114,6 +114,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/settings/ssl/install-certificate', [SslSettingsController::class, 'installCertificate']);
         Route::post('/api/settings/ssl/enable', [SslSettingsController::class, 'enableSsl']);
         Route::post('/api/settings/ssl/disable', [SslSettingsController::class, 'disableSsl']);
+        Route::get('/api/settings/ssl/firewall-port', [SslSettingsController::class, 'checkFirewallPort']);
         Route::delete('/api/settings/ssl/certificate', [SslSettingsController::class, 'deleteCertificate']);
         Route::post('/api/settings/ssl/generate-self-signed', [SslSettingsController::class, 'generateSelfSigned']);
 

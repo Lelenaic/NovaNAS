@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Title, Text, Card, Badge, Group, ActionIcon, Stack, Loader, Button, Modal, TextInput, PasswordInput, Alert, Table, ScrollArea, Tooltip } from '@mantine/core';
 import { IconRefresh, IconTrash, IconPlus, IconLogin, IconLogout, IconKey, IconAlertCircle, IconCloud } from '@tabler/icons-react';
+import { useConfirmModal } from '../../ConfirmModal';
 
 export function RegistriesTab() {
     const [loading, setLoading] = useState(true);
@@ -9,6 +10,7 @@ export function RegistriesTab() {
     const [actionLoading, setActionLoading] = useState({});
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [confirmRemove, removeConfirmModal] = useConfirmModal();
 
     // Add registry modal
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -129,7 +131,12 @@ export function RegistriesTab() {
     };
 
     const handleRemove = async (registryAddress) => {
-        if (!confirm(`Are you sure you want to remove ${registryAddress}?`)) {
+        const confirmed = await confirmRemove({
+            title: 'Remove Registry',
+            message: `Are you sure you want to remove ${registryAddress}?`,
+            confirmLabel: 'Remove',
+        });
+        if (!confirmed) {
             return;
         }
 
@@ -342,6 +349,8 @@ export function RegistriesTab() {
                     </Group>
                 </Stack>
             </Modal>
+
+            {removeConfirmModal}
         </Stack>
     );
 }

@@ -33,12 +33,14 @@ import {
     IconFolder,
 } from '@tabler/icons-react';
 import { FileSelector } from '../../../FileSelector';
+import { useConfirmModal } from '../../../ConfirmModal';
 
 export function RepositoriesTab() {
     const theme = useMantineTheme();
     const [repositories, setRepositories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [confirmDelete, deleteConfirmModal] = useConfirmModal();
     const [opened, { open: openModal, close: closeModal }] = useDisclosure(false);
     const [editingRepo, setEditingRepo] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -125,7 +127,12 @@ export function RepositoriesTab() {
     };
 
     const handleDelete = async (repoId) => {
-        if (!confirm('Are you sure you want to delete this destination? This will not delete the actual backup data.')) return;
+        const confirmed = await confirmDelete({
+            title: 'Delete Destination',
+            message: 'Are you sure you want to delete this destination? This will not delete the actual backup data.',
+            confirmLabel: 'Delete',
+        });
+        if (!confirmed) return;
 
         try {
             await fetch(`/api/backup/repositories/${repoId}`, { method: 'DELETE' });
@@ -558,6 +565,8 @@ export function RepositoriesTab() {
                 showFiles={false}
                 useSudo={true}
             />
+
+            {deleteConfirmModal}
         </Box>
     );
 }

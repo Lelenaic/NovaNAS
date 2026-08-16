@@ -117,6 +117,72 @@ class UfwService
     }
 
     /**
+     * Check whether the firewall would allow incoming traffic on a given port/protocol.
+     *
+     * When the firewall is inactive no filtering happens, so the port is considered open.
+     *
+     * @return array{active: bool, open: bool}
+     */
+    public function isPortOpen(string $port, string $protocol = 'tcp'): array
+    {
+        $status = $this->getStatus();
+        $active = $status['active'];
+
+        // Firewall inactive => no filtering, port is open.
+        if (! $active) {
+            return ['active' => false, 'open' => true];
+        }
+
+        // Default incoming policy allows traffic unless a deny rule exists.
+        $policies = $this->getDefaultPolicies();
+        if (strtolower($policies['incoming']) === 'allow') {
+            return ['active' => true, 'open' => true];
+        }
+
+        $protocol = strtolower($protocol);
+
+        foreach ($this->getRules() as $rule) {
+            if (strtolower((string) $rule['action']) !== 'allow') {
+                continue;
+            }
+
+            if (strtolower((string) $rule['direction']) === 'out') {
+                continue;
+            }
+
+            $rulePort = strtolower((string) $rule['port']);
+            $ruleProtocol = strtolower((string) $rule['protocol']);
+
+            $portMatches = $rulePort === '' || $rulePort === $port || $this->portInRange($rulePort, $port);
+            $protocolMatches = $ruleProtocol === 'any' || $ruleProtocol === $protocol;
+
+            if ($portMatches && $protocolMatches) {
+                return ['active' => true, 'open' => true];
+            }
+        }
+
+        return ['active' => true, 'open' => false];
+    }
+
+    /**
+     * Check whether a port falls within a port range (e.g. "443:445").
+     */
+    protected function portInRange(string $range, string $port): bool
+    {
+        if (! str_contains($range, ':')) {
+            return false;
+        }
+
+        [$from, $to] = explode(':', $range, 2);
+
+        if (! ctype_digit($from) || ! ctype_digit($to) || ! ctype_digit($port)) {
+            return false;
+        }
+
+        return (int) $port >= (int) $from && (int) $port <= (int) $to;
+    }
+
+    /**
      * Get all firewall rules.
      *
      * @return array<int, array{id: int, priority: int, action: string, direction: string, port: string, protocol: string, from: string, to: string, interface: string, comment: string}>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Firewall\UfwService;
 use App\Services\SslService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ use Illuminate\Http\Request;
 class SslSettingsController extends Controller
 {
     public function __construct(
-        private SslService $sslService
+        private SslService $sslService,
+        private UfwService $ufwService
     ) {}
 
     /**
@@ -68,12 +70,12 @@ class SslSettingsController extends Controller
 
             if (! $installResult['success']) {
                 return response()->json([
-                    'message' => 'Certificate issued but installation failed: '.$installResult['message'],
+                    'message' => 'Certificate issued but saving it failed: '.$installResult['message'],
                 ], 500);
             }
 
             return response()->json([
-                'message' => 'Certificate issued and installed successfully.',
+                'message' => 'Certificate issued and saved. Enable SSL to activate it.',
             ]);
         }
 
@@ -110,7 +112,7 @@ class SslSettingsController extends Controller
 
         if ($result['success']) {
             return response()->json([
-                'message' => 'Certificate installed successfully.',
+                'message' => 'Certificate saved. Enable SSL to activate it.',
             ]);
         }
 
@@ -122,8 +124,10 @@ class SslSettingsController extends Controller
     /**
      * Enable SSL on Apache.
      */
-    public function enableSsl(): JsonResponse
+    public function enableSsl(Request $request): JsonResponse
     {
+        $forceHttps = $request->boolean('force_https', false);
+
         $hostname = $this->sslService->getCurrentHostname();
 
         if (! $hostname) {
@@ -140,7 +144,7 @@ class SslSettingsController extends Controller
             ], 400);
         }
 
-        $result = $this->sslService->enableSsl();
+        $result = $this->sslService->enableSsl($forceHttps);
 
         if ($result['success']) {
             return response()->json([
@@ -151,6 +155,21 @@ class SslSettingsController extends Controller
         return response()->json([
             'message' => $result['message'],
         ], 500);
+    }
+
+    /**
+     * Check whether the firewall allows incoming traffic on a given port.
+     */
+    public function checkFirewallPort(): JsonResponse
+    {
+        $result = $this->ufwService->isPortOpen('443', 'tcp');
+
+        return response()->json([
+            'port' => '443',
+            'protocol' => 'tcp',
+            'firewall_active' => $result['active'],
+            'open' => $result['open'],
+        ]);
     }
 
     /**
@@ -219,7 +238,7 @@ class SslSettingsController extends Controller
 
         if ($result['success']) {
             return response()->json([
-                'message' => 'Self-signed certificate generated and installed successfully.',
+                'message' => 'Self-signed certificate generated and saved. Enable SSL to activate it.',
             ]);
         }
 

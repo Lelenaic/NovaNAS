@@ -19,6 +19,10 @@ class SslService
 
     private const CERT_DIR = '/etc/ssl/novanas';
 
+    private const HTTPS_REDIRECT_START = '# NOVANAS HTTPS REDIRECT START';
+
+    private const HTTPS_REDIRECT_END = '# NOVANAS HTTPS REDIRECT END';
+
     /**
      * Get the current SSL status.
      *
@@ -90,7 +94,7 @@ class SslService
     public function issueLetsEncrypt(string $domain): array
     {
         $result = Process::timeout(120)->run([
-            'sudo', self::ACME_SH, '--issue', '--apache', '-d', $domain, '--force',
+            'sudo', self::ACME_SH, '--issue', '--server', 'letsencrypt', '--apache', '-d', $domain, '--force',
         ]);
 
         if ($result->successful()) {
@@ -188,7 +192,7 @@ class SslService
      *
      * @return array{success: bool, message: string}
      */
-    public function enableSsl(): array
+    public function enableSsl(bool $forceHttps = false): array
     {
         // Enable mod_ssl
         $result = Process::run(['sudo', 'a2enmod', 'ssl']);
@@ -202,7 +206,6 @@ class SslService
 
         // Write SSL VirtualHost
         $vhConfig = '<VirtualHost *:443>'."\n"
-            .'    ServerName '.$this->getCurrentHostname()."\n"
             .'    DocumentRoot /var/novanas/public'."\n"
             ."\n"
             .'    SSLEngine on'."\n"
@@ -228,6 +231,13 @@ class SslService
                 'success' => false,
                 'message' => 'Failed to write SSL config: '.$result->errorOutput(),
             ];
+        }
+
+        // Optionally force HTTP to HTTPS redirection on the port-80 vhost.
+        $redirectResult = $this->setHttpsRedirect($forceHttps);
+
+        if (! $redirectResult['success']) {
+            return $redirectResult;
         }
 
         // Config test and reload
@@ -271,6 +281,9 @@ class SslService
 
         // Disable mod_ssl
         Process::run(['sudo', 'a2dismod', 'ssl']);
+
+        // Remove the HTTP to HTTPS redirect
+        $this->setHttpsRedirect(false);
 
         // Config test and reload
         $result = Process::run(['sudo', 'apache2ctl', 'configtest']);
@@ -564,5 +577,102 @@ class SslService
         Process::run(['sudo', 'cp', $tmpFile, $path]);
 
         unlink($tmpFile);
+    }
+
+    /**
+     * Add or remove the HTTP to HTTPS redirect on the port-80 vhost.
+     *
+     * @return array{success: bool, message: string}
+     */
+    protected function setHttpsRedirect(bool $force): array
+    {
+        $configPath = '/etc/apache2/sites-enabled/000-default.conf';
+
+        $result = Process::run(['sudo', 'cat', $configPath]);
+
+        if ($result->failed()) {
+            return [
+                'success' => false,
+                'message' => 'Failed to read Apache port-80 config: '.$result->errorOutput(),
+            ];
+        }
+
+        $config = $result->output();
+        $block = self::HTTPS_REDIRECT_START."\n"
+            .'    RewriteEngine On'."\n"
+            .'    RewriteCond %{HTTPS} off'."\n"
+            .'    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/'."\n"
+            .'    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]'."\n"
+            .'    '.self::HTTPS_REDIRECT_END;
+
+        $hasRedirect = str_contains($config, self::HTTPS_REDIRECT_START);
+
+        if ($force && ! $hasRedirect) {
+            $insert = self::HTTPS_REDIRECT_START;
+            $vhostClose = '</VirtualHost>';
+
+            $config = str_replace($vhostClose, $block."\n".$vhostClose, $config);
+
+            return $this->writeApacheConfig($configPath, $config);
+        }
+
+        if (! $force && $hasRedirect) {
+            $start = self::HTTPS_REDIRECT_START;
+            $end = self::HTTPS_REDIRECT_END;
+            $pattern = '/\s*'.preg_quote($start, '/').'.*?'.preg_quote($end, '/').'\s*/s';
+            $config = preg_replace($pattern, '', $config, 1) ?? $config;
+
+            return $this->writeApacheConfig($configPath, $config);
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Redirect configuration unchanged.',
+        ];
+    }
+
+    /**
+     * Persist an Apache config file and run a config test.
+     *
+     * @return array{success: bool, message: string}
+     */
+    protected function writeApacheConfig(string $configPath, string $config): array
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'apachecfg_');
+        file_put_contents($tmpFile, $config);
+
+        $result = Process::run(['sudo', 'cp', $tmpFile, $configPath]);
+
+        unlink($tmpFile);
+
+        if ($result->failed()) {
+            return [
+                'success' => false,
+                'message' => 'Failed to write Apache config: '.$result->errorOutput(),
+            ];
+        }
+
+        $test = Process::run(['sudo', 'apache2ctl', 'configtest']);
+
+        if ($test->failed()) {
+            return [
+                'success' => false,
+                'message' => 'Apache config test failed: '.$test->errorOutput(),
+            ];
+        }
+
+        $reload = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
+
+        if ($reload->failed()) {
+            return [
+                'success' => false,
+                'message' => 'Failed to reload Apache: '.$reload->errorOutput(),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Apache configuration updated.',
+        ];
     }
 }

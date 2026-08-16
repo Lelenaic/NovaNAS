@@ -20,6 +20,7 @@ import {
     IconTrash,
     IconCamera,
 } from '@tabler/icons-react';
+import { useConfirmModal } from '../../../ConfirmModal';
 
 export function SnapshotsTab() {
     const theme = useMantineTheme();
@@ -29,6 +30,7 @@ export function SnapshotsTab() {
     const [loading, setLoading] = useState(true);
     const [loadingSnapshots, setLoadingSnapshots] = useState(false);
     const [error, setError] = useState(null);
+    const [confirmDelete, deleteConfirmModal] = useConfirmModal();
 
     useEffect(() => {
         fetchRepositories();
@@ -79,7 +81,12 @@ export function SnapshotsTab() {
     };
 
     const handleDelete = async (snapshotId) => {
-        if (!confirm('Are you sure you want to delete this backup?')) return;
+        const confirmed = await confirmDelete({
+            title: 'Delete Backup',
+            message: 'Are you sure you want to delete this backup?',
+            confirmLabel: 'Delete',
+        });
+        if (!confirmed) return;
 
         try {
             const response = await fetch(
@@ -229,6 +236,8 @@ export function SnapshotsTab() {
                     </Table>
                 </Box>
             )}
+
+            {deleteConfirmModal}
         </Box>
     );
 }

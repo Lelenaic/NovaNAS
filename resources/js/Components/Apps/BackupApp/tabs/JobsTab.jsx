@@ -34,6 +34,7 @@ import {
     IconFolder,
 } from '@tabler/icons-react';
 import { FileSelector } from '../../../FileSelector';
+import { useConfirmModal } from '../../../ConfirmModal';
 
 export function JobsTab() {
     const theme = useMantineTheme();
@@ -41,6 +42,7 @@ export function JobsTab() {
     const [repositories, setRepositories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [confirmDelete, deleteConfirmModal] = useConfirmModal();
     const [opened, { open: openModal, close: closeModal }] = useDisclosure(false);
     const [editingJob, setEditingJob] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -143,7 +145,12 @@ export function JobsTab() {
     };
 
     const handleDelete = async (jobId) => {
-        if (!confirm('Are you sure you want to delete this backup job?')) return;
+        const confirmed = await confirmDelete({
+            title: 'Delete Backup Job',
+            message: 'Are you sure you want to delete this backup job?',
+            confirmLabel: 'Delete',
+        });
+        if (!confirmed) return;
 
         try {
             await fetch(`/api/backup/jobs/${jobId}`, { method: 'DELETE' });
@@ -585,6 +592,8 @@ export function JobsTab() {
                 showFiles={false}
                 useSudo={true}
             />
+
+            {deleteConfirmModal}
         </Box>
     );
 }

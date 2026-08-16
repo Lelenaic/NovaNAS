@@ -231,4 +231,10 @@ As you're a remote agent on a headless system, you cannot use visit() or screens
 
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
+=== project rules ===
+
+# NovaNAS Frontend
+
+- NEVER use native `confirm()` / `window.confirm()`. For confirmation dialogs use the shared `useConfirmModal()` hook from `resources/js/Components/ConfirmModal.jsx` (returns `[confirm, confirmModal]`, where `confirm(options)` is promise-based and `confirmModal` is rendered once per component). This matches the app-wide convention for custom Modals.
+
 </laravel-boost-guidelines>
