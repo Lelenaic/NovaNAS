@@ -16,9 +16,9 @@ class SettingsService
     /**
      * Get a setting value by key.
      */
-    public function get(string $key, ?string $default = null): ?string
+    public function get(string $key): ?string
     {
-        return Setting::getValue($key, $default);
+        return Setting::getValue($key);
     }
 
     /**

@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Artisan;
  */
 class LogSettingsController extends Controller
 {
-    public const DEFAULT_RETENTION_DAYS = 30;
-
     public const SETTING_KEY = 'logs.auto_delete_days';
 
     /**
@@ -21,8 +19,7 @@ class LogSettingsController extends Controller
      */
     public function index(): JsonResponse
     {
-        $retentionDays = (int) (Setting::getValue(self::SETTING_KEY, (string) self::DEFAULT_RETENTION_DAYS)
-            ?: self::DEFAULT_RETENTION_DAYS);
+        $retentionDays = (int) Setting::getValue(self::SETTING_KEY);
 
         $stats = $this->getLogStats();
 

@@ -27,16 +27,13 @@ class PruneLogsCommand extends Command
 
     protected $description = 'Delete log lines older than the configured retention period';
 
-    private const DEFAULT_RETENTION_DAYS = 30;
-
     private const SETTING_KEY = 'logs.auto_delete_days';
 
     public function handle(): int
     {
         $days = $this->option('days')
             ? (int) $this->option('days')
-            : (int) (Setting::getValue(self::SETTING_KEY, (string) self::DEFAULT_RETENTION_DAYS)
-                ?: self::DEFAULT_RETENTION_DAYS);
+            : (int) Setting::getValue(self::SETTING_KEY);
 
         $cutoff = now()->subDays($days);
         $dryRun = (bool) $this->option('dry-run');

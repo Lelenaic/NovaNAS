@@ -63,7 +63,7 @@ class DockerComposeController extends Controller
 
     private function getProjectsStoragePath(): string
     {
-        $appsStorage = $this->settings->get('storage.app_folders_home', '/srv');
+        $appsStorage = $this->settings->get('storage.app_folders_home');
 
         return $appsStorage.'/novanas_projects';
     }

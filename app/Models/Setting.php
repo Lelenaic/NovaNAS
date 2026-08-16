@@ -42,11 +42,9 @@ class Setting extends Model
     /**
      * Get a setting value by key.
      */
-    public static function getValue(string $key, ?string $default = null): ?string
+    public static function getValue(string $key): ?string
     {
-        $setting = static::where('key', $key)->first();
-
-        return $setting->value ?? $default;
+        return static::where('key', $key)->value('value');
     }
 
     /**

@@ -467,7 +467,7 @@ class ApplicationsService
      */
     private function getAppStoragePath(): string
     {
-        $path = $this->settings->get('storage.app_folders_home', '/var/novanas/storage/applications');
+        $path = $this->settings->get('storage.app_folders_home');
 
         if (! is_dir($path)) {
             mkdir($path, 0755, true);

@@ -110,7 +110,7 @@ class UserController extends Controller
         }
 
         // Get the home directory base path
-        $homeBase = $this->settingsService->get('storage.user_files_home', '/home');
+        $homeBase = $this->settingsService->get('storage.user_files_home');
         $homeDir = $homeBase.'/'.$validated['username'];
 
         // Generate a random temporary password
@@ -191,11 +191,11 @@ class UserController extends Controller
 
         // Generate invitation token
         $token = Str::uuid()->toString();
-        $expiresInHours = (int) $this->settingsService->get('users.invitation_lifetime_hours', '48');
+        $expiresInHours = (int) $this->settingsService->get('users.invitation_lifetime_hours');
         $expiresAt = now()->addHours($expiresInHours);
 
         // Get the home directory base path
-        $homeBase = $this->settingsService->get('storage.user_files_home', '/home');
+        $homeBase = $this->settingsService->get('storage.user_files_home');
         $homeDir = $homeBase.'/'.$username;
 
         // Create the Linux user (or link to existing)

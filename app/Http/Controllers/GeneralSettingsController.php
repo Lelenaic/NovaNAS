@@ -24,9 +24,9 @@ class GeneralSettingsController extends Controller
         ]);
 
         return response()->json([
-            'invitation_lifetime_hours' => (int) ($settings['users.invitation_lifetime_hours'] ?? 48),
-            'user_files_home' => $settings['storage.user_files_home'] ?? '',
-            'app_folders_home' => $settings['storage.app_folders_home'] ?? '',
+            'invitation_lifetime_hours' => (int) $settings['users.invitation_lifetime_hours'],
+            'user_files_home' => $settings['storage.user_files_home'],
+            'app_folders_home' => $settings['storage.app_folders_home'],
             'hostname' => $this->getHostname(),
         ]);
     }

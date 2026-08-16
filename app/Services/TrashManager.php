@@ -18,20 +18,12 @@ class TrashManager
 
     private const RETENTION_SETTING_KEY = 'filemanager.trash_retention_days';
 
-    private const DEFAULT_RETENTION_DAYS = 30;
-
     /**
      * Get the trash retention period in days.
      */
     public function getRetentionDays(): int
     {
-        $value = Setting::getValue(self::RETENTION_SETTING_KEY);
-
-        if ($value === null || ! is_numeric($value)) {
-            return self::DEFAULT_RETENTION_DAYS;
-        }
-
-        return max(1, (int) $value);
+        return max(1, (int) Setting::getValue(self::RETENTION_SETTING_KEY));
     }
 
     /**
