@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton, Badge, Drawer } from '@mantine/core';
+import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse, UnstyledButton, Badge, Drawer, Tooltip } from '@mantine/core';
 import { IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck, IconPlug } from '@tabler/icons-react';
 
 // Singleton hook to fetch system info - shared by all components
@@ -87,26 +87,99 @@ function GaugeWidget({ icon: Icon, label, value, maxValue = 100, color = 'blue',
     );
 }
 
+function MemoryGaugeWidget({ usage }) {
+    const theme = useMantineTheme();
+    const { total, used, cached, free } = usage;
+
+    const pct = (value) => (total > 0 ? Math.min((value / total) * 100, 100) : 0);
+
+    const usedPct = pct(used);
+    const cachedPct = pct(cached);
+    const freePct = Math.max(100 - usedPct - cachedPct, 0);
+
+    const totalUsedPct = Math.min(usedPct + cachedPct, 100);
+    const usedColor = getMemoryColor(totalUsedPct);
+    const occupied = Math.min(used + cached, total);
+
+    const segments = [
+        { name: 'Used', value: used, percentage: usedPct, color: theme.colors[usedColor][6] },
+        { name: 'Cached', value: cached, percentage: cachedPct, color: theme.colors.blue[6] },
+        { name: 'Free', value: free, percentage: freePct, color: theme.colors.dark[4] },
+    ].filter((segment) => segment.percentage > 0);
+
+    const tooltipLabel = (segment) => (
+        <Stack gap={2}>
+            <Text size="xs" fw={600}>{segment.name}</Text>
+            <Text size="xs" c="dimmed">
+                {segment.percentage.toFixed(1)}% · {formatBytes(segment.value)}
+            </Text>
+        </Stack>
+    );
+
+    return (
+        <Box>
+            <Group gap="xs" mb={4}>
+                <IconDeviceDesktop size={14} color={theme.colors[usedColor][5]} />
+                <Text size="xs" c="dimmed">Memory</Text>
+            </Group>
+            <Box
+                display="flex"
+                style={{
+                    height: 8,
+                    borderRadius: 999,
+                    overflow: 'hidden',
+                    background: theme.colors.dark[4],
+                    marginBottom: 2,
+                }}
+            >
+                {segments.map((segment) => (
+                    <Tooltip
+                        key={segment.name}
+                        label={tooltipLabel(segment)}
+                        withArrow
+                        position="top"
+                        openDelay={0}
+                    >
+                        <Box
+                            style={{
+                                width: `${segment.percentage}%`,
+                                height: '100%',
+                                backgroundColor: segment.color,
+                            }}
+                        />
+                    </Tooltip>
+                ))}
+            </Box>
+            <Group justify="space-between" align="center">
+                <Text size="xs" c="dimmed">
+                    {formatBytes(occupied)} / {formatBytes(total)}
+                </Text>
+                <Text size="xs" c="white">{totalUsedPct.toFixed(1)}%</Text>
+            </Group>
+        </Box>
+    );
+}
+
+function getCpuColor(percentage) {
+    if (percentage > 80) return 'red';
+    if (percentage > 60) return 'orange';
+    return 'blue';
+}
+
+function getMemoryColor(percentage) {
+    if (percentage > 80) return 'red';
+    if (percentage > 60) return 'orange';
+    return 'teal';
+}
+
+function getTemperatureColor(temp) {
+    if (temp > 80) return 'red';
+    if (temp > 60) return 'orange';
+    return 'green';
+}
+
 export function SystemResourcesWidget({ systemInfo, loading }) {
     const theme = useMantineTheme();
-
-    const getCpuColor = (percentage) => {
-        if (percentage > 80) return 'red';
-        if (percentage > 60) return 'orange';
-        return 'blue';
-    };
-
-    const getMemoryColor = (percentage) => {
-        if (percentage > 80) return 'red';
-        if (percentage > 60) return 'orange';
-        return 'teal';
-    };
-
-    const getTemperatureColor = (temp) => {
-        if (temp > 80) return 'red';
-        if (temp > 60) return 'orange';
-        return 'green';
-    };
 
     return (
         <Box
@@ -152,13 +225,7 @@ export function SystemResourcesWidget({ systemInfo, loading }) {
                             </>
                         )}
                         {systemInfo.memory_usage && (
-                            <GaugeWidget
-                                icon={IconDeviceDesktop}
-                                label="Memory"
-                                value={systemInfo.memory_usage.percentage}
-                                color={getMemoryColor(systemInfo.memory_usage.percentage)}
-                                supplementaryText={`${formatBytes(systemInfo.memory_usage.used)} / ${formatBytes(systemInfo.memory_usage.total)}`}
-                            />
+                            <MemoryGaugeWidget usage={systemInfo.memory_usage} />
                         )}
                         {systemInfo.load_average && (
                             <Box mt={4}>

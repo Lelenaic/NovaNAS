@@ -231,7 +231,24 @@ class SystemController extends Controller
     }
 
     /**
-     * Get memory usage.
+     * Build the memory usage payload with the cached portion broken out of used.
+     *
+     * @return array{total: int, available: int, free: int, used: int, cached: int, percentage: float}
+     */
+    protected function buildMemoryUsage(int $totalKb, int $availableKb, int $freeKb, int $usedKb, int $cachedKb): array
+    {
+        return [
+            'total' => $totalKb * 1024,
+            'available' => $availableKb * 1024,
+            'free' => max($freeKb, 0) * 1024,
+            'used' => max($usedKb, 0) * 1024,
+            'cached' => max($cachedKb, 0) * 1024,
+            'percentage' => $totalKb > 0 ? round(($usedKb / $totalKb) * 100, 1) : 0.0,
+        ];
+    }
+
+    /**
+     * Get memory usage, separating cached (buff/cache) memory from truly used memory.
      */
     protected function getMemoryUsage(): ?array
     {
@@ -248,59 +265,57 @@ class SystemController extends Controller
                 if (count($parts) >= 3) {
                     $total = (int) $parts[1];
                     $used = (int) $parts[2];
-                    $free = (int) $parts[3];
+                    $free = count($parts) >= 4 ? (int) $parts[3] : 0;
+                    // buff/cache column (col 5) groups buffers + cached
+                    $cached = count($parts) >= 6 ? (int) $parts[5] : 0;
 
-                    // If available is present (newer free versions), use it
                     if (count($parts) >= 7) {
                         $available = (int) $parts[6];
-                        $used = $total - $available;
+                    } else {
+                        $available = $total - $used - $cached;
                     }
 
                     if ($total > 0) {
-                        return [
-                            'total' => $total,
-                            'available' => $total - $used,
-                            'used' => $used,
-                            'percentage' => round(($used / $total) * 100, 1),
-                        ];
+                        return $this->buildMemoryUsage(
+                            (int) ($total / 1024),
+                            (int) ($available / 1024),
+                            (int) ($free / 1024),
+                            (int) ($used / 1024),
+                            (int) ($cached / 1024),
+                        );
                     }
                 }
             }
         }
 
-        // Fallback to /proc/meminfo parsing
+        // Fallback to /proc/meminfo parsing (gives granular Buffers/Cached values)
         if (File::exists('/proc/meminfo')) {
             $meminfo = File::get('/proc/meminfo');
 
-            // Try to match MemTotal and MemAvailable (modern kernels)
             preg_match('/^MemTotal:\s+(\d+)/', $meminfo, $total);
             preg_match('/^MemAvailable:\s+(\d+)/', $meminfo, $available);
+            preg_match('/^MemFree:\s+(\d+)/', $meminfo, $free);
+            preg_match('/^Buffers:\s+(\d+)/', $meminfo, $buffers);
+            preg_match('/^Cached:\s+(\d+)/', $meminfo, $cached);
+            preg_match('/^SReclaimable:\s+(\d+)/', $meminfo, $sReclaimable);
 
             $totalKb = isset($total[1]) ? (int) $total[1] : 0;
-
-            // If MemAvailable is not available or is 0, fall back to MemFree + Buffers + Cached (older kernels)
-            if (empty($available) || (int) $available[1] === 0) {
-                preg_match('/^MemFree:\s+(\d+)/', $meminfo, $free);
-                preg_match('/^Buffers:\s+(\d+)/', $meminfo, $buffers);
-                preg_match('/^Cached:\s+(\d+)/', $meminfo, $cached);
-
-                $freeKb = isset($free[1]) ? (int) $free[1] : 0;
-                $buffersKb = isset($buffers[1]) ? (int) $buffers[1] : 0;
-                $cachedKb = isset($cached[1]) ? (int) $cached[1] : 0;
-                $availableKb = $freeKb + $buffersKb + $cachedKb;
-            } else {
-                $availableKb = (int) $available[1];
-            }
+            $cachedKb = (int) ($buffers[1] ?? 0)
+                + (int) ($cached[1] ?? 0)
+                + (int) ($sReclaimable[1] ?? 0);
+            $freeKb = isset($free[1]) ? (int) $free[1] : 0;
 
             if ($totalKb > 0) {
-                $usedKb = $totalKb - $availableKb;
+                // If MemAvailable is present (modern kernels) use it, otherwise fall back to MemFree + Buffers + Cached
+                if (isset($available[1]) && (int) $available[1] > 0) {
+                    $availableKb = (int) $available[1];
+                } else {
+                    $availableKb = $freeKb + $cachedKb;
+                }
 
-                return [
-                    'total' => $totalKb * 1024,
-                    'available' => $availableKb * 1024,
-                    'used' => $usedKb * 1024,
-                    'percentage' => round(($usedKb / $totalKb) * 100, 1),
-                ];
+                $usedKb = $totalKb - $freeKb - $cachedKb;
+
+                return $this->buildMemoryUsage($totalKb, $availableKb, $freeKb, $usedKb, $cachedKb);
             }
         }
 
