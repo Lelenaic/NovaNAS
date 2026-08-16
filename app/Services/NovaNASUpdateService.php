@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 /**
  * NovaNAS Update Service
@@ -103,23 +104,18 @@ class NovaNASUpdateService
     public function triggerUpdate(): array
     {
         try {
-            $process = \Symfony\Component\Process\Process::fromShellCommandline(
-                'sudo systemctl start novanas-update'
-            );
+            $result = Process::timeout(10)->run('sudo systemctl start novanas-update');
 
-            $process->setTimeout(10); // 10 seconds should be enough to start the service
-            $process->run();
-
-            if ($process->isSuccessful()) {
+            if ($result->successful()) {
                 return [
                     'success' => true,
                     'message' => 'NovaNAS update process started successfully',
                 ];
             } else {
-                $errorOutput = $process->getErrorOutput();
+                $errorOutput = $result->errorOutput();
 
                 Log::error('Failed to start novanas-update service', [
-                    'exit_code' => $process->getExitCode(),
+                    'exit_code' => $result->exitCode(),
                     'error_output' => $errorOutput,
                 ]);
 

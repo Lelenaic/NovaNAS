@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
-use Symfony\Component\Process\Process;
 
 class MonitorController extends Controller
 {
@@ -36,14 +36,12 @@ class MonitorController extends Controller
             "tmux new-session -d -s {$tmuxSession} bash -c '/usr/local/bin/ttyd -p {$port} -i 127.0.0.1 --once -s SIGHUP -W -o -H X-Terminal-User btop ; {$cleanupCmd}'",
         ];
 
-        $process = new Process($command);
-        $process->setTimeout(10);
-        $process->run();
+        $result = Process::timeout(10)->run($command);
 
-        if (! $process->isSuccessful()) {
-            Log::error('Failed to start monitor session', ['error' => $process->getErrorOutput()]);
+        if ($result->failed()) {
+            Log::error('Failed to start monitor session', ['error' => $result->errorOutput()]);
 
-            return response()->json(['error' => 'Failed to start monitor: '.$process->getErrorOutput()], 500);
+            return response()->json(['error' => 'Failed to start monitor: '.$result->errorOutput()], 500);
         }
 
         $this->writeApacheConfig($sessionId, $port);
@@ -72,13 +70,12 @@ class MonitorController extends Controller
             return response()->json(['error' => 'Session not found'], 404);
         }
 
-        $process = new Process(['sudo', 'tmux', 'kill-session', '-t', $session['tmux_session']]);
-        $process->run();
+        Process::run(['sudo', 'tmux', 'kill-session', '-t', $session['tmux_session']]);
 
         $configPath = "/etc/apache2/conf-available/terminal-{$sessionId}.conf";
-        (new Process(['sudo', 'a2disconf', "terminal-{$sessionId}"]))->run();
-        (new Process(['sudo', 'rm', '-f', $configPath]))->run();
-        (new Process(['sudo', 'systemctl', 'reload', 'apache2']))->run();
+        Process::run(['sudo', 'a2disconf', "terminal-{$sessionId}"]);
+        Process::run(['sudo', 'rm', '-f', $configPath]);
+        Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
         Cache::forget("monitor_session_{$sessionId}");
 
@@ -91,12 +88,10 @@ class MonitorController extends Controller
     private function findFreePort(): ?int
     {
         for ($port = 10000; $port <= 65535; $port++) {
-            $process = new Process(['ss', '-tuln']);
-            $process->setTimeout(5);
-            $process->run();
+            $result = Process::timeout(5)->run(['ss', '-tuln']);
 
-            if ($process->isSuccessful()) {
-                $output = $process->getOutput();
+            if ($result->successful()) {
+                $output = $result->output();
                 if (strpos($output, ":{$port} ") === false) {
                     return $port;
                 }
@@ -119,31 +114,27 @@ class MonitorController extends Controller
         $config .= "    RequestHeader set X-Terminal-User \"authenticated\"\n";
         $config .= "</Location>\n";
 
-        $process = new Process(['sudo', 'bash', '-c', "echo '$config' > $configPath"]);
-        $process->run();
+        $result = Process::run(['sudo', 'bash', '-c', "echo '$config' > $configPath"]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             throw new \RuntimeException('Failed to write Apache config');
         }
 
-        $process = new Process(['sudo', 'a2enconf', "terminal-{$sessionId}"]);
-        $process->run();
+        $result = Process::run(['sudo', 'a2enconf', "terminal-{$sessionId}"]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             throw new \RuntimeException('Failed to enable Apache config');
         }
 
-        $process = new Process(['sudo', 'apache2ctl', 'configtest']);
-        $process->run();
+        $result = Process::run(['sudo', 'apache2ctl', 'configtest']);
 
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException('Apache config test failed: '.$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException('Apache config test failed: '.$result->errorOutput());
         }
 
-        $process = new Process(['sudo', 'systemctl', 'reload', 'apache2']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             throw new \RuntimeException('Failed to reload Apache');
         }
     }

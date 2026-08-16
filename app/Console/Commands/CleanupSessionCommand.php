@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 class CleanupSessionCommand extends Command
 {
@@ -62,11 +62,10 @@ class CleanupSessionCommand extends Command
 
     private function killTmuxSession(string $tmuxSession): void
     {
-        $process = new Process(['sudo', 'tmux', 'kill-session', '-t', $tmuxSession]);
-        $process->run();
+        $result = Process::run(['sudo', 'tmux', 'kill-session', '-t', $tmuxSession]);
 
-        if (! $process->isSuccessful()) {
-            $this->warn("Failed to kill tmux session: {$process->getErrorOutput()}");
+        if ($result->failed()) {
+            $this->warn("Failed to kill tmux session: {$result->errorOutput()}");
         }
     }
 
@@ -74,17 +73,16 @@ class CleanupSessionCommand extends Command
     {
         $configPath = "/etc/apache2/conf-available/terminal-{$sessionId}.conf";
 
-        (new Process(['sudo', 'a2disconf', "terminal-{$sessionId}"]))->run();
-        (new Process(['sudo', 'rm', '-f', $configPath]))->run();
+        Process::run(['sudo', 'a2disconf', "terminal-{$sessionId}"]);
+        Process::run(['sudo', 'rm', '-f', $configPath]);
     }
 
     private function reloadApache(): void
     {
-        $process = new Process(['sudo', 'systemctl', 'reload', 'apache2']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
-        if (! $process->isSuccessful()) {
-            $this->warn('Failed to reload Apache: '.$process->getErrorOutput());
+        if ($result->failed()) {
+            $this->warn('Failed to reload Apache: '.$result->errorOutput());
         }
     }
 }

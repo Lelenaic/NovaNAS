@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\DynDnsConfig;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * SSL Certificate Service
@@ -88,30 +89,28 @@ class SslService
      */
     public function issueLetsEncrypt(string $domain): array
     {
-        $process = new Process([
+        $result = Process::timeout(120)->run([
             'sudo', self::ACME_SH, '--issue', '--apache', '-d', $domain, '--force',
         ]);
-        $process->setTimeout(120);
-        $process->run();
 
-        if ($process->isSuccessful()) {
+        if ($result->successful()) {
             Log::info('Let\'s Encrypt certificate issued', ['domain' => $domain]);
 
             return [
                 'success' => true,
                 'message' => 'Certificate issued successfully.',
-                'output' => $process->getOutput(),
+                'output' => $result->output(),
             ];
         }
 
         Log::error('Let\'s Encrypt certificate issuance failed', [
             'domain' => $domain,
-            'error' => $process->getErrorOutput(),
+            'error' => $result->errorOutput(),
         ]);
 
         return [
             'success' => false,
-            'message' => 'Failed to issue certificate: '.$process->getErrorOutput(),
+            'message' => 'Failed to issue certificate: '.$result->errorOutput(),
         ];
     }
 
@@ -135,13 +134,12 @@ class SslService
         if ($certContent !== null && $keyContent !== null) {
             $acmeDir = '/root/.acme.sh/'.$domain.'_ecc';
 
-            $process = new Process(['sudo', 'mkdir', '-p', $acmeDir]);
-            $process->run();
+            $result = Process::run(['sudo', 'mkdir', '-p', $acmeDir]);
 
-            if (! $process->isSuccessful()) {
+            if ($result->failed()) {
                 return [
                     'success' => false,
-                    'message' => 'Failed to create acme.sh directory: '.$process->getErrorOutput(),
+                    'message' => 'Failed to create acme.sh directory: '.$result->errorOutput(),
                 ];
             }
 
@@ -157,17 +155,15 @@ class SslService
             }
         }
 
-        $process = new Process([
+        $result = Process::timeout(60)->run([
             'sudo', self::ACME_SH, '--install-cert', '-d', $domain,
             '--cert-file', self::CERT_DIR.'/cert.pem',
             '--key-file', self::CERT_DIR.'/privkey.pem',
             '--fullchain-file', self::CERT_DIR.'/fullchain.pem',
             '--reloadcmd', 'service apache2 force-reload',
         ]);
-        $process->setTimeout(60);
-        $process->run();
 
-        if ($process->isSuccessful()) {
+        if ($result->successful()) {
             Log::info('Certificate installed', ['domain' => $domain]);
 
             return [
@@ -178,12 +174,12 @@ class SslService
 
         Log::error('Certificate installation failed', [
             'domain' => $domain,
-            'error' => $process->getErrorOutput(),
+            'error' => $result->errorOutput(),
         ]);
 
         return [
             'success' => false,
-            'message' => 'Failed to install certificate: '.$process->getErrorOutput(),
+            'message' => 'Failed to install certificate: '.$result->errorOutput(),
         ];
     }
 
@@ -195,13 +191,12 @@ class SslService
     public function enableSsl(): array
     {
         // Enable mod_ssl
-        $process = new Process(['sudo', 'a2enmod', 'ssl']);
-        $process->run();
+        $result = Process::run(['sudo', 'a2enmod', 'ssl']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Failed to enable mod_ssl: '.$process->getErrorOutput(),
+                'message' => 'Failed to enable mod_ssl: '.$result->errorOutput(),
             ];
         }
 
@@ -226,34 +221,31 @@ class SslService
 
         $configPath = '/etc/apache2/sites-enabled/novanas-ssl.conf';
 
-        $process = new Process(['sudo', 'bash', '-c', "cat > {$configPath} <<'VHEOF'"."\n".$vhConfig."\n".'VHEOF']);
-        $process->run();
+        $result = Process::run(['sudo', 'bash', '-c', "cat > {$configPath} <<'VHEOF'"."\n".$vhConfig."\n".'VHEOF']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Failed to write SSL config: '.$process->getErrorOutput(),
+                'message' => 'Failed to write SSL config: '.$result->errorOutput(),
             ];
         }
 
         // Config test and reload
-        $process = new Process(['sudo', 'apache2ctl', 'configtest']);
-        $process->run();
+        $result = Process::run(['sudo', 'apache2ctl', 'configtest']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Apache config test failed: '.$process->getErrorOutput(),
+                'message' => 'Apache config test failed: '.$result->errorOutput(),
             ];
         }
 
-        $process = new Process(['sudo', 'systemctl', 'reload', 'apache2']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Failed to reload Apache: '.$process->getErrorOutput(),
+                'message' => 'Failed to reload Apache: '.$result->errorOutput(),
             ];
         }
 
@@ -275,31 +267,27 @@ class SslService
         // Remove SSL VirtualHost
         $configPath = '/etc/apache2/sites-enabled/novanas-ssl.conf';
 
-        $process = new Process(['sudo', 'rm', '-f', $configPath]);
-        $process->run();
+        Process::run(['sudo', 'rm', '-f', $configPath]);
 
         // Disable mod_ssl
-        $process = new Process(['sudo', 'a2dismod', 'ssl']);
-        $process->run();
+        Process::run(['sudo', 'a2dismod', 'ssl']);
 
         // Config test and reload
-        $process = new Process(['sudo', 'apache2ctl', 'configtest']);
-        $process->run();
+        $result = Process::run(['sudo', 'apache2ctl', 'configtest']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Apache config test failed: '.$process->getErrorOutput(),
+                'message' => 'Apache config test failed: '.$result->errorOutput(),
             ];
         }
 
-        $process = new Process(['sudo', 'systemctl', 'reload', 'apache2']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Failed to reload Apache: '.$process->getErrorOutput(),
+                'message' => 'Failed to reload Apache: '.$result->errorOutput(),
             ];
         }
 
@@ -318,14 +306,12 @@ class SslService
      */
     public function removeCertificate(string $domain): array
     {
-        $process = new Process([
+        Process::run([
             'sudo', self::ACME_SH, '--remove', '-d', $domain, '--force',
         ]);
-        $process->run();
 
         // Remove cert files from our directory
-        $process = new Process(['sudo', 'rm', '-rf', self::CERT_DIR]);
-        $process->run();
+        Process::run(['sudo', 'rm', '-rf', self::CERT_DIR]);
 
         Log::info('Certificate removed', ['domain' => $domain]);
 
@@ -347,36 +333,33 @@ class SslService
         $acmeDir = '/root/.acme.sh/'.$domain.'_ecc';
 
         // Create acme.sh directory
-        $process = new Process(['sudo', 'mkdir', '-p', $acmeDir]);
-        $process->run();
+        $result = Process::run(['sudo', 'mkdir', '-p', $acmeDir]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'message' => 'Failed to create certificate directory: '.$process->getErrorOutput(),
+                'message' => 'Failed to create certificate directory: '.$result->errorOutput(),
             ];
         }
 
         // Generate self-signed certificate valid for 90 days (3 months)
-        $process = new Process([
+        $result = Process::timeout(60)->run([
             'sudo', 'openssl', 'req', '-x509', '-nodes', '-days', '90',
             '-newkey', 'rsa:2048',
             '-keyout', $acmeDir.'/'.$domain.'.key',
             '-out', $acmeDir.'/'.$domain.'.cer',
             '-subj', '/CN='.$domain.'/O=NovaNAS/C=US',
         ]);
-        $process->setTimeout(60);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             Log::error('Self-signed certificate generation failed', [
                 'domain' => $domain,
-                'error' => $process->getErrorOutput(),
+                'error' => $result->errorOutput(),
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Failed to generate certificate: '.$process->getErrorOutput(),
+                'message' => 'Failed to generate certificate: '.$result->errorOutput(),
             ];
         }
 
@@ -437,7 +420,7 @@ class SslService
                 continue;
             }
 
-            $expiryDate = \Carbon\Carbon::parse($expiresAt);
+            $expiryDate = Carbon::parse($expiresAt);
 
             if ($expiryDate->lte($renewalThreshold)) {
                 $certsNeedingRenewal[] = [
@@ -480,11 +463,10 @@ class SslService
         $expiresAt = null;
         $certFile = self::CERT_DIR.'/fullchain.pem';
 
-        $process = new Process(['sudo', 'openssl', 'x509', '-in', $certFile, '-noout', '-enddate']);
-        $process->run();
+        $result = Process::run(['sudo', 'openssl', 'x509', '-in', $certFile, '-noout', '-enddate']);
 
-        if ($process->isSuccessful()) {
-            $output = trim($process->getOutput());
+        if ($result->successful()) {
+            $output = trim($result->output());
             if (str_starts_with($output, 'notAfter=')) {
                 $expiresAt = substr($output, 9);
             }
@@ -499,8 +481,7 @@ class SslService
         $tmpFile = tempnam(sys_get_temp_dir(), 'sslmeta_');
         file_put_contents($tmpFile, json_encode($metadata, JSON_PRETTY_PRINT));
 
-        $process = new Process(['sudo', 'cp', $tmpFile, $metadataFile]);
-        $process->run();
+        Process::run(['sudo', 'cp', $tmpFile, $metadataFile]);
 
         unlink($tmpFile);
     }
@@ -510,10 +491,9 @@ class SslService
      */
     protected function isSslEnabled(): bool
     {
-        $process = new Process(['apache2ctl', '-M']);
-        $process->run();
+        $result = Process::run(['apache2ctl', '-M']);
 
-        return $process->isSuccessful() && str_contains($process->getOutput(), 'ssl_module');
+        return $result->successful() && str_contains($result->output(), 'ssl_module');
     }
 
     /**
@@ -521,10 +501,9 @@ class SslService
      */
     protected function certificateExists(): bool
     {
-        $process = new Process(['test', '-f', self::CERT_DIR.'/fullchain.pem']);
-        $process->run();
+        $result = Process::run(['test', '-f', self::CERT_DIR.'/fullchain.pem']);
 
-        return $process->isSuccessful();
+        return $result->successful();
     }
 
     /**
@@ -536,14 +515,13 @@ class SslService
     {
         $certFile = self::CERT_DIR.'/fullchain.pem';
 
-        $process = new Process(['sudo', 'openssl', 'x509', '-in', $certFile, '-noout', '-subject', '-issuer', '-enddate']);
-        $process->run();
+        $result = Process::run(['sudo', 'openssl', 'x509', '-in', $certFile, '-noout', '-subject', '-issuer', '-enddate']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return null;
         }
 
-        $output = $process->getOutput();
+        $output = $result->output();
         $domain = '';
         $issuer = '';
         $expiresAt = '';
@@ -572,8 +550,7 @@ class SslService
      */
     protected function ensureCertDir(): void
     {
-        $process = new Process(['sudo', 'mkdir', '-p', self::CERT_DIR]);
-        $process->run();
+        Process::run(['sudo', 'mkdir', '-p', self::CERT_DIR]);
     }
 
     /**
@@ -584,8 +561,7 @@ class SslService
         $tmpFile = tempnam(sys_get_temp_dir(), 'acme_');
         file_put_contents($tmpFile, $content);
 
-        $process = new Process(['sudo', 'cp', $tmpFile, $path]);
-        $process->run();
+        Process::run(['sudo', 'cp', $tmpFile, $path]);
 
         unlink($tmpFile);
     }

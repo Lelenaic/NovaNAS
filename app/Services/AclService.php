@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 /**
  * ACL Service
@@ -58,15 +59,14 @@ class AclService
             return [];
         }
 
-        $process = new Process(['sudo', 'getfacl', '-p', '-c', $path]);
-        $process->run();
+        $result = Process::run(['sudo', 'getfacl', '-p', '-c', $path]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [];
         }
 
         $permissions = [];
-        $lines = explode("\n", trim($process->getOutput()));
+        $lines = explode("\n", trim($result->output()));
 
         foreach ($lines as $line) {
             $trimmed = trim($line);
@@ -112,14 +112,14 @@ class AclService
                 'sudo', 'setfacl', '-R',
                 '-m', "u:{$username}:r-X",
                 '-m', "d:u:{$username}:r-x",
-                $path
+                $path,
             ]);
         } elseif ($level === 'readwrite') {
             $this->runCommand([
                 'sudo', 'setfacl', '-R',
                 '-m', "u:{$username}:rwX",
                 '-m', "d:u:{$username}:rwx",
-                $path
+                $path,
             ]);
         }
     }
@@ -133,15 +133,13 @@ class AclService
     protected function removeUserPermission(string $path, string $username): void
     {
         // Remove named user ACL entry (recursively)
-        $process = new Process(['sudo', 'setfacl', '-R', '-x', "u:{$username}", $path]);
-        $process->run();
+        Process::run(['sudo', 'setfacl', '-R', '-x', "u:{$username}", $path]);
 
         // Also remove default ACL entries for this user on directories
-        $process = new Process([
+        Process::run([
             'sudo', 'find', $path, '-type', 'd',
             '-exec', 'setfacl', '-x', "d:u:{$username}", '{}', '+',
         ]);
-        $process->run();
     }
 
     /**
@@ -151,13 +149,12 @@ class AclService
      */
     protected function runCommand(array $command): void
     {
-        $process = new Process($command);
-        $process->run();
+        $result = Process::run($command);
 
-        if (! $process->isSuccessful()) {
-            \Illuminate\Support\Facades\Log::warning('[AclService] Command failed: '.implode(' ', $command), [
-                'stderr' => $process->getErrorOutput(),
-                'exit_code' => $process->getExitCode(),
+        if ($result->failed()) {
+            Log::warning('[AclService] Command failed: '.implode(' ', $command), [
+                'stderr' => $result->errorOutput(),
+                'exit_code' => $result->exitCode(),
             ]);
         }
     }

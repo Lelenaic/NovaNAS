@@ -6,7 +6,7 @@ use App\Services\DockerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Controller for Docker operations using CLI commands.
@@ -22,15 +22,13 @@ class DockerController extends Controller
      */
     private function runDockerCommand(array $args): array
     {
-        $process = new Process(array_merge(['docker'], $args));
-        $process->setTimeout(60);
-        $process->run();
+        $result = Process::timeout(60)->run(array_merge(['docker'], $args));
 
         return [
-            'success' => $process->isSuccessful(),
-            'output' => $process->getOutput(),
-            'error' => $process->getErrorOutput(),
-            'exitCode' => $process->getExitCode(),
+            'success' => $result->successful(),
+            'output' => $result->output(),
+            'error' => $result->errorOutput(),
+            'exitCode' => $result->exitCode(),
         ];
     }
 
@@ -221,14 +219,11 @@ class DockerController extends Controller
         $loginArgs[] = '-u';
         $loginArgs[] = $username;
 
-        $process = new Process(array_merge(['docker'], $loginArgs));
         // Pass password via stdin using --password-stdin
-        $process->setInput($password);
-        $process->setTimeout(60);
-        $process->run();
+        $result = Process::timeout(60)->input($password)->run(array_merge(['docker'], $loginArgs));
 
-        if (! $process->isSuccessful()) {
-            $error = $process->getErrorOutput();
+        if ($result->failed()) {
+            $error = $result->errorOutput();
 
             // Provide a more helpful error message
             if (str_contains($error, 'unauthorized') || str_contains($error, 'authentication')) {
@@ -281,14 +276,11 @@ class DockerController extends Controller
         $loginArgs[] = '-u';
         $loginArgs[] = $username;
 
-        $process = new Process(array_merge(['docker'], $loginArgs));
         // Pass password via stdin using --password-stdin
-        $process->setInput($password);
-        $process->setTimeout(60);
-        $process->run();
+        $result = Process::timeout(60)->input($password)->run(array_merge(['docker'], $loginArgs));
 
-        if (! $process->isSuccessful()) {
-            $error = $process->getErrorOutput();
+        if ($result->failed()) {
+            $error = $result->errorOutput();
 
             return response()->json([
                 'error' => 'Failed to login to registry',

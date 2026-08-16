@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * System Service Manager
@@ -71,10 +71,9 @@ class SystemService
         $systemdNames = self::COMPOSITE_SERVICES[$serviceName] ?? [$serviceName];
 
         foreach ($systemdNames as $systemdName) {
-            $process = new Process(['sudo', 'systemctl', 'is-enabled', $systemdName]);
-            $process->run();
+            $result = Process::run(['sudo', 'systemctl', 'is-enabled', $systemdName]);
 
-            if (! $process->isSuccessful() || trim($process->getOutput()) !== 'enabled') {
+            if ($result->failed() || trim($result->output()) !== 'enabled') {
                 return false;
             }
         }
@@ -90,10 +89,9 @@ class SystemService
         $systemdNames = self::COMPOSITE_SERVICES[$serviceName] ?? [$serviceName];
 
         foreach ($systemdNames as $systemdName) {
-            $process = new Process(['sudo', 'systemctl', 'is-active', $systemdName]);
-            $process->run();
+            $result = Process::run(['sudo', 'systemctl', 'is-active', $systemdName]);
 
-            if (! $process->isSuccessful() || trim($process->getOutput()) !== 'active') {
+            if ($result->failed() || trim($result->output()) !== 'active') {
                 return false;
             }
         }
@@ -120,12 +118,11 @@ class SystemService
         $systemdNames = self::COMPOSITE_SERVICES[$serviceId] ?? [$serviceId];
 
         foreach ($systemdNames as $systemdName) {
-            $process = new Process(['sudo', 'systemctl', $action, '--now', $systemdName]);
-            $process->run();
+            $result = Process::run(['sudo', 'systemctl', $action, '--now', $systemdName]);
 
-            if (! $process->isSuccessful()) {
+            if ($result->failed()) {
                 throw new \RuntimeException(
-                    "Failed to {$action} ".self::SERVICES[$serviceId]['name'].': '.$process->getErrorOutput()
+                    "Failed to {$action} ".self::SERVICES[$serviceId]['name'].': '.$result->errorOutput()
                 );
             }
         }

@@ -3,7 +3,7 @@
 namespace App\Services\GPU\Providers;
 
 use App\Contracts\GPUInterface;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * NVIDIA GPU provider implementation.
@@ -38,10 +38,9 @@ class NvidiaGPU implements GPUInterface
      */
     public function isDriverInstalled(): bool
     {
-        $process = new Process([self::NVIDIA_SMI, '--version']);
-        $process->run();
+        $result = Process::run([self::NVIDIA_SMI, '--version']);
 
-        return $process->isSuccessful();
+        return $result->successful();
     }
 
     /**
@@ -53,18 +52,17 @@ class NvidiaGPU implements GPUInterface
             return null;
         }
 
-        $process = new Process([
+        $result = Process::run([
             self::NVIDIA_SMI,
             '--query-gpu=driver_version',
             '--format=csv,noheader',
         ]);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return null;
         }
 
-        return trim($process->getOutput());
+        return trim($result->output());
     }
 
     /**
@@ -98,20 +96,19 @@ class NvidiaGPU implements GPUInterface
         }
 
         // Query all GPUs with basic information (fields that work on all GPUs)
-        $process = new Process([
+        $result = Process::run([
             self::NVIDIA_SMI,
             '--query-gpu=index,name,uuid,memory.total,memory.used,memory.free,'
             .'utilization.gpu,utilization.memory,temperature.gpu,'
             .'power.draw,power.limit,driver_version',
             '--format=csv,noheader,nounits',
         ]);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [];
         }
 
-        $output = trim($process->getOutput());
+        $output = trim($result->output());
         $lines = explode("\n", $output);
 
         $gpus = [];
@@ -163,15 +160,14 @@ class NvidiaGPU implements GPUInterface
     protected function addOptionalGpuInfo(array $gpus): array
     {
         // Try to get clock information
-        $clockProcess = new Process([
+        $clockResult = Process::run([
             self::NVIDIA_SMI,
             '--query-gpu=clocks.applications.sm,clocks.applications.memory',
             '--format=csv,noheader,nounits',
         ]);
-        $clockProcess->run();
 
-        if ($clockProcess->isSuccessful()) {
-            $clockOutput = trim($clockProcess->getOutput());
+        if ($clockResult->successful()) {
+            $clockOutput = trim($clockResult->output());
             $clockLines = explode("\n", $clockOutput);
 
             foreach ($gpus as $index => &$gpu) {
@@ -186,15 +182,14 @@ class NvidiaGPU implements GPUInterface
         }
 
         // Try to get VBIOS version
-        $vbiosProcess = new Process([
+        $vbiosResult = Process::run([
             self::NVIDIA_SMI,
             '--query-gpu=vbios_version',
             '--format=csv,noheader',
         ]);
-        $vbiosProcess->run();
 
-        if ($vbiosProcess->isSuccessful()) {
-            $vbiosOutput = trim($vbiosProcess->getOutput());
+        if ($vbiosResult->successful()) {
+            $vbiosOutput = trim($vbiosResult->output());
             $vbiosLines = explode("\n", $vbiosOutput);
 
             foreach ($gpus as $index => &$gpu) {
@@ -249,18 +244,17 @@ class NvidiaGPU implements GPUInterface
      */
     protected function getCudaVersion(): string
     {
-        $process = new Process([
+        $result = Process::run([
             self::NVIDIA_SMI,
             '--query-gpu=compute_cap',
             '--format=csv,noheader',
         ]);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return 'Unknown';
         }
 
-        $output = trim($process->getOutput());
+        $output = trim($result->output());
 
         if ($output === '') {
             return 'Unknown';

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Controller for viewing and searching log files.
@@ -57,14 +57,13 @@ class LogViewerController extends Controller
      */
     protected function countLines(string $path): int
     {
-        $process = new Process(['wc', '-l', $path]);
-        $process->run();
+        $result = Process::run(['wc', '-l', $path]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return 0;
         }
 
-        $output = trim($process->getOutput());
+        $output = trim($result->output());
         $parts = preg_split('/\s+/', $output);
 
         return isset($parts[0]) ? (int) $parts[0] : 0;
@@ -97,14 +96,13 @@ class LogViewerController extends Controller
         $size = filesize($path);
         $total = $skip + $take;
 
-        $tail = new Process(['tail', '-n', (string) $total, $path]);
-        $tail->run();
+        $tail = Process::run(['tail', '-n', (string) $total, $path]);
 
-        if (! $tail->isSuccessful()) {
+        if ($tail->failed()) {
             return response()->json(['message' => 'Unable to read log file.'], 500);
         }
 
-        $tailOutput = $tail->getOutput();
+        $tailOutput = $tail->output();
         $lenTotal = strlen($tailOutput);
 
         $lines = explode("\n", rtrim($tailOutput, "\n"));
@@ -172,11 +170,9 @@ class LogViewerController extends Controller
             $args[] = $file;
         }
 
-        $process = new Process($args);
-        $process->setTimeout(120);
-        $process->run();
+        $process = Process::timeout(120)->run($args);
 
-        $exitCode = $process->getExitCode();
+        $exitCode = $process->exitCode();
 
         // grep exits 1 when there are no matches (not a failure).
         if ($exitCode === 1) {
@@ -190,7 +186,7 @@ class LogViewerController extends Controller
 
         // grep exits 2 on a bad pattern or other error.
         if ($exitCode !== 0) {
-            $error = trim($process->getErrorOutput());
+            $error = trim($process->errorOutput());
 
             if (str_contains(strtolower($error), 'invalid')
                 || str_contains(strtolower($error), 'regex')
@@ -208,7 +204,7 @@ class LogViewerController extends Controller
 
         $directory = $this->logsDirectory();
         $matches = [];
-        $raw = rtrim($process->getOutput(), "\n");
+        $raw = rtrim($process->output(), "\n");
 
         if ($raw !== '') {
             foreach (explode("\n", $raw) as $line) {

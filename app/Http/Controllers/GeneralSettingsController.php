@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Controller for managing general settings.
@@ -70,7 +70,6 @@ class GeneralSettingsController extends Controller
      */
     protected function setHostname(string $hostname): void
     {
-        $process = new Process(['sudo', 'hostnamectl', 'set-hostname', $hostname]);
-        $process->run();
+        Process::run(['sudo', 'hostnamectl', 'set-hostname', $hostname]);
     }
 }

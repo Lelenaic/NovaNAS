@@ -3,8 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Samba Service
@@ -268,20 +267,18 @@ class SambaService
         }
 
         // Validate with testparm
-        $process = new Process(['sudo', 'testparm', '-s', $tempFile]);
-        $process->run();
+        $result = Process::run(['sudo', 'testparm', '-s', $tempFile]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             unlink($tempFile);
-            throw new \RuntimeException('Invalid smb.conf: '.$process->getErrorOutput());
+            throw new \RuntimeException('Invalid smb.conf: '.$result->errorOutput());
         }
 
         // Move to actual location
-        $process = new Process(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
-        $process->run();
+        $result = Process::run(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
 
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException('Failed to update smb.conf: '.$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to update smb.conf: '.$result->errorOutput());
         }
 
         // Restart Samba
@@ -725,33 +722,31 @@ class SambaService
         Log::info('[writeSharesConfig] Temp file [share] section: '.(preg_match('/\[share\](.*?)(?=\[|$)/s', $tempContent, $m) ? $m[0] : 'NOT FOUND'));
 
         // Validate
-        $process = new Process(['sudo', 'testparm', '-s', $tempFile]);
-        $process->run();
+        $result = Process::run(['sudo', 'testparm', '-s', $tempFile]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             unlink($tempFile);
-            Log::error('[writeSharesConfig] testparm failed: '.$process->getErrorOutput());
-            throw new \RuntimeException('Invalid smb.conf: '.$process->getErrorOutput());
+            Log::error('[writeSharesConfig] testparm failed: '.$result->errorOutput());
+            throw new \RuntimeException('Invalid smb.conf: '.$result->errorOutput());
         }
 
         Log::info('[writeSharesConfig] testparm passed');
 
         // Move to actual location
-        $process = new Process(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
-        $process->run();
+        $result = Process::run(['sudo', 'mv', $tempFile, self::SMBCONF_PATH]);
 
         // DEBUG: Log the actual output
-        $stdout = $process->getOutput();
-        $stderr = $process->getErrorOutput();
-        $exitCode = $process->getExitCode();
+        $stdout = $result->output();
+        $stderr = $result->errorOutput();
+        $exitCode = $result->exitCode();
 
         Log::info('[writeSharesConfig] mv stdout: "'.$stdout.'"');
         Log::info('[writeSharesConfig] mv stderr: "'.$stderr.'"');
         Log::info('[writeSharesConfig] mv exitCode: '.$exitCode);
 
-        if (! $process->isSuccessful()) {
-            Log::error('[writeSharesConfig] mv failed: '.$process->getErrorOutput());
-            throw new \RuntimeException('Failed to update smb.conf: '.$process->getErrorOutput());
+        if ($result->failed()) {
+            Log::error('[writeSharesConfig] mv failed: '.$result->errorOutput());
+            throw new \RuntimeException('Failed to update smb.conf: '.$result->errorOutput());
         }
 
         Log::info('[writeSharesConfig] File moved successfully');
@@ -771,30 +766,26 @@ class SambaService
         Log::info('[restartSmb] Starting restart...');
 
         // Try to restart smbd first, then nmbd
-        $process = new Process(['sudo', 'systemctl', 'restart', 'smbd']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'restart', 'smbd']);
 
-        Log::info('[restartSmb] smbd restart stdout: '.$process->getOutput());
-        Log::info('[restartSmb] smbd restart stderr: '.$process->getErrorOutput());
-        Log::info('[restartSmb] smbd restart exitCode: '.$process->getExitCode());
+        Log::info('[restartSmb] smbd restart stdout: '.$result->output());
+        Log::info('[restartSmb] smbd restart stderr: '.$result->errorOutput());
+        Log::info('[restartSmb] smbd restart exitCode: '.$result->exitCode());
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             // Try alternative service names
-            $process = new Process(['sudo', 'service', 'smbd', 'restart']);
-            $process->run();
+            $result = Process::run(['sudo', 'service', 'smbd', 'restart']);
 
-            if (! $process->isSuccessful()) {
+            if ($result->failed()) {
                 // Try smbd directly
-                $process = new Process(['sudo', 'smbd', '--reload-config']);
-                $process->run();
+                $result = Process::run(['sudo', 'smbd', '--reload-config']);
             }
         }
 
         // Also restart nmbd if it exists
-        $process = new Process(['sudo', 'systemctl', 'restart', 'nmbd']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'restart', 'nmbd']);
 
-        Log::info('[restartSmb] nmbd restart exitCode: '.$process->getExitCode());
+        Log::info('[restartSmb] nmbd restart exitCode: '.$result->exitCode());
 
         return true;
     }
@@ -804,14 +795,13 @@ class SambaService
      */
     public function userExists(string $username): bool
     {
-        $process = new Process(['sudo', 'pdbedit', '-L']);
-        $process->run();
+        $result = Process::run(['sudo', 'pdbedit', '-L']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return false;
         }
 
-        $lines = explode("\n", $process->getOutput());
+        $lines = explode("\n", $result->output());
 
         // pdbedit -L output format is: username:uid:gecos
         // We need to extract just the username (part before first colon)
@@ -955,12 +945,10 @@ class SambaService
             return true;
         }
 
-        $process = new Process(['sudo', 'pdbedit', '-x', '-u', $username]);
+        $result = Process::run(['sudo', 'pdbedit', '-x', '-u', $username]);
 
-        try {
-            $process->mustRun();
-        } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to delete Samba user '{$username}': ".$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException("Failed to delete Samba user '{$username}': ".$result->errorOutput());
         }
 
         return true;
@@ -971,7 +959,6 @@ class SambaService
      */
     protected function cleanupTempFile(string $tempFile): void
     {
-        $process = new Process(['sudo', 'rm', '-f', $tempFile]);
-        $process->run();
+        Process::run(['sudo', 'rm', '-f', $tempFile]);
     }
 }

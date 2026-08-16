@@ -2,8 +2,7 @@
 
 namespace App\Services;
 
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Linux User Service
@@ -19,15 +18,14 @@ class LinuxUserService
      */
     public function listUsers(): array
     {
-        $process = new Process(['getent', 'passwd']);
-        $process->run();
+        $result = Process::run(['getent', 'passwd']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [];
         }
 
         $users = [];
-        $lines = explode("\n", $process->getOutput());
+        $lines = explode("\n", $result->output());
 
         foreach ($lines as $line) {
             if (empty(trim($line))) {
@@ -59,10 +57,9 @@ class LinuxUserService
      */
     public function userExists(string $username): bool
     {
-        $process = new Process(['id', $username]);
-        $process->run();
+        $result = Process::run(['id', $username]);
 
-        return $process->isSuccessful();
+        return $result->successful();
     }
 
     /**
@@ -70,14 +67,13 @@ class LinuxUserService
      */
     public function getUid(string $username): ?int
     {
-        $process = new Process(['id', '-u', $username]);
-        $process->run();
+        $result = Process::run(['id', '-u', $username]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return null;
         }
 
-        return (int) trim($process->getOutput());
+        return (int) trim($result->output());
     }
 
     /**
@@ -139,7 +135,7 @@ class LinuxUserService
         }
 
         // Create user with home directory
-        $process = new Process([
+        $result = Process::run([
             'sudo',
             'useradd',
             '-m',
@@ -148,10 +144,8 @@ class LinuxUserService
             $username,
         ]);
 
-        try {
-            $process->mustRun();
-        } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to create user '{$username}': ".$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException("Failed to create user '{$username}': ".$result->errorOutput());
         }
 
         // Set the password
@@ -170,17 +164,13 @@ class LinuxUserService
     public function updatePassword(string $username, string $password): bool
     {
         // Use chpasswd to set the password
-        $process = new Process([
+        $result = Process::input("{$username}:{$password}")->run([
             'sudo',
             'chpasswd',
         ]);
 
-        $process->setInput("{$username}:{$password}");
-
-        try {
-            $process->mustRun();
-        } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to update password for user '{$username}': ".$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException("Failed to update password for user '{$username}': ".$result->errorOutput());
         }
 
         return true;
@@ -203,12 +193,10 @@ class LinuxUserService
         }
 
         $command = $removeHome ? ['userdel', '-r', $username] : ['userdel', $username];
-        $process = new Process($command);
+        $result = Process::run($command);
 
-        try {
-            $process->mustRun();
-        } catch (ProcessFailedException $e) {
-            throw new \RuntimeException("Failed to delete user '{$username}': ".$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException("Failed to delete user '{$username}': ".$result->errorOutput());
         }
 
         return true;
@@ -221,15 +209,12 @@ class LinuxUserService
     {
         // Get the username if not specified
         if ($username === null) {
-            $whoamiProcess = Process::fromShellCommandLine('whoami');
-            $whoamiProcess->run();
-            $username = trim($whoamiProcess->getOutput());
+            $username = trim(Process::run('whoami')->output());
         }
 
-        $process = new Process(['getent', 'passwd', $username]);
-        $process->run();
+        $userResult = Process::run(['getent', 'passwd', $username]);
 
-        $parts = explode(':', $process->getOutput());
+        $parts = explode(':', $userResult->output());
 
         if (count($parts) >= 6) {
             return $parts[5];

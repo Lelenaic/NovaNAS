@@ -6,7 +6,7 @@ use App\Services\TrashManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 class FileManagerSettingsController extends Controller
 {
@@ -87,14 +87,13 @@ class FileManagerSettingsController extends Controller
      */
     protected function getIniValue(string $key): string
     {
-        $process = new Process(['grep', '-E', "^{$key}\s*=", self::PHP_INI_PATH]);
-        $process->run();
+        $result = Process::run(['grep', '-E', "^{$key}\s*=", self::PHP_INI_PATH]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return '';
         }
 
-        $line = trim($process->getOutput());
+        $line = trim($result->output());
         $parts = explode('=', $line, 2);
 
         return isset($parts[1]) ? trim($parts[1]) : '';
@@ -106,23 +105,20 @@ class FileManagerSettingsController extends Controller
     protected function setIniValue(string $key, string $value): void
     {
         // Use sed to replace the value
-        $process = new Process([
+        Process::run([
             'sudo', 'sed', '-i',
             "-e s/^\\s*{$key}\\s*=.*/{$key} = {$value}/",
             self::PHP_INI_PATH,
         ]);
-        $process->run();
 
         // Fallback: if sed didn't find the line, append it
-        $checkProcess = new Process(['grep', '-cE', "^\\s*{$key}\\s*=", self::PHP_INI_PATH]);
-        $checkProcess->run();
+        $checkResult = Process::run(['grep', '-cE', "^\\s*{$key}\\s*=", self::PHP_INI_PATH]);
 
-        if ($checkProcess->isSuccessful() && trim($checkProcess->getOutput()) === '0') {
-            $appendProcess = new Process([
+        if ($checkResult->successful() && trim($checkResult->output()) === '0') {
+            Process::run([
                 'sudo', 'bash', '-c',
                 'echo '.escapeshellarg("{$key} = {$value}").' >> '.escapeshellarg(self::PHP_INI_PATH),
             ]);
-            $appendProcess->run();
         }
     }
 
@@ -163,23 +159,21 @@ class FileManagerSettingsController extends Controller
      */
     protected function reloadApache(): array
     {
-        $process = new Process(['sudo', 'apache2ctl', 'configtest']);
-        $process->run();
+        $result = Process::run(['sudo', 'apache2ctl', 'configtest']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'error' => $process->getErrorOutput(),
+                'error' => $result->errorOutput(),
             ];
         }
 
-        $process = new Process(['sudo', 'systemctl', 'reload', 'apache2']);
-        $process->run();
+        $result = Process::run(['sudo', 'systemctl', 'reload', 'apache2']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return [
                 'success' => false,
-                'error' => $process->getErrorOutput(),
+                'error' => $result->errorOutput(),
             ];
         }
 

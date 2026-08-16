@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\DockerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Controller for managing Docker settings.
@@ -146,12 +146,10 @@ class DockerSettingsController extends Controller
             '-i', (string) $intervalSeconds,
         ];
 
-        $process = new Process(array_merge(['docker'], $args));
-        $process->setTimeout(60);
-        $process->run();
+        $result = Process::timeout(60)->run(array_merge(['docker'], $args));
 
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException('Failed to start watchtower container: '.$process->getErrorOutput());
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to start watchtower container: '.$result->errorOutput());
         }
     }
 
@@ -161,13 +159,9 @@ class DockerSettingsController extends Controller
     private function stopWatchtowerContainer(): void
     {
         // Try to stop and remove the container
-        $stopProcess = new Process(['docker', 'stop', 'watchtower']);
-        $stopProcess->setTimeout(30);
-        $stopProcess->run();
+        Process::timeout(30)->run(['docker', 'stop', 'watchtower']);
 
-        $rmProcess = new Process(['docker', 'rm', 'watchtower']);
-        $rmProcess->setTimeout(30);
-        $rmProcess->run();
+        Process::timeout(30)->run(['docker', 'rm', 'watchtower']);
 
         // Don't throw errors if container doesn't exist or fails to stop/remove
     }
@@ -177,15 +171,13 @@ class DockerSettingsController extends Controller
      */
     private function getWatchtowerContainerInfo(): ?array
     {
-        $process = new Process(['docker', 'inspect', 'watchtower']);
-        $process->setTimeout(30);
-        $process->run();
+        $result = Process::timeout(30)->run(['docker', 'inspect', 'watchtower']);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return null;
         }
 
-        $containers = json_decode($process->getOutput(), true);
+        $containers = json_decode($result->output(), true);
 
         return $containers[0] ?? null;
     }

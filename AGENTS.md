@@ -143,6 +143,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - When generating links to other pages, prefer named routes and the `route()` function.
 
+## Process Execution
+
+- ALWAYS use the Laravel `Process` facade (`Illuminate\Support\Facades\Process`) — e.g. `Process::run(...)`, `Process::timeout(...)->run(...)`, `Process::input(...)`. Never use `Symfony\Component\Process\Process` (`new Process`, `mustRun`, `getOutput`, `getErrorOutput`, `setTimeout`, etc.) directly. Use the facade's `successful()`/`failed()`, `output()`, `errorOutput()`, and `exitCode()` result methods instead.
+
 ## Testing
 
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.

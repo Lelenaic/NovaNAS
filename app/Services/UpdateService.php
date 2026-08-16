@@ -6,8 +6,7 @@ use App\Jobs\SystemUpdateJob;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * System Update Service
@@ -31,33 +30,30 @@ class UpdateService
     public function performUpgrade(): array
     {
         try {
-            $process = new Process([
+            $result = Process::timeout(1800)->run([ // 30 minutes timeout
                 'sudo', 'DEBIAN_FRONTEND=noninteractive', 'apt', 'full-upgrade', '--assume-yes',
                 '-o', 'Dpkg::Options::="--force-confdef"',
                 '-o', 'Dpkg::Options::="--force-confold"',
             ]);
 
-            $process->setTimeout(1800); // 30 minutes timeout
-            $process->run();
-
-            if ($process->isSuccessful()) {
+            if ($result->successful()) {
                 // Update the last update timestamp
                 Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
 
                 return [
                     'success' => true,
                     'message' => 'System upgrade completed successfully',
-                    'output' => $process->getOutput(),
+                    'output' => $result->output(),
                 ];
             } else {
                 return [
                     'success' => false,
                     'message' => 'System upgrade failed',
-                    'error' => $process->getErrorOutput(),
-                    'output' => $process->getOutput(),
+                    'error' => $result->errorOutput(),
+                    'output' => $result->output(),
                 ];
             }
-        } catch (ProcessFailedException $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'message' => 'System upgrade failed',
@@ -161,14 +157,11 @@ class UpdateService
     public function checkForUpdates(): array
     {
         try {
-            $process = new Process([
+            $result = Process::timeout(300)->run([ // 5 minutes timeout
                 'sudo', 'apt', 'update',
             ]);
 
-            $process->setTimeout(300); // 5 minutes timeout
-            $process->run();
-
-            if ($process->isSuccessful()) {
+            if ($result->successful()) {
                 // Update the last update timestamp
                 Setting::setValue(self::LAST_UPDATE_KEY, now()->toISOString());
 
@@ -179,16 +172,16 @@ class UpdateService
                 return [
                     'success' => true,
                     'message' => 'Package lists updated successfully',
-                    'output' => $process->getOutput(),
+                    'output' => $result->output(),
                 ];
             } else {
                 return [
                     'success' => false,
                     'message' => 'Failed to update package lists',
-                    'error' => $process->getErrorOutput(),
+                    'error' => $result->errorOutput(),
                 ];
             }
-        } catch (ProcessFailedException $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'message' => 'Failed to check for updates',
@@ -342,14 +335,12 @@ class UpdateService
     {
         try {
             // Check how many packages can be upgraded
-            $process = new Process([
+            $result = Process::run([
                 'sudo', 'apt', 'list', '--upgradable',
             ]);
 
-            $process->run();
-
-            if ($process->isSuccessful()) {
-                $output = $process->getOutput();
+            if ($result->successful()) {
+                $output = $result->output();
                 $lines = explode("\n", trim($output));
 
                 // Remove header line if present
@@ -374,7 +365,7 @@ class UpdateService
                     'message' => 'Unable to check update status',
                 ];
             }
-        } catch (ProcessFailedException $e) {
+        } catch (\Throwable $e) {
             return [
                 'available' => false,
                 'message' => 'Error checking update status: '.$e->getMessage(),
@@ -390,14 +381,12 @@ class UpdateService
     public function getAvailableUpdates(): array
     {
         try {
-            $process = new Process([
+            $result = Process::run([
                 'sudo', 'apt', 'list', '--upgradable',
             ]);
 
-            $process->run();
-
-            if ($process->isSuccessful()) {
-                $output = $process->getOutput();
+            if ($result->successful()) {
+                $output = $result->output();
                 $lines = explode("\n", trim($output));
                 $packages = [];
 
@@ -423,7 +412,7 @@ class UpdateService
                     'count' => count($packages),
                 ];
             }
-        } catch (ProcessFailedException $e) {
+        } catch (\Throwable $e) {
             // Return empty array on error
         }
 
@@ -441,26 +430,24 @@ class UpdateService
     public function cleanCache(): array
     {
         try {
-            $process = new Process([
+            $result = Process::run([
                 'sudo', 'apt', 'autoclean',
             ]);
 
-            $process->run();
-
-            if ($process->isSuccessful()) {
+            if ($result->successful()) {
                 return [
                     'success' => true,
                     'message' => 'Package cache cleaned successfully',
-                    'output' => $process->getOutput(),
+                    'output' => $result->output(),
                 ];
             } else {
                 return [
                     'success' => false,
                     'message' => 'Failed to clean package cache',
-                    'error' => $process->getErrorOutput(),
+                    'error' => $result->errorOutput(),
                 ];
             }
-        } catch (ProcessFailedException $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'message' => 'Failed to clean package cache',

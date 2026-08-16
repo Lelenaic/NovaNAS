@@ -9,7 +9,7 @@ use App\Services\DynDNS\DynDNSProviderManager;
 use App\Services\SslService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Controller for managing DynDNS configurations.
@@ -153,12 +153,11 @@ class DynDnsController extends Controller
     {
         $config = DynDnsConfig::findOrFail($id);
 
-        $process = new Process(['sudo', 'hostnamectl', 'set-hostname', $config->full_domain]);
-        $process->run();
+        $result = Process::run(['sudo', 'hostnamectl', 'set-hostname', $config->full_domain]);
 
-        if (! $process->isSuccessful()) {
+        if ($result->failed()) {
             return response()->json([
-                'message' => 'Failed to set hostname: '.$process->getErrorOutput(),
+                'message' => 'Failed to set hostname: '.$result->errorOutput(),
             ], 500);
         }
 
@@ -297,8 +296,7 @@ class DynDnsController extends Controller
      */
     protected function resetHostname(): void
     {
-        $process = new Process(['sudo', 'hostnamectl', 'set-hostname', 'localhost']);
-        $process->run();
+        Process::run(['sudo', 'hostnamectl', 'set-hostname', 'localhost']);
     }
 
     /**
