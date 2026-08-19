@@ -51,6 +51,7 @@ I tried to offer a complete experience through the NovaNAS UI making you feel al
 - **Shared Folders**: SMB/CIFS and NFS sharing with access controls
 - **File Manager**: Web-based file browser with upload/download capabilities
 - **Backup Solutions**: Automated backup to external drives or cloud storage
+- **NovaNAS-to-NovaNAS Backup**: Back up one NovaNAS instance to another over the network using a built-in backup server with API key authentication
 
 ### Application Management
 - **Docker Integration**: Install and manage Docker containers through the UI
