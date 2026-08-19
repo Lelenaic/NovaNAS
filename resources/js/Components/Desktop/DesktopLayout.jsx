@@ -4,7 +4,6 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { DesktopIcons } from './DesktopIcons';
 import { DraggableWindow } from './DraggableWindow';
-import { SampleAppContent } from '../Apps/SampleApp';
 import { SettingsAppContent } from '../Apps/SettingsApp';
 import { TerminalAppContent } from '../Apps/TerminalApp';
 import { FirewallAppContent } from '../Apps/FirewallApp';
