@@ -26,6 +26,7 @@ class ResticService
             BackupStorageType::Local => new Storage\LocalStorageProvider,
             BackupStorageType::Sftp => new Storage\SftpStorageProvider,
             BackupStorageType::S3 => new Storage\S3StorageProvider,
+            BackupStorageType::NovaNasBackup => new Storage\NovaNasBackupStorageProvider,
         };
     }
 
@@ -40,6 +41,7 @@ class ResticService
             BackupStorageType::Local => new Storage\LocalStorageProvider,
             BackupStorageType::Sftp => new Storage\SftpStorageProvider,
             BackupStorageType::S3 => new Storage\S3StorageProvider,
+            BackupStorageType::NovaNasBackup => new Storage\NovaNasBackupStorageProvider,
         };
 
         return $provider->testConnection($repoPath, $credentials);

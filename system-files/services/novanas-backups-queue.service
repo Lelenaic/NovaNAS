@@ -4,19 +4,19 @@ After=network.target
 
 [Service]
 Type=simple
-User=glados
-Group=glados
-WorkingDirectory=/media/main/homes/glados/NovaNAS
+User=novanas
+Group=novanas
+WorkingDirectory=/var/novanas
 
-ExecStart=/usr/bin/php /media/main/homes/glados/NovaNAS/artisan queue:work --sleep=3 --tries=1 --timeout=3600 --queue=backups --max-time=3600
+ExecStart=/usr/bin/php /var/novanas/artisan queue:work --sleep=3 --tries=1 --timeout=3600 --queue=backups --max-time=3600
 Restart=always
 RestartSec=5
 
 KillSignal=SIGTERM
 TimeoutStopSec=60
 
-StandardOutput=append:/media/main/homes/glados/NovaNAS/storage/logs/backups-queue-worker.log
-StandardError=append:/media/main/homes/glados/NovaNAS/storage/logs/backups-queue-worker-error.log
+StandardOutput=append:/var/novanas/storage/logs/backups-queue-worker.log
+StandardError=append:/var/novanas/storage/logs/backups-queue-worker-error.log
 
 [Install]
 WantedBy=multi-user.target

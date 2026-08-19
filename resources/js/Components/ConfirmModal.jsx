@@ -61,6 +61,7 @@ export function useConfirmModal() {
     const confirmModal = state ? (
         <ConfirmModal
             {...state}
+            opened
             onClose={() => close(false)}
             onConfirm={() => close(true)}
         />

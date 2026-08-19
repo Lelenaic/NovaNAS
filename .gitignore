@@ -31,3 +31,5 @@ Thumbs.db
 /storage/framework/cache
 /storage/logs
 /update-scripts/.update_lock
+backup-server.env
+backup.htpasswd

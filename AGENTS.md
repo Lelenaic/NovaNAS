@@ -236,5 +236,11 @@ As you're a remote agent on a headless system, you cannot use visit() or screens
 # NovaNAS Frontend
 
 - NEVER use native `confirm()` / `window.confirm()`. For confirmation dialogs use the shared `useConfirmModal()` hook from `resources/js/Components/ConfirmModal.jsx` (returns `[confirm, confirmModal]`, where `confirm(options)` is promise-based and `confirmModal` is rendered once per component). This matches the app-wide convention for custom Modals.
+- `navigator.clipboard.writeText()` only works in secure contexts (HTTPS, localhost). Always provide a fallback using a hidden textarea + `document.execCommand('copy')` for HTTP.
+
+# NovaNAS Paths
+
+- NEVER hardcode `/var/novanas` or any absolute root path in PHP code. Always use `base_path()`, `storage_path()`, or `app_path()`. The root path differs between dev and production environments.
+- Hardcoded `/var/novanas` is ONLY allowed in bash scripts (`install.sh`, `update-scripts/*.sh`) and system config files (`system-files/`).
 
 </laravel-boost-guidelines>

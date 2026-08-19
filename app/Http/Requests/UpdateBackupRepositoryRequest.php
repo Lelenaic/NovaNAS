@@ -44,6 +44,13 @@ class UpdateBackupRepositoryRequest extends FormRequest
                 'credentials.access_key_id' => ['sometimes', 'string', 'max:255'],
                 'credentials.secret_access_key' => ['sometimes', 'string', 'max:255'],
             ]),
+            'novanas_backup' => array_merge($rules, [
+                'credentials.server_url' => ['sometimes', 'string', 'max:500'],
+                'credentials.api_key' => ['sometimes', 'string', 'max:1000'],
+                'credentials.repo_path' => ['sometimes', 'string', 'max:500'],
+                'credentials.allow_unsigned_cert' => ['nullable', 'boolean'],
+                'credentials.server_machine_id' => ['nullable', 'string', 'max:255'],
+            ]),
             default => $rules,
         };
     }

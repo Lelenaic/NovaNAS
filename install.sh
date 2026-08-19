@@ -256,6 +256,29 @@ else
     print_success "ttyd already installed"
 fi
 
+# Install restic rest-server
+if ! command -v rest-server &> /dev/null; then
+    print_info "Installing restic rest-server..."
+    REST_SERVER_VERSION="0.14.0"
+    ARCH=$(uname -m)
+
+    case "$ARCH" in
+        x86_64)  RS_ARCH="amd64" ;;
+        aarch64) RS_ARCH="arm64" ;;
+        armv7l)  RS_ARCH="armv7" ;;
+        *) print_error "Unsupported architecture for rest-server: $ARCH"; exit 1 ;;
+    esac
+
+    curl -fsSL -o /tmp/rest-server.tar.gz "https://github.com/restic/rest-server/releases/download/v${REST_SERVER_VERSION}/rest-server_${REST_SERVER_VERSION}_linux_${RS_ARCH}.tar.gz"
+    tar -xzf /tmp/rest-server.tar.gz -C /tmp
+    cp "/tmp/rest-server_${REST_SERVER_VERSION}_linux_${RS_ARCH}/rest-server" /usr/local/bin/rest-server
+    chmod +x /usr/local/bin/rest-server
+    rm -rf /tmp/rest-server*
+    print_success "restic rest-server ${REST_SERVER_VERSION} installed"
+else
+    print_success "restic rest-server already installed"
+fi
+
 # Add PHP repository if not exists
 if [ ! -f /etc/apt/sources.list.d/php.list ]; then
     print_info "Installing PHP 8.5..."
@@ -290,8 +313,22 @@ print_success "PHP 8.5 and Apache installed"
 
 # Configure Apache
 print_info "Enabling Apache modules..."
-a2enmod rewrite proxy headers proxy_http proxy_wstunnel
+a2enmod rewrite proxy headers proxy_http proxy_wstunnel auth_basic authn_file
 print_success "Apache modules enabled"
+
+# Install backup server Apache config
+print_info "Installing backup server Apache configuration..."
+cp system-files/apache/novanas-backup-server.conf /etc/apache2/conf-available/
+print_success "Backup server Apache config installed"
+
+# Create backup server files
+print_info "Creating backup server files..."
+mkdir -p /var/novanas/storage/backups
+chown novanas:novanas /var/novanas/storage/backups
+echo "BACKUP_PATH=/var/novanas/storage/backups" > /var/novanas/backup-server.env
+touch /var/novanas/backup.htpasswd
+chown novanas:novanas /var/novanas/backup.htpasswd /var/novanas/backup-server.env
+print_success "Backup server files created"
 
 print_success "System dependencies installed"
 
@@ -421,7 +458,8 @@ print_info "Installing systemd services..."
 cp system-files/services/* /etc/systemd/system/
 systemctl daemon-reload
 for service in /etc/systemd/system/novanas-*.service; do
-    if [[ "$service" != "/etc/systemd/system/novanas-update.service" ]]; then
+    if [[ "$service" != "/etc/systemd/system/novanas-update.service" ]] && \
+       [[ "$service" != "/etc/systemd/system/novanas-backup-server.service" ]]; then
         systemctl enable --now "$(basename "$service" .service)"
     fi
 done

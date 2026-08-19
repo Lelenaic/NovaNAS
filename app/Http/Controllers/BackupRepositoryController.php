@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateBackupRepositoryRequest;
 use App\Models\BackupRepository;
 use App\Services\Backup\ResticService;
 use App\Services\Backup\Storage\LocalStorageProvider;
+use App\Services\Backup\Storage\NovaNasBackupStorageProvider;
 use App\Services\Backup\Storage\S3StorageProvider;
 use App\Services\Backup\Storage\SftpStorageProvider;
 use Illuminate\Http\JsonResponse;
@@ -141,7 +142,7 @@ class BackupRepositoryController extends Controller
     public function testConnection(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'storage_type' => 'required|string|in:local,sftp,s3',
+            'storage_type' => 'required|string|in:local,sftp,s3,novanas_backup',
             'repo_path' => 'required|string',
             'credentials' => 'nullable|array',
         ]);
@@ -169,6 +170,7 @@ class BackupRepositoryController extends Controller
                 BackupStorageType::Local => new LocalStorageProvider,
                 BackupStorageType::Sftp => new SftpStorageProvider,
                 BackupStorageType::S3 => new S3StorageProvider,
+                BackupStorageType::NovaNasBackup => new NovaNasBackupStorageProvider,
             };
 
             $providers[] = [

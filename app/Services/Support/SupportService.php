@@ -3,13 +3,12 @@
 namespace App\Services\Support;
 
 use App\Models\InstalledApplication;
-use App\Models\Setting;
 use App\Services\NovaNasApiService;
 use App\Services\Storage\StorageService;
+use App\Services\SystemInfoService;
 use App\Services\UpdateService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 
 /**
  * Support Service
@@ -22,45 +21,15 @@ class SupportService
         protected NovaNasApiService $apiService,
         protected StorageService $storageService,
         protected UpdateService $updateService,
+        protected SystemInfoService $systemInfoService,
     ) {}
 
     /**
      * Get or create the NAS UUID.
-     *
-     * Reads from /etc/machine-id first. If missing or empty, generates a UUID,
-     * writes it to /etc/machine-id, and returns it. Falls back to the settings
-     * table if the file write fails.
      */
     public function getNasUuid(): string
     {
-        // Try reading from /etc/machine-id
-        $machineIdPath = '/etc/machine-id';
-        if (File::exists($machineIdPath)) {
-            $id = trim((string) file_get_contents($machineIdPath));
-            if ($id !== '') {
-                return $id;
-            }
-        }
-
-        // Generate a new UUID and try to persist it
-        $uuid = (string) Str::uuid();
-
-        // Attempt to write to /etc/machine-id via sudo
-        $escapedUuid = escapeshellarg($uuid);
-        $escapedPath = escapeshellarg($machineIdPath);
-        $result = shell_exec("echo {$escapedUuid} | sudo tee {$escapedPath} > /dev/null 2>&1");
-
-        if (File::exists($machineIdPath)) {
-            $written = trim((string) file_get_contents($machineIdPath));
-            if ($written === $uuid) {
-                return $uuid;
-            }
-        }
-
-        // Fallback: store in the settings table
-        Setting::setValue('system.nas_uuid', $uuid);
-
-        return $uuid;
+        return $this->systemInfoService->getNasUuid();
     }
 
     /**

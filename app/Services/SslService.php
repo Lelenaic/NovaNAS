@@ -205,14 +205,15 @@ class SslService
         }
 
         // Write SSL VirtualHost
+        $publicPath = base_path('public');
         $vhConfig = '<VirtualHost *:443>'."\n"
-            .'    DocumentRoot /var/novanas/public'."\n"
+            ."    DocumentRoot {$publicPath}"."\n"
             ."\n"
             .'    SSLEngine on'."\n"
             .'    SSLCertificateFile '.self::CERT_DIR.'/fullchain.pem'."\n"
             .'    SSLCertificateKeyFile '.self::CERT_DIR.'/privkey.pem'."\n"
             ."\n"
-            .'    <Directory /var/novanas/public>'."\n"
+            ."    <Directory {$publicPath}>"."\n"
             .'        Options Indexes FollowSymLinks'."\n"
             .'        AllowOverride All'."\n"
             .'        Require all granted'."\n"

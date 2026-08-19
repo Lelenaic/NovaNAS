@@ -4,6 +4,7 @@ use App\Http\Controllers\ApplicationsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupJobController;
 use App\Http\Controllers\BackupRepositoryController;
+use App\Http\Controllers\BackupServerController;
 use App\Http\Controllers\BackupSnapshotController;
 use App\Http\Controllers\DesktopIconController;
 use App\Http\Controllers\DockerComposeController;
@@ -385,6 +386,14 @@ Route::group(['middleware' => 'auth'], function () {
 
         Route::get('/api/backup/repositories/{repository}/snapshots', [BackupSnapshotController::class, 'index']);
         Route::delete('/api/backup/repositories/{repository}/snapshots/{snapshotId}', [BackupSnapshotController::class, 'destroy']);
+
+        // Backup server routes
+        Route::get('/api/backup/server/keys', [BackupServerController::class, 'listKeys']);
+        Route::post('/api/backup/server/keys', [BackupServerController::class, 'storeKey']);
+        Route::delete('/api/backup/server/keys/{name}', [BackupServerController::class, 'destroyKey']);
+        Route::get('/api/backup/server/status', [BackupServerController::class, 'status']);
+        Route::put('/api/backup/server/path', [BackupServerController::class, 'updatePath']);
+        Route::get('/api/backup/server/machine-id', [BackupServerController::class, 'machineId']);
 
         // Support routes
         Route::get('/api/support/system-info', [SupportController::class, 'systemInfo']);

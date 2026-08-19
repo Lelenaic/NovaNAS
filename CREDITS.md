@@ -98,3 +98,12 @@ project by IceWhale Technology, licensed under the
 [Apache License 2.0](https://github.com/IceWhaleTech/CasaOS-AppStore/blob/main/LICENSE).
 Individual apps published through the store carry their own licenses and
 credits.
+
+## System Dependencies
+
+| Tool | License | Author / Copyright |
+| --- | --- | --- |
+| [Apache HTTP Server](https://httpd.apache.org/) | Apache-2.0 | Apache Software Foundation |
+| [restic](https://restic.net/) | BSD-2-Clause | Alexander Neumann and contributors |
+| [rest-server](https://github.com/restic/rest-server) | BSD-2-Clause | restic contributors |
+| [SQLite](https://www.sqlite.org/) | Public Domain | D. Richard Hipp |

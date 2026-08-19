@@ -47,6 +47,13 @@ class StoreBackupRepositoryRequest extends FormRequest
                 'credentials.access_key_id' => ['required', 'string', 'max:255'],
                 'credentials.secret_access_key' => ['required', 'string', 'max:255'],
             ]),
+            'novanas_backup' => array_merge($rules, [
+                'credentials.server_url' => ['required', 'string', 'max:500'],
+                'credentials.api_key' => ['required', 'string', 'max:1000'],
+                'credentials.repo_path' => ['required', 'string', 'max:500'],
+                'credentials.allow_unsigned_cert' => ['nullable', 'boolean'],
+                'credentials.server_machine_id' => ['nullable', 'string', 'max:255'],
+            ]),
             default => $rules,
         };
     }
@@ -68,6 +75,9 @@ class StoreBackupRepositoryRequest extends FormRequest
             'credentials.bucket.required' => 'Please enter the S3 bucket name.',
             'credentials.access_key_id.required' => 'Please enter the S3 access key ID.',
             'credentials.secret_access_key.required' => 'Please enter the S3 secret access key.',
+            'credentials.server_url.required' => 'Please enter the backup server URL.',
+            'credentials.api_key.required' => 'Please enter the API key.',
+            'credentials.repo_path.required' => 'Please enter the repository path on the server.',
         ];
     }
 }

@@ -7,6 +7,7 @@ enum BackupStorageType: string
     case Local = 'local';
     case Sftp = 'sftp';
     case S3 = 's3';
+    case NovaNasBackup = 'novanas_backup';
 
     /**
      * Get the display name for the storage type.
@@ -17,6 +18,7 @@ enum BackupStorageType: string
             self::Local => 'Local Directory',
             self::Sftp => 'SFTP (SSH)',
             self::S3 => 'S3-Compatible Storage',
+            self::NovaNasBackup => 'NovaNAS Backup Server',
         };
     }
 

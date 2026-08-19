@@ -15,6 +15,7 @@ import {
     Modal,
     PasswordInput,
     NumberInput,
+    Switch,
     useMantineTheme,
     Tooltip,
     Collapse,
@@ -371,6 +372,7 @@ export function RepositoriesTab() {
                             { value: 'local', label: 'Local Directory' },
                             { value: 'sftp', label: 'SFTP (SSH)' },
                             { value: 's3', label: 'S3-Compatible Storage' },
+                            { value: 'novanas_backup', label: 'NovaNAS Backup Server' },
                         ]}
                         value={formData.storage_type}
                         onChange={(value) => setFormData({ ...formData, storage_type: value, credentials: {} })}
@@ -507,6 +509,38 @@ export function RepositoriesTab() {
                                 value={formData.repo_path}
                                 onChange={(e) => setFormData({ ...formData, repo_path: e.target.value })}
                                 required
+                            />
+                        </>
+                    )}
+
+                    {formData.storage_type === 'novanas_backup' && (
+                        <>
+                            <TextInput
+                                label="Server URL"
+                                placeholder="https://nas.example.com/apache/backup-server"
+                                value={formData.credentials.server_url || ''}
+                                onChange={(e) => updateCredential('server_url', e.target.value)}
+                                required
+                            />
+                            <TextInput
+                                label="API Key"
+                                placeholder="Paste the base64-encoded API key"
+                                value={formData.credentials.api_key || ''}
+                                onChange={(e) => updateCredential('api_key', e.target.value)}
+                                required
+                            />
+                            <TextInput
+                                label="Repository Path"
+                                placeholder="my-backups"
+                                description="A sub-path on the backup server for this repository"
+                                value={formData.repo_path}
+                                onChange={(e) => setFormData({ ...formData, repo_path: e.target.value })}
+                                required
+                            />
+                            <Switch
+                                label="Allow unsigned/self-signed certificates"
+                                checked={formData.credentials.allow_unsigned_cert || false}
+                                onChange={(e) => updateCredential('allow_unsigned_cert', e.currentTarget.checked)}
                             />
                         </>
                     )}
