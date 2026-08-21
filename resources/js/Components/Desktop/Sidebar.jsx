@@ -3,9 +3,12 @@ import { Box, Text, Stack, Skeleton, useMantineTheme, Progress, Group, Collapse,
 import { IconCpu, IconDeviceDesktop, IconChartBar, IconChevronDown, IconChevronRight, IconDeviceTv, IconDisc, IconCopy, IconCheck, IconPlug } from '@tabler/icons-react';
 
 // Singleton hook to fetch system info - shared by all components
-let systemInfoState = { data: null, loading: true, subscribers: new Set(), intervalId: null };
+const POLL_INTERVAL = 5000;
+let systemInfoState = { data: null, loading: true, subscribers: new Set(), timeoutId: null, fetching: false };
 
-function fetchSystemInfoOnce() {
+function scheduleFetch() {
+    if (systemInfoState.fetching || systemInfoState.subscribers.size === 0) return;
+    systemInfoState.fetching = true;
     fetch('/api/system/info')
         .then(res => res.json())
         .then(data => {
@@ -16,6 +19,12 @@ function fetchSystemInfoOnce() {
         .catch(() => {
             systemInfoState.loading = false;
             systemInfoState.subscribers.forEach(fn => fn());
+        })
+        .finally(() => {
+            systemInfoState.fetching = false;
+            if (systemInfoState.subscribers.size > 0) {
+                systemInfoState.timeoutId = setTimeout(scheduleFetch, POLL_INTERVAL);
+            }
         });
 }
 
@@ -27,17 +36,16 @@ export function useSystemInfo() {
         systemInfoState.subscribers.add(callback);
 
         // Start polling on first subscriber
-        if (!systemInfoState.intervalId) {
-            fetchSystemInfoOnce();
-            systemInfoState.intervalId = setInterval(fetchSystemInfoOnce, 5000);
+        if (systemInfoState.subscribers.size === 1 && !systemInfoState.fetching) {
+            scheduleFetch();
         }
 
         return () => {
             systemInfoState.subscribers.delete(callback);
             // Stop polling when no subscribers
-            if (systemInfoState.subscribers.size === 0 && systemInfoState.intervalId) {
-                clearInterval(systemInfoState.intervalId);
-                systemInfoState.intervalId = null;
+            if (systemInfoState.subscribers.size === 0 && systemInfoState.timeoutId) {
+                clearTimeout(systemInfoState.timeoutId);
+                systemInfoState.timeoutId = null;
             }
         };
     }, []);

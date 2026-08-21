@@ -116,4 +116,15 @@ class BackupServerController extends Controller
             'machine_id' => $this->backupServerService->getMachineId(),
         ]);
     }
+
+    /**
+     * Public endpoint to identify a NovaNAS instance.
+     */
+    public function identify(): JsonResponse
+    {
+        return response()->json([
+            'machine_id' => $this->backupServerService->getMachineId(),
+            'version' => config('app.version', 'unknown'),
+        ]);
+    }
 }

@@ -393,6 +393,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/api/backup/server/keys/{name}', [BackupServerController::class, 'destroyKey']);
         Route::get('/api/backup/server/status', [BackupServerController::class, 'status']);
         Route::put('/api/backup/server/path', [BackupServerController::class, 'updatePath']);
+
         Route::get('/api/backup/server/machine-id', [BackupServerController::class, 'machineId']);
 
         // Support routes
@@ -405,4 +406,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     // API routes - exclude Inertia middleware
 });
+
+// Public endpoint to identify a NovaNAS instance (no middleware)
+Route::get('/api/backup/server/identify', [BackupServerController::class, 'identify']);
 Route::passkeys();

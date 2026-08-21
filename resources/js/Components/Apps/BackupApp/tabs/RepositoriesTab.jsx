@@ -32,6 +32,7 @@ import {
     IconChevronUp,
     IconPlug,
     IconFolder,
+    IconAlertCircle,
 } from '@tabler/icons-react';
 import { FileSelector } from '../../../FileSelector';
 import { useConfirmModal } from '../../../ConfirmModal';
@@ -52,6 +53,7 @@ export function RepositoriesTab() {
     const [checking, setChecking] = useState(null);
     const [success, setSuccess] = useState(null);
     const [fileSelectorOpened, setFileSelectorOpened] = useState(false);
+    const [modalError, setModalError] = useState(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -89,6 +91,7 @@ export function RepositoriesTab() {
 
     const handleSubmit = async () => {
         setSubmitting(true);
+        setModalError(null);
         try {
             const url = editingRepo
                 ? `/api/backup/repositories/${editingRepo.id}`
@@ -107,10 +110,10 @@ export function RepositoriesTab() {
                 fetchRepositories();
             } else {
                 const data = await response.json();
-                setError(data.message || 'Failed to save destination');
+                setModalError(data.message || 'Failed to save destination');
             }
         } catch (err) {
-            setError('Failed to save destination');
+            setModalError('Failed to save destination');
         } finally {
             setSubmitting(false);
         }
@@ -124,6 +127,7 @@ export function RepositoriesTab() {
             repo_path: repo.repo_path,
             credentials: {},
         });
+        setModalError(null);
         openModal();
     };
 
@@ -197,6 +201,7 @@ export function RepositoriesTab() {
             credentials: {},
         });
         setTestResult(null);
+        setModalError(null);
     };
 
     const getCurrentProviderFields = () => {
@@ -375,7 +380,7 @@ export function RepositoriesTab() {
                             { value: 'novanas_backup', label: 'NovaNAS Backup Server' },
                         ]}
                         value={formData.storage_type}
-                        onChange={(value) => setFormData({ ...formData, storage_type: value, credentials: {} })}
+                        onChange={(value) => setFormData({ ...formData, storage_type: value, credentials: value === 'novanas_backup' ? { protocol: 'https' } : {} })}
                         disabled={!!editingRepo}
                     />
 
@@ -515,16 +520,27 @@ export function RepositoriesTab() {
 
                     {formData.storage_type === 'novanas_backup' && (
                         <>
-                            <TextInput
-                                label="Server URL"
-                                placeholder="https://nas.example.com/apache/backup-server"
-                                value={formData.credentials.server_url || ''}
-                                onChange={(e) => updateCredential('server_url', e.target.value)}
-                                required
-                            />
+                            <Group grow>
+                                <Select
+                                    label="Protocol"
+                                    data={[
+                                        { value: 'https', label: 'https' },
+                                        { value: 'http', label: 'http' },
+                                    ]}
+                                    value={formData.credentials.protocol || 'https'}
+                                    onChange={(val) => updateCredential('protocol', val || 'https')}
+                                />
+                                <TextInput
+                                    label="Hostname / IP"
+                                    placeholder="nas.example.com"
+                                    value={formData.credentials.hostname || ''}
+                                    onChange={(e) => updateCredential('hostname', e.target.value)}
+                                    required
+                                />
+                            </Group>
                             <TextInput
                                 label="API Key"
-                                placeholder="Paste the base64-encoded API key"
+                                placeholder="Paste the API key"
                                 value={formData.credentials.api_key || ''}
                                 onChange={(e) => updateCredential('api_key', e.target.value)}
                                 required
@@ -575,6 +591,12 @@ export function RepositoriesTab() {
                             The backup password is automatically set to the application key for security.
                         </Text>
                     </Alert>
+
+                    {modalError && (
+                        <Alert color="red" icon={<IconAlertCircle size={16} />}>
+                            <Text size="sm">{modalError}</Text>
+                        </Alert>
+                    )}
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeModal}>Cancel</Button>

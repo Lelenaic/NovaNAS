@@ -56,10 +56,11 @@ class BackupRepositoryController extends Controller
         $initResult = $this->resticService->init($repository);
 
         if (! $initResult['success']) {
+            $repository->delete();
+
             return response()->json([
-                'message' => 'Destination created but failed to initialize: '.$initResult['message'],
-                'repository' => $this->formatRepository($repository),
-            ], 201);
+                'message' => 'Failed to initialize repository: '.$initResult['message'],
+            ], 422);
         }
 
         return response()->json([

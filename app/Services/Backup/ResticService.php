@@ -60,7 +60,7 @@ class ResticService
 
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
-            $command = $this->buildResticCommand($uri, 'init');
+            $command = $this->buildResticCommand($uri, 'init', null, $env);
 
             $result = Process::env($env)->run($command);
 
@@ -95,7 +95,7 @@ class ResticService
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
             $resticArgs = $this->buildBackupArgs($uri, $job);
-            $command = $this->buildResticCommand($uri, null, $resticArgs);
+            $command = $this->buildResticCommand($uri, null, $resticArgs, $env);
 
             $command .= ' 2>&1';
 
@@ -138,7 +138,7 @@ class ResticService
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
             $forgetArgs = $this->buildForgetArgs($retentionPolicy);
-            $command = $this->buildResticCommand($uri, null, "forget {$forgetArgs} --prune");
+            $command = $this->buildResticCommand($uri, null, "forget {$forgetArgs} --prune", $env);
 
             $result = Process::env($env)->run($command);
 
@@ -169,7 +169,7 @@ class ResticService
 
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
-            $command = $this->buildResticCommand($uri, 'snapshots', '--json');
+            $command = $this->buildResticCommand($uri, 'snapshots', '--json', $env);
 
             $result = Process::env($env)->run($command);
 
@@ -202,7 +202,7 @@ class ResticService
 
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
-            $command = $this->buildResticCommand($uri, null, 'forget '.escapeshellarg($snapshotId));
+            $command = $this->buildResticCommand($uri, null, 'forget '.escapeshellarg($snapshotId), $env);
 
             $result = Process::env($env)->run($command);
 
@@ -233,7 +233,7 @@ class ResticService
 
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
-            $command = $this->buildResticCommand($uri, 'check');
+            $command = $this->buildResticCommand($uri, 'check', null, $env);
 
             $result = Process::env($env)->run($command);
 
@@ -266,7 +266,7 @@ class ResticService
 
         try {
             $env = $this->buildEnvironment($repository, $provider, $passwordFile);
-            $command = $this->buildResticCommand($uri, 'stats', '--mode raw-data --json');
+            $command = $this->buildResticCommand($uri, 'stats', '--mode raw-data --json', $env);
 
             $result = Process::env($env)->run($command);
 
@@ -289,9 +289,15 @@ class ResticService
     /**
      * Build a restic command string.
      */
-    protected function buildResticCommand(string $uri, ?string $subcommand, ?string $extraArgs = null): string
+    protected function buildResticCommand(string $uri, ?string $subcommand, ?string $extraArgs = null, array $env = []): string
     {
-        $parts = ['sudo -E restic -r '.escapeshellarg($uri)];
+        $parts = ['sudo -E restic'];
+
+        if (! empty($env['RESTIC_INSECURE_TLS'])) {
+            $parts[] = '--insecure-tls';
+        }
+
+        $parts[] = '-r '.escapeshellarg($uri);
 
         if ($subcommand !== null) {
             $parts[] = $subcommand;

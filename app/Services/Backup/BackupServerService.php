@@ -191,6 +191,21 @@ class BackupServerService
      */
     public function enableService(): void
     {
+        $backupPath = $this->getBackupPath();
+
+        $result = Process::run(['sudo', 'mkdir', '-p', $backupPath]);
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to create backup directory: '.$result->errorOutput());
+        }
+
+        $result = Process::run(['sudo', 'chown', 'novanas:novanas', $backupPath]);
+        if ($result->failed()) {
+            throw new \RuntimeException('Failed to set directory ownership: '.$result->errorOutput());
+        }
+
+        $this->writeEnvFile($backupPath);
+        $this->daemonReload();
+
         $result = Process::run(['sudo', 'a2enconf', 'novanas-backup-server']);
         if ($result->failed()) {
             throw new \RuntimeException('Failed to enable Apache config: '.$result->errorOutput());
@@ -263,6 +278,35 @@ class BackupServerService
         }
 
         return explode("\n", $result->output());
+    }
+
+    /**
+     * Validate username and password against the htpasswd file.
+     */
+    public function validateCredentials(string $user, string $password): bool
+    {
+        $lines = $this->readHtpasswdFile();
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#') {
+                continue;
+            }
+
+            $colonPos = strpos($line, ':');
+            if ($colonPos === false) {
+                continue;
+            }
+
+            $fileUser = substr($line, 0, $colonPos);
+            $hash = substr($line, $colonPos + 1);
+
+            if ($fileUser === $user) {
+                return password_verify($password, $hash);
+            }
+        }
+
+        return false;
     }
 
     /**

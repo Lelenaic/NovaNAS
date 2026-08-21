@@ -33,24 +33,17 @@ class NovaNasBackupStorageProvider implements BackupStorageProviderInterface
 
         ['user' => $user, 'pass' => $pass] = $decoded;
 
-        $serverUrl = rtrim($credentials['server_url'] ?? '', '/');
-        $parsedUrl = parse_url($serverUrl);
-        if ($parsedUrl === false) {
+        $protocol = $credentials['protocol'] ?? 'https';
+        $hostname = $credentials['hostname'] ?? '';
+        if ($hostname === '') {
             return '';
         }
-
-        $scheme = $parsedUrl['scheme'] ?? 'https';
-        $host = $parsedUrl['host'] ?? '';
-        $port = isset($parsedUrl['port']) ? ':'.$parsedUrl['port'] : '';
-        $basePath = $parsedUrl['path'] ?? '';
-
-        $basePath = rtrim($basePath, '/');
 
         $repoPath = ltrim($repoPath, '/');
 
         $userPart = rawurlencode($user).':'.rawurlencode($pass).'@';
 
-        return "rest:{$scheme}://{$userPart}{$host}{$port}{$basePath}/{$repoPath}";
+        return "rest:{$protocol}://{$userPart}{$hostname}/apache/backup-server/{$repoPath}";
     }
 
     /**
@@ -74,8 +67,11 @@ class NovaNasBackupStorageProvider implements BackupStorageProviderInterface
     {
         $errors = [];
 
-        if (empty($credentials['server_url'])) {
-            $errors[] = 'Server URL is required.';
+        $hostname = $credentials['hostname'] ?? '';
+        if ($hostname === '') {
+            $errors[] = 'Hostname is required.';
+        } elseif (! $this->isValidHostnameOrIp($hostname)) {
+            $errors[] = 'Hostname must be a valid hostname, IPv4, or IPv6 address.';
         }
 
         if (empty($credentials['api_key'])) {
@@ -97,24 +93,44 @@ class NovaNasBackupStorageProvider implements BackupStorageProviderInterface
     }
 
     /**
+     * Check if a string is a valid hostname or IP address.
+     */
+    protected function isValidHostnameOrIp(string $value): bool
+    {
+        if (filter_var($value, FILTER_VALIDATE_IP)) {
+            return true;
+        }
+
+        // RFC 1123 hostname: labels separated by dots, each 1-63 chars, alphanumeric + hyphens, not starting/ending with hyphen
+        return (bool) preg_match('/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$/', $value);
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function getFormFields(): array
     {
         return [
             [
-                'name' => 'server_url',
-                'label' => 'Server URL',
+                'name' => 'protocol',
+                'label' => 'Protocol',
+                'type' => 'select',
+                'required' => true,
+                'options' => ['https' => 'https', 'http' => 'http'],
+            ],
+            [
+                'name' => 'hostname',
+                'label' => 'Hostname / IP',
                 'type' => 'text',
                 'required' => true,
-                'placeholder' => 'https://nas.example.com/apache/backup-server',
+                'placeholder' => 'nas.example.com',
             ],
             [
                 'name' => 'api_key',
                 'label' => 'API Key',
                 'type' => 'password',
                 'required' => true,
-                'placeholder' => 'Paste the base64-encoded API key',
+                'placeholder' => 'Paste the API key',
             ],
             [
                 'name' => 'repo_path',
@@ -137,18 +153,21 @@ class NovaNasBackupStorageProvider implements BackupStorageProviderInterface
      */
     public function testConnection(string $repoPath, array $credentials): array
     {
-        $serverUrl = rtrim($credentials['server_url'] ?? '', '/');
+        $protocol = $credentials['protocol'] ?? 'https';
+        $hostname = $credentials['hostname'] ?? '';
         $apiKey = $credentials['api_key'] ?? '';
         $allowUnsigned = ! empty($credentials['allow_unsigned_cert']);
 
-        if (empty($serverUrl) || empty($apiKey)) {
-            return ['success' => false, 'message' => 'Server URL and API key are required.'];
+        if ($hostname === '' || $apiKey === '') {
+            return ['success' => false, 'message' => 'Hostname and API key are required.'];
         }
 
         $decoded = $this->decodeApiKey($apiKey);
         if ($decoded === null) {
             return ['success' => false, 'message' => 'Invalid API key format. Must be base64-encoded username:password.'];
         }
+
+        $baseUrl = "{$protocol}://{$hostname}/apache/backup-server";
 
         // Step 1: Try to reach the server
         try {
@@ -158,49 +177,31 @@ class NovaNasBackupStorageProvider implements BackupStorageProviderInterface
             }
 
             $response = $http->withBasicAuth($decoded['user'], $decoded['pass'])
-                ->get($serverUrl);
+                ->get($baseUrl);
 
             if ($response->status() === 401) {
                 return ['success' => false, 'message' => 'Authentication failed. Bad API key.'];
             }
 
-            if ($response->failed() && $response->status() !== 404) {
+            if ($response->failed() && ! in_array($response->status(), [404, 405])) {
                 return ['success' => false, 'message' => "Cannot reach the server (HTTP {$response->status()})."];
             }
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Cannot reach the server: '.$e->getMessage()];
         }
 
-        // Step 2: Verify it's a NovaNAS instance by checking the machine-id endpoint
-        $parsedUrl = parse_url($serverUrl);
-        $baseUrl = ($parsedUrl['scheme'] ?? 'https').'://'.$parsedUrl['host'].(isset($parsedUrl['port']) ? ':'.$parsedUrl['port'] : '');
+        // Step 2: Verify it's a NovaNAS instance via the public identify endpoint
+        $apiBaseUrl = "{$protocol}://{$hostname}";
 
         try {
-            $machineIdResponse = $http->withBasicAuth($decoded['user'], $decoded['pass'])
-                ->get($baseUrl.'/api/backup/server/machine-id');
+            $identifyResponse = $http->get($apiBaseUrl.'/api/backup/server/identify');
 
-            if ($machineIdResponse->successful()) {
-                $machineId = $machineIdResponse->json('machine_id');
+            if ($identifyResponse->successful()) {
+                $data = $identifyResponse->json();
 
                 return [
                     'success' => true,
-                    'message' => "Connected to NovaNAS backup server. Machine ID: {$machineId}",
-                    'machine_id' => $machineId,
-                ];
-            }
-        } catch (\Exception $e) {
-            // Fall through to generic check
-        }
-
-        // Step 3: Try to reach the Laravel API to confirm it's NovaNAS
-        try {
-            $statusResponse = $http->withBasicAuth($decoded['user'], $decoded['pass'])
-                ->get($baseUrl.'/api/backup/server/status');
-
-            if ($statusResponse->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Connected to NovaNAS backup server.',
+                    'message' => "Connected to NovaNAS backup server. Machine ID: {$data['machine_id']}, Version: {$data['version']}",
                 ];
             }
         } catch (\Exception $e) {
