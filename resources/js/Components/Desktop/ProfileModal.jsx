@@ -9,16 +9,27 @@ import {
     Text,
     Alert,
     Divider,
-    List,
     ActionIcon,
     ThemeIcon,
     Skeleton,
+    Tabs,
+    Badge,
+    Box,
 } from '@mantine/core';
 import { router } from '@inertiajs/react';
-import { IconUser, IconLock, IconAlertCircle, IconCheck, IconKey, IconTrash } from '@tabler/icons-react';
+import {
+    IconUser,
+    IconLock,
+    IconAlertCircle,
+    IconCheck,
+    IconKey,
+    IconTrash,
+    IconShield,
+} from '@tabler/icons-react';
 import { startRegistration } from '@simplewebauthn/browser';
 
 export function ProfileModal({ opened, onClose }) {
+    const [activeTab, setActiveTab] = useState('profile');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
@@ -81,7 +92,7 @@ export function ProfileModal({ opened, onClose }) {
         }));
     };
 
-    const handleSubmit = async (event) => {
+    const handleProfileSubmit = async (event) => {
         event.preventDefault();
         setLoading(true);
         setError(null);
@@ -94,7 +105,10 @@ export function ProfileModal({ opened, onClose }) {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                }),
             });
 
             const data = await response.json();
@@ -108,14 +122,51 @@ export function ProfileModal({ opened, onClose }) {
             }
 
             setSuccess('Profile updated successfully');
+            router.reload();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePasswordSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                },
+                body: JSON.stringify({
+                    current_password: formData.current_password,
+                    password: formData.password,
+                    password_confirmation: formData.password_confirmation,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    const firstError = Object.values(data.errors)[0];
+                    throw new Error(firstError[0]);
+                }
+                throw new Error(data.message || 'Failed to update password');
+            }
+
+            setSuccess('Password updated successfully');
             setFormData((prev) => ({
                 ...prev,
                 current_password: '',
                 password: '',
                 password_confirmation: '',
             }));
-
-            router.reload();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -204,6 +255,7 @@ export function ProfileModal({ opened, onClose }) {
         setError(null);
         setSuccess(null);
         setPasskeyError(null);
+        setActiveTab('profile');
         setFormData((prev) => ({
             ...prev,
             current_password: '',
@@ -217,148 +269,237 @@ export function ProfileModal({ opened, onClose }) {
         <Modal
             opened={opened}
             onClose={handleClose}
-            title={<Text fw={600}>Edit Profile</Text>}
-            size="md"
+            title={
+                <Group gap="sm">
+                    <Text fw={600}>Profile Settings</Text>
+                </Group>
+            }
+            size="lg"
             centered
         >
-            <form onSubmit={handleSubmit}>
-                <Stack gap="md">
-                    {error && (
-                        <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setError(null)} withCloseButton>
-                            {error}
-                        </Alert>
-                    )}
+            <Tabs value={activeTab} onChange={setActiveTab}>
+                <Tabs.List>
+                    <Tabs.Tab value="profile" leftSection={<IconUser size={16} />}>
+                        Profile
+                    </Tabs.Tab>
+                    <Tabs.Tab value="password" leftSection={<IconLock size={16} />}>
+                        Password
+                    </Tabs.Tab>
+                    <Tabs.Tab
+                        value="passkeys"
+                        leftSection={<IconKey size={16} />}
+                        rightSection={
+                            passkeys.length > 0 ? (
+                                <Badge size="xs" variant="light" color="gray">
+                                    {passkeys.length}
+                                </Badge>
+                            ) : null
+                        }
+                    >
+                        Passkeys
+                    </Tabs.Tab>
+                    <Tabs.Tab value="2fa" leftSection={<IconShield size={16} />}>
+                        2FA
+                    </Tabs.Tab>
+                </Tabs.List>
 
-                    {success && (
-                        <Alert icon={<IconCheck size={16} />} color="green" onClose={() => setSuccess(null)} withCloseButton>
-                            {success}
-                        </Alert>
-                    )}
+                {/* Profile Tab */}
+                <Tabs.Panel value="profile" pt="md">
+                    <form onSubmit={handleProfileSubmit}>
+                        <Stack gap="md">
+                            {error && activeTab === 'profile' && (
+                                <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setError(null)} withCloseButton>
+                                    {error}
+                                </Alert>
+                            )}
 
-                    <TextInput
-                        label="Username"
-                        value={formData.username}
-                        disabled
-                        description="Username cannot be changed"
-                        leftSection={<IconUser size={16} />}
-                    />
+                            {success && activeTab === 'profile' && (
+                                <Alert icon={<IconCheck size={16} />} color="green" onClose={() => setSuccess(null)} withCloseButton>
+                                    {success}
+                                </Alert>
+                            )}
 
-                    <TextInput
-                        label="Name"
-                        value={formData.name}
-                        onChange={handleChange('name')}
-                        required
-                        leftSection={<IconUser size={16} />}
-                    />
+                            <TextInput
+                                label="Username"
+                                value={formData.username}
+                                disabled
+                                description="Username cannot be changed"
+                                leftSection={<IconUser size={16} />}
+                            />
 
-                    <TextInput
-                        label="Email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange('email')}
-                        required
-                        leftSection={<IconUser size={16} />}
-                    />
+                            <TextInput
+                                label="Name"
+                                value={formData.name}
+                                onChange={handleChange('name')}
+                                required
+                                leftSection={<IconUser size={16} />}
+                            />
 
-                    <Divider label="Change Password" labelPosition="center" my="sm" />
+                            <TextInput
+                                label="Email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange('email')}
+                                required
+                                leftSection={<IconUser size={16} />}
+                            />
 
-                    <PasswordInput
-                        label="Current Password"
-                        value={formData.current_password}
-                        onChange={handleChange('current_password')}
-                        description="Required only if changing password"
-                        leftSection={<IconLock size={16} />}
-                    />
-
-                    <PasswordInput
-                        label="New Password"
-                        value={formData.password}
-                        onChange={handleChange('password')}
-                        description="Leave blank to keep current password"
-                        leftSection={<IconLock size={16} />}
-                    />
-
-                    <PasswordInput
-                        label="Confirm New Password"
-                        value={formData.password_confirmation}
-                        onChange={handleChange('password_confirmation')}
-                        leftSection={<IconLock size={16} />}
-                    />
-
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="subtle" onClick={handleClose} disabled={loading}>
-                            Cancel
-                        </Button>
-                        <Button type="submit" loading={loading}>
-                            Save Changes
-                        </Button>
-                    </Group>
-                </Stack>
-            </form>
-
-            <Divider label="Passkeys" labelPosition="center" my="md" />
-
-            <Stack gap="md">
-                {passkeyError && (
-                    <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setPasskeyError(null)} withCloseButton>
-                        {passkeyError}
-                    </Alert>
-                )}
-
-                {passkeysLoading ? (
-                    <Stack gap="xs">
-                        <Skeleton height={36} />
-                        <Skeleton height={36} />
-                    </Stack>
-                ) : passkeys.length > 0 ? (
-                    <Stack gap="xs">
-                        {passkeys.map((passkey) => (
-                            <Group key={passkey.id} justify="space-between" p="xs" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-sm)' }}>
-                                <Group gap="xs">
-                                    <ThemeIcon variant="light" size="sm">
-                                        <IconKey size={14} />
-                                    </ThemeIcon>
-                                    <Stack gap={0}>
-                                        <Text size="sm" fw={500}>{passkey.name}</Text>
-                                        <Text size="xs" c="dimmed">
-                                            Last used: {passkey.last_used_at ? new Date(passkey.last_used_at).toLocaleDateString() : 'Never'}
-                                        </Text>
-                                    </Stack>
-                                </Group>
-                                <ActionIcon
-                                    variant="subtle"
-                                    color="red"
-                                    size="sm"
-                                    onClick={() => handleDeletePasskey(passkey.id)}
-                                >
-                                    <IconTrash size={14} />
-                                </ActionIcon>
+                            <Group justify="flex-end" mt="sm">
+                                <Button type="submit" loading={loading}>
+                                    Save Changes
+                                </Button>
                             </Group>
-                        ))}
+                        </Stack>
+                    </form>
+                </Tabs.Panel>
+
+                {/* Password Tab */}
+                <Tabs.Panel value="password" pt="md">
+                    <form onSubmit={handlePasswordSubmit}>
+                        <Stack gap="md">
+                            {error && activeTab === 'password' && (
+                                <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setError(null)} withCloseButton>
+                                    {error}
+                                </Alert>
+                            )}
+
+                            {success && activeTab === 'password' && (
+                                <Alert icon={<IconCheck size={16} />} color="green" onClose={() => setSuccess(null)} withCloseButton>
+                                    {success}
+                                </Alert>
+                            )}
+
+                            <PasswordInput
+                                label="Current Password"
+                                value={formData.current_password}
+                                onChange={handleChange('current_password')}
+                                required
+                                leftSection={<IconLock size={16} />}
+                            />
+
+                            <PasswordInput
+                                label="New Password"
+                                value={formData.password}
+                                onChange={handleChange('password')}
+                                required
+                                leftSection={<IconLock size={16} />}
+                            />
+
+                            <PasswordInput
+                                label="Confirm New Password"
+                                value={formData.password_confirmation}
+                                onChange={handleChange('password_confirmation')}
+                                required
+                                leftSection={<IconLock size={16} />}
+                            />
+
+                            <Group justify="flex-end" mt="sm">
+                                <Button type="submit" loading={loading}>
+                                    Update Password
+                                </Button>
+                            </Group>
+                        </Stack>
+                    </form>
+                </Tabs.Panel>
+
+                {/* Passkeys Tab */}
+                <Tabs.Panel value="passkeys" pt="md">
+                    <Stack gap="md">
+                        {passkeyError && (
+                            <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setPasskeyError(null)} withCloseButton>
+                                {passkeyError}
+                            </Alert>
+                        )}
+
+                        {passkeysLoading ? (
+                            <Stack gap="xs">
+                                <Skeleton height={36} />
+                                <Skeleton height={36} />
+                            </Stack>
+                        ) : passkeys.length > 0 ? (
+                            <Stack gap="xs">
+                                {passkeys.map((passkey) => (
+                                    <Group
+                                        key={passkey.id}
+                                        justify="space-between"
+                                        p="xs"
+                                        style={{
+                                            border: '1px solid var(--mantine-color-default-border)',
+                                            borderRadius: 'var(--mantine-radius-sm)',
+                                        }}
+                                    >
+                                        <Group gap="xs">
+                                            <ThemeIcon variant="light" size="sm">
+                                                <IconKey size={14} />
+                                            </ThemeIcon>
+                                            <Stack gap={0}>
+                                                <Text size="sm" fw={500}>
+                                                    {passkey.name}
+                                                </Text>
+                                                <Text size="xs" c="dimmed">
+                                                    Last used:{' '}
+                                                    {passkey.last_used_at
+                                                        ? new Date(passkey.last_used_at).toLocaleDateString()
+                                                        : 'Never'}
+                                                </Text>
+                                            </Stack>
+                                        </Group>
+                                        <ActionIcon
+                                            variant="subtle"
+                                            color="red"
+                                            size="sm"
+                                            onClick={() => handleDeletePasskey(passkey.id)}
+                                        >
+                                            <IconTrash size={14} />
+                                        </ActionIcon>
+                                    </Group>
+                                ))}
+                            </Stack>
+                        ) : (
+                            <Text size="sm" c="dimmed" ta="center" py="md">
+                                No passkeys registered yet.
+                            </Text>
+                        )}
+
+                        <Divider />
+
+                        <TextInput
+                            placeholder="e.g. My iPhone, Hardware Key..."
+                            value={passkeyName}
+                            onChange={(e) => setPasskeyName(e.target.value)}
+                            label="Passkey Name"
+                            leftSection={<IconKey size={16} />}
+                        />
+
+                        <Button
+                            variant="light"
+                            leftSection={<IconKey size={16} />}
+                            onClick={handleAddPasskey}
+                            loading={registeringPasskey}
+                            fullWidth
+                        >
+                            Register New Passkey
+                        </Button>
                     </Stack>
-                ) : (
-                    <Text size="sm" c="dimmed" ta="center">
-                        No passkeys registered yet.
-                    </Text>
-                )}
+                </Tabs.Panel>
 
-                <TextInput
-                    placeholder="e.g. My iPhone, Hardware Key..."
-                    value={passkeyName}
-                    onChange={(e) => setPasskeyName(e.target.value)}
-                    leftSection={<IconKey size={16} />}
-                />
-
-                <Button
-                    variant="light"
-                    leftSection={<IconKey size={16} />}
-                    onClick={handleAddPasskey}
-                    loading={registeringPasskey}
-                    fullWidth
-                >
-                    Register New Passkey
-                </Button>
-            </Stack>
+                {/* 2FA Tab (placeholder) */}
+                <Tabs.Panel value="2fa" pt="md">
+                    <Stack gap="md" align="center" py="xl">
+                        <ThemeIcon variant="light" size={64} radius="xl">
+                            <IconShield size={32} />
+                        </ThemeIcon>
+                        <Text fw={500}>Two-Factor Authentication</Text>
+                        <Text size="sm" c="dimmed" ta="center" maw={400}>
+                            Add an extra layer of security to your account by enabling two-factor
+                            authentication.
+                        </Text>
+                        <Badge size="lg" variant="light" color="yellow">
+                            Coming Soon
+                        </Badge>
+                    </Stack>
+                </Tabs.Panel>
+            </Tabs>
         </Modal>
     );
 }
