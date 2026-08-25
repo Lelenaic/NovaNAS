@@ -22,6 +22,7 @@ Full license texts are available at:
 | [laravel/framework](https://github.com/laravel/framework) | MIT | Taylor Otwell and contributors |
 | [inertiajs/inertia-laravel](https://github.com/inertiajs/inertia-laravel) | MIT | Jonathan Reinink and contributors |
 | [laravel/tinker](https://github.com/laravel/tinker) | MIT | Taylor Otwell |
+| [spomky-labs/otphp](https://github.com/Spomky-Labs/otphp) | MIT | Florent Morselli and contributors |
 
 ### Development
 
@@ -61,6 +62,7 @@ Full license texts are available at:
 | [@mantine/nprogress](https://github.com/mantinedev/mantine) | MIT | Mantine |
 | [@mantine/spotlight](https://github.com/mantinedev/mantine) | MIT | Mantine |
 | [@mantine/tiptap](https://github.com/mantinedev/mantine) | MIT | Mantine |
+| [@simplewebauthn/browser](https://github.com/MasterKale/SimpleWebAuthn) | MIT | Matthew Miller |
 | [@tabler/icons-react](https://github.com/tabler/tabler-icons) | MIT | Tabler |
 | [@tiptap/extension-link](https://github.com/ueberdosis/tiptap) | MIT | überdosis |
 | [@tiptap/pm](https://github.com/ueberdosis/tiptap) | MIT | überdosis |
@@ -72,6 +74,7 @@ Full license texts are available at:
 | [dayjs](https://github.com/iamkun/dayjs) | MIT | iamkun and contributors |
 | [embla-carousel](https://github.com/davidjerleke/embla-carousel) | MIT | Embla Carousel |
 | [embla-carousel-react](https://github.com/davidjerleke/embla-carousel) | MIT | Embla Carousel |
+| [qrcode.react](https://github.com/zpao/qrcode.react) | ISC | Paul O'Shannessy |
 | [react](https://github.com/facebook/react) | MIT | Meta Platforms, Inc. and contributors |
 | [react-dom](https://github.com/facebook/react) | MIT | Meta Platforms, Inc. and contributors |
 | [recharts](https://github.com/recharts/recharts) | MIT | Recharts contributors |
