@@ -1,0 +1,4 @@
+# NovaNAS UPS Configuration - Auto-generated
+[monuser]
+	password = nutmon
+	upsmon primary

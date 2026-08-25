@@ -142,10 +142,7 @@ class NutService
             return ['success' => false, 'message' => 'No UPS device selected.'];
         }
 
-        // Write nut.conf
-        $this->writeNutConf();
-
-        // Write ups.conf with the selected device
+        // Write ups.conf with the selected device (only dynamic config)
         $detected = $this->detectDevices();
         $deviceInfo = collect($detected)->firstWhere('id', $selectedDevice);
 
@@ -155,14 +152,8 @@ class NutService
 
         $this->writeUpsConf($deviceInfo);
 
-        // Write upsd.conf
-        $this->writeUpsdConf();
-
-        // Write upsd.users
-        $this->writeUpsdUsers();
-
-        // Write upsmon.conf
-        $this->writeUpsmonConf($selectedDevice);
+        // Write shutdown config
+        $this->writeShutdownConfig($config);
 
         // Restart NUT services
         $restartResult = $this->restartNutServices();
@@ -201,23 +192,6 @@ class NutService
     }
 
     /**
-     * Write /etc/nut/nut.conf for standalone mode.
-     */
-    private function writeNutConf(): void
-    {
-        $content = <<<'CONF'
-# NovaNAS UPS Configuration
-MODE=standalone
-CONF;
-
-        $process = Process::run('echo '.escapeshellarg($content).' | sudo tee /etc/nut/nut.conf > /dev/null');
-
-        if (! $process->successful()) {
-            Log::error('Failed to write nut.conf', ['error' => $process->errorOutput()]);
-        }
-    }
-
-    /**
      * Write /etc/nut/ups.conf with the detected UPS device.
      *
      * @param  array<string, string>  $deviceInfo
@@ -245,81 +219,6 @@ CONF;
         if (! $process->successful()) {
             Log::error('Failed to write ups.conf', ['error' => $process->errorOutput()]);
         }
-    }
-
-    /**
-     * Write /etc/nut/upsd.conf.
-     */
-    private function writeUpsdConf(): void
-    {
-        $content = <<<'CONF'
-# NovaNAS UPS Configuration - Auto-generated
-LISTEN 127.0.0.1 3493
-CONF;
-
-        $process = Process::run('echo '.escapeshellarg($content).' | sudo tee /etc/nut/upsd.conf > /dev/null');
-
-        if (! $process->successful()) {
-            Log::error('Failed to write upsd.conf', ['error' => $process->errorOutput()]);
-        }
-    }
-
-    /**
-     * Write /etc/nut/upsd.users with monuser for upsmon.
-     */
-    private function writeUpsdUsers(): void
-    {
-        $content = <<<'CONF'
-# NovaNAS UPS Configuration - Auto-generated
-[monuser]
-	password = nutmon
-	upsmon primary
-CONF;
-
-        $process = Process::run('echo '.escapeshellarg($content).' | sudo tee /etc/nut/upsd.users > /dev/null');
-
-        if (! $process->successful()) {
-            Log::error('Failed to write upsd.users', ['error' => $process->errorOutput()]);
-        }
-    }
-
-    /**
-     * Write /etc/nut/upsmon.conf with shutdown configuration.
-     */
-    private function writeUpsmonConf(string $deviceName): void
-    {
-        $config = $this->getConfig();
-        $shutdownCmd = $this->buildShutdownCommand($config);
-
-        $content = <<<CONF
-# NovaNAS UPS Configuration - Auto-generated
-MONITOR nas-ups@localhost 1 monuser nutmon primary
-MINSUPPLIES 1
-SHUTDOWNCMD "{$shutdownCmd}"
-POLLFREQ 5
-POLLFREQALERT 5
-HOSTSYNC 15
-DEADTIME 15
-POWERDOWNFLAG "/etc/killpower"
-FINALDELAY 5
-CONF;
-
-        $process = Process::run('echo '.escapeshellarg($content).' | sudo tee /etc/nut/upsmon.conf > /dev/null');
-
-        if (! $process->successful()) {
-            Log::error('Failed to write upsmon.conf', ['error' => $process->errorOutput()]);
-        }
-    }
-
-    /**
-     * Build the shutdown command based on the user's configuration.
-     *
-     * @param  array<string, mixed>  $config
-     */
-    private function buildShutdownCommand(array $config): string
-    {
-        // Base shutdown command
-        return '/sbin/shutdown -h +0';
     }
 
     /**
@@ -376,6 +275,30 @@ CONF;
         }
 
         return ['success' => true, 'message' => 'NUT services restarted successfully.'];
+    }
+
+    /**
+     * Write the shutdown configuration file for the monitor script.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function writeShutdownConfig(array $config): void
+    {
+        $lines = [
+            '# NovaNAS UPS Shutdown Configuration - Auto-generated',
+            'SHUTDOWN_MODE='.$config['shutdown_mode'],
+            'BATTERY_THRESHOLD='.$config['shutdown_battery_pct'],
+            'SHUTDOWN_MINUTES='.$config['shutdown_minutes'],
+            'CANCEL_ON_POWER_RETURN='.($config['cancel_on_power_return'] ? '1' : '0'),
+            'UPS_NAME='.self::NUT_DEVICE_NAME,
+        ];
+
+        $content = implode("\n", $lines)."\n";
+        $process = Process::run('echo '.escapeshellarg($content).' | sudo tee /etc/nut/nova-shutdown.conf > /dev/null');
+
+        if (! $process->successful()) {
+            Log::error('Failed to write nova-shutdown.conf', ['error' => $process->errorOutput()]);
+        }
     }
 
     /**

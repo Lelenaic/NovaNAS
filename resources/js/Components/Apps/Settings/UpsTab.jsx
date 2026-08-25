@@ -167,7 +167,7 @@ export function UpsTab() {
         return parts.length > 0 ? parts.join(' - ') : device.id;
     };
 
-    const isOnline = deviceStatus?.['ups.status'] === 'OL';
+    const isOnline = deviceStatus?.['ups.status']?.includes('OL');
     const batteryCharge = deviceStatus?.['battery.charge'] ? parseFloat(deviceStatus['battery.charge']) : null;
     const inputVoltage = deviceStatus?.['input.voltage'] ?? null;
     const outputVoltage = deviceStatus?.['output.voltage'] ?? null;

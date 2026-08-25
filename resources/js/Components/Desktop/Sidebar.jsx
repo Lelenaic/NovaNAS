@@ -517,7 +517,7 @@ function UpsWidget({ systemInfo, loading }) {
     const upsInfo = systemInfo?.ups;
     const isEnabled = upsInfo?.enabled;
     const status = upsInfo?.status;
-    const isOnline = status?.['ups.status'] === 'OL';
+    const isOnline = status?.['ups.status']?.includes('OL');
     const batteryCharge = status?.['battery.charge'] ? parseFloat(status['battery.charge']) : null;
     const inputVoltage = status?.['input.voltage'] ?? null;
 

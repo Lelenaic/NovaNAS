@@ -211,7 +211,8 @@ apt install -y \
     zip \
     unzip \
     cron \
-    btop
+    btop \
+    nut
 print_success "System packages installed"
 
 # Enable ZFS and cronservices
@@ -227,6 +228,30 @@ if ! command -v docker &> /dev/null; then
     print_success "Docker installed"
 else
     print_success "Docker already installed"
+fi
+
+# Configure NUT (UPS monitoring)
+print_info "Configuring NUT (UPS monitoring)..."
+if command -v upsc &>/dev/null; then
+    NUT_DIR="$(dirname "$0")/system-files/nut"
+
+    sudo cp "$NUT_DIR/nut.conf" /etc/nut/nut.conf
+    sudo cp "$NUT_DIR/upsd.conf" /etc/nut/upsd.conf
+    sudo cp "$NUT_DIR/upsd.users" /etc/nut/upsd.users
+    sudo cp "$NUT_DIR/upsmon.conf" /etc/nut/upsmon.conf
+
+    sudo cp "$NUT_DIR/nut-event-handler.sh" /usr/local/bin/nut-event-handler.sh
+    sudo chmod +x /usr/local/bin/nut-event-handler.sh
+    sudo cp "$NUT_DIR/nut-shutdown-monitor.sh" /usr/local/bin/nut-shutdown-monitor.sh
+    sudo chmod +x /usr/local/bin/nut-shutdown-monitor.sh
+
+    echo 'nut ALL=(root) NOPASSWD: /sbin/shutdown' | sudo tee /etc/sudoers.d/nut-shutdown > /dev/null
+    sudo chmod 440 /etc/sudoers.d/nut-shutdown
+
+    sudo systemctl enable nut-server nut-monitor 2>/dev/null || true
+    print_success "NUT configured"
+else
+    print_success "NUT not installed, skipping configuration"
 fi
 
 # Install ttyd (terminal sharing over web)
