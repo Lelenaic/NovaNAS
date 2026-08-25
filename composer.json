@@ -13,7 +13,8 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
-        "spatie/laravel-passkeys": "^1.8"
+        "spatie/laravel-passkeys": "^1.8",
+        "spomky-labs/otphp": "^11.5"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.7",

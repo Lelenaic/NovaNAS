@@ -7,6 +7,7 @@ use App\Services\DynDNS\DynDNSProviderManager;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * DynDNS Configuration Model
@@ -18,12 +19,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $token
  * @property int $interval_minutes
  * @property bool $is_enabled
- * @property \Illuminate\Support\Carbon|null $last_updated_at
+ * @property Carbon|null $last_updated_at
  * @property string|null $last_ip
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read string $full_domain
- *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig enabled()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig forProvider(string $provider)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig newModelQuery()
@@ -40,7 +40,6 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereSubdomain($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereToken($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DynDnsConfig whereUpdatedAt($value)
- *
  * @mixin \Eloquent
  */
 class DynDnsConfig extends Model

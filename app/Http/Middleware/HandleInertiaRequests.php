@@ -45,6 +45,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'flash' => [
+                '2fa_required' => fn () => $request->session()->get('2fa_required'),
+                '2fa_email' => fn () => $request->session()->get('2fa_email'),
+            ],
         ];
     }
 }

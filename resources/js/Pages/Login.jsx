@@ -13,17 +13,22 @@ import {
     rem,
     Alert,
     Divider,
+    PinInput,
 } from '@mantine/core';
-import { IconLock, IconMail, IconCheck, IconKey } from '@tabler/icons-react';
+import { IconLock, IconMail, IconCheck, IconKey, IconShield } from '@tabler/icons-react';
 import { useForm } from '@inertiajs/react';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { useRef, useState } from 'react';
 
-export default function Login({ version, errors, passwordSet }) {
+export default function Login({ version, errors, passwordSet, twoFactorRequired, twoFactorEmail }) {
     const { data, setData, post, processing } = useForm({
         email: '',
         password: '',
         remember: false,
+    });
+
+    const { data: twoFactorData, setData: setTwoFactorData, post: postTwoFactor, processing: twoFactorProcessing } = useForm({
+        code: '',
     });
 
     const passkeyFormRef = useRef(null);
@@ -33,6 +38,11 @@ export default function Login({ version, errors, passwordSet }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         post('/login');
+    };
+
+    const handleTwoFactorSubmit = (e) => {
+        e.preventDefault();
+        postTwoFactor('/login/2fa');
     };
 
     const handlePasskeyLogin = async () => {
@@ -57,6 +67,20 @@ export default function Login({ version, errors, passwordSet }) {
         } finally {
             setPasskeyLoading(false);
         }
+    };
+
+    const inputStyles = {
+        input: {
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'white',
+            '&::placeholder': {
+                color: 'rgba(255, 255, 255, 0.4)',
+            },
+            '&:focus': {
+                borderColor: '#2099f0',
+            },
+        },
     };
 
     return (
@@ -167,169 +191,250 @@ export default function Login({ version, errors, passwordSet }) {
                         justifyContent: 'center',
                     }}
                 >
-                    <Stack align="center" gap="xs">
-                        {/* Logo/Icon */}
-                        <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
-                        <Text c="dimmed" size="sm" ta="center" maw={280}>
-                            Your personal cloud storage solution
-                        </Text>
-                    </Stack>
-
-                    <form onSubmit={handleSubmit}>
-                        <Stack mt={rem(32)} gap="md">
-                            {passwordSet && (
-                                <Alert
-                                    color="green"
-                                    variant="light"
-                                    icon={<IconCheck size={16} />}
-                                >
-                                    Password set successfully. You can now log in.
-                                </Alert>
-                            )}
-                            <TextInput
-                                size="md"
-                                placeholder="Email"
-                                name="email"
-                                type="email"
-                                value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                                leftSection={<IconMail size={18} stroke={1.5} />}
-                                error={errors?.email}
-                                style={{ width: '100%' }}
-                                styles={{
-                                    input: {
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '&::placeholder': {
-                                            color: 'rgba(255, 255, 255, 0.4)',
-                                        },
-                                        '&:focus': {
-                                            borderColor: '#2099f0',
-                                        },
-                                    },
-                                }}
-                                required
-                            />
-
-                            <PasswordInput
-                                size="md"
-                                placeholder="Password"
-                                name="password"
-                                value={data.password}
-                                onChange={(e) => setData('password', e.target.value)}
-                                leftSection={<IconLock size={18} stroke={1.5} />}
-                                error={errors?.password}
-                                style={{ width: '100%' }}
-                                styles={{
-                                    input: {
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '&::placeholder': {
-                                            color: 'rgba(255, 255, 255, 0.4)',
-                                        },
-                                        '&:focus': {
-                                            borderColor: '#2099f0',
-                                        },
-                                    },
-                                }}
-                                required
-                            />
-
-                            <Group justify="space-between">
-                                <Checkbox
-                                    label="Remember me"
-                                    size="xs"
-                                    checked={data.remember}
-                                    onChange={(e) => setData('remember', e.target.checked)}
-                                    styles={{
-                                        label: {
-                                            color: 'rgba(255, 255, 255, 0.6)',
-                                        },
+                    {twoFactorRequired ? (
+                        /* 2FA Verification View */
+                        <>
+                            <Stack align="center" gap="xs">
+                                <Box
+                                    style={{
+                                        width: 64,
+                                        height: 64,
+                                        borderRadius: '50%',
+                                        background: 'rgba(32, 153, 240, 0.15)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                     }}
-                                />
-                                <Text
-                                    size="xs"
-                                    c="blue"
-                                    style={{ cursor: 'pointer' }}
                                 >
-                                    Forgot password?
+                                    <IconShield size={32} color="#2099f0" />
+                                </Box>
+                                <Title order={4} c="white" fw={600}>
+                                    Two-Factor Authentication
+                                </Title>
+                                <Text c="dimmed" size="sm" ta="center" maw={280}>
+                                    Enter the 6-digit code from your authenticator app
                                 </Text>
-                            </Group>
+                            </Stack>
+
+                            <form onSubmit={handleTwoFactorSubmit}>
+                                <Stack mt={rem(32)} gap="md">
+                                    {errors?.code && (
+                                        <Alert color="red" variant="light" icon={<IconShield size={16} />}>
+                                            {errors.code}
+                                        </Alert>
+                                    )}
+
+                                    <Group justify="center">
+                                        <PinInput
+                                            length={6}
+                                            size="lg"
+                                            gap="sm"
+                                            autoFocus
+                                            onComplete={(value) => {
+                                                setTwoFactorData('code', value);
+                                                // Auto-submit when all 6 digits are entered
+                                                if (value.length === 6) {
+                                                    postTwoFactor('/login/2fa', { code: value });
+                                                }
+                                            }}
+                                            onChange={(value) => setTwoFactorData('code', value)}
+                                            styles={{
+                                                input: {
+                                                    background: 'rgba(255, 255, 255, 0.05)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                    color: 'white',
+                                                    fontSize: '1.5rem',
+                                                    fontWeight: 600,
+                                                    textAlign: 'center',
+                                                    '&:focus': {
+                                                        borderColor: '#2099f0',
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </Group>
+
+                                    <Button
+                                        type="submit"
+                                        size="md"
+                                        fullWidth
+                                        mt="md"
+                                        loading={twoFactorProcessing}
+                                        disabled={twoFactorData.code.length !== 6}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
+                                            border: 'none',
+                                            fontWeight: 600,
+                                            height: rem(44),
+                                        }}
+                                        styles={{
+                                            root: {
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
+                                                },
+                                            },
+                                        }}
+                                    >
+                                        Verify Code
+                                    </Button>
+
+                                    <Button
+                                        variant="subtle"
+                                        size="sm"
+                                        c="dimmed"
+                                        onClick={() => window.location.href = '/login'}
+                                    >
+                                        Back to login
+                                    </Button>
+                                </Stack>
+                            </form>
+                        </>
+                    ) : (
+                        /* Standard Login View */
+                        <>
+                            <Stack align="center" gap="xs">
+                                {/* Logo/Icon */}
+                                <img src="/images/logo.png" alt="NovaNAS" style={{ height: '50px', maxWidth: '60%' }} />
+                                <Text c="dimmed" size="sm" ta="center" maw={280}>
+                                    Your personal cloud storage solution
+                                </Text>
+                            </Stack>
+
+                            <form onSubmit={handleSubmit}>
+                                <Stack mt={rem(32)} gap="md">
+                                    {passwordSet && (
+                                        <Alert
+                                            color="green"
+                                            variant="light"
+                                            icon={<IconCheck size={16} />}
+                                        >
+                                            Password set successfully. You can now log in.
+                                        </Alert>
+                                    )}
+                                    <TextInput
+                                        size="md"
+                                        placeholder="Email"
+                                        name="email"
+                                        type="email"
+                                        value={data.email}
+                                        onChange={(e) => setData('email', e.target.value)}
+                                        leftSection={<IconMail size={18} stroke={1.5} />}
+                                        error={errors?.email}
+                                        style={{ width: '100%' }}
+                                        styles={inputStyles}
+                                        required
+                                    />
+
+                                    <PasswordInput
+                                        size="md"
+                                        placeholder="Password"
+                                        name="password"
+                                        value={data.password}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        leftSection={<IconLock size={18} stroke={1.5} />}
+                                        error={errors?.password}
+                                        style={{ width: '100%' }}
+                                        styles={inputStyles}
+                                        required
+                                    />
+
+                                    <Group justify="space-between">
+                                        <Checkbox
+                                            label="Remember me"
+                                            size="xs"
+                                            checked={data.remember}
+                                            onChange={(e) => setData('remember', e.target.checked)}
+                                            styles={{
+                                                label: {
+                                                    color: 'rgba(255, 255, 255, 0.6)',
+                                                },
+                                            }}
+                                        />
+                                        <Text
+                                            size="xs"
+                                            c="blue"
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            Forgot password?
+                                        </Text>
+                                    </Group>
+
+                                    <Button
+                                        type="submit"
+                                        size="md"
+                                        fullWidth
+                                        mt="md"
+                                        loading={processing}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
+                                            border: 'none',
+                                            fontWeight: 600,
+                                            height: rem(44),
+                                        }}
+                                        styles={{
+                                            root: {
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
+                                                },
+                                            },
+                                        }}
+                                    >
+                                        Sign In
+                                    </Button>
+                                </Stack>
+                            </form>
+
+                            <Divider
+                                label="or"
+                                labelPosition="center"
+                                my="lg"
+                                styles={{
+                                    label: { color: 'rgba(255, 255, 255, 0.4)' },
+                                    root: { '&::before': { borderColor: 'rgba(255, 255, 255, 0.1)' }, '&::after': { borderColor: 'rgba(255, 255, 255, 0.1)' } },
+                                }}
+                            />
 
                             <Button
-                                type="submit"
+                                variant="outline"
                                 size="md"
                                 fullWidth
-                                mt="md"
-                                loading={processing}
+                                leftSection={<IconKey size={18} />}
+                                onClick={handlePasskeyLogin}
+                                loading={passkeyLoading}
                                 style={{
-                                    background: 'linear-gradient(135deg, #2099f0 0%, #1976d2 100%)',
-                                    border: 'none',
-                                    fontWeight: 600,
+                                    borderColor: 'rgba(255, 255, 255, 0.15)',
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    background: 'rgba(255, 255, 255, 0.03)',
                                     height: rem(44),
                                 }}
                                 styles={{
                                     root: {
                                         transition: 'all 0.3s ease',
                                         '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: '0 8px 24px rgba(32, 153, 240, 0.4)',
+                                            background: 'rgba(255, 255, 255, 0.08)',
+                                            borderColor: 'rgba(255, 255, 255, 0.25)',
                                         },
                                     },
                                 }}
                             >
-                                Sign In
+                                Login with Passkey
                             </Button>
-                        </Stack>
-                    </form>
 
-                    <Divider
-                        label="or"
-                        labelPosition="center"
-                        my="lg"
-                        styles={{
-                            label: { color: 'rgba(255, 255, 255, 0.4)' },
-                            root: { '&::before': { borderColor: 'rgba(255, 255, 255, 0.1)' }, '&::after': { borderColor: 'rgba(255, 255, 255, 0.1)' } },
-                        }}
-                    />
+                            {passkeyError && (
+                                <Alert color="red" variant="light" onClose={() => setPasskeyError(null)} withCloseButton mt="sm">
+                                    {passkeyError}
+                                </Alert>
+                            )}
 
-                    <Button
-                        variant="outline"
-                        size="md"
-                        fullWidth
-                        leftSection={<IconKey size={18} />}
-                        onClick={handlePasskeyLogin}
-                        loading={passkeyLoading}
-                        style={{
-                            borderColor: 'rgba(255, 255, 255, 0.15)',
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            background: 'rgba(255, 255, 255, 0.03)',
-                            height: rem(44),
-                        }}
-                        styles={{
-                            root: {
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    borderColor: 'rgba(255, 255, 255, 0.25)',
-                                },
-                            },
-                        }}
-                    >
-                        Login with Passkey
-                    </Button>
-
-                    {passkeyError && (
-                        <Alert color="red" variant="light" onClose={() => setPasskeyError(null)} withCloseButton mt="sm">
-                            {passkeyError}
-                        </Alert>
+                            <Text size="xs" c="dimmed" ta="center" mt="xl">
+                                Secure access to your NAS
+                            </Text>
+                        </>
                     )}
-
-                    <Text size="xs" c="dimmed" ta="center" mt="xl">
-                        Secure access to your NAS
-                    </Text>
                 </Paper>
 
                 {/* Version Info */}

@@ -5,7 +5,7 @@
 
 /**
  * A helper file for Laravel, to provide autocomplete information to your IDE
- * Generated for Laravel 13.25.0.
+ * Generated for Laravel 13.26.1.
  *
  * This file should not be included in your code, only analyzed by your IDE!
  *
@@ -13085,7 +13085,7 @@ namespace Illuminate\Support\Facades {
         /**
          * Assert that a process was recorded matching a given truth test.
          *
-         * @param \Closure|string $callback
+         * @param \Closure|array<array-key, string>|string $callback
          * @return \Illuminate\Process\Factory
          * @static
          */
@@ -13098,7 +13098,7 @@ namespace Illuminate\Support\Facades {
         /**
          * Assert that a process was recorded a given number of times matching a given truth test.
          *
-         * @param \Closure|string $callback
+         * @param \Closure|array<array-key, string>|string $callback
          * @param int $times
          * @return \Illuminate\Process\Factory
          * @static
@@ -13110,9 +13110,22 @@ namespace Illuminate\Support\Facades {
         }
 
         /**
+         * Assert that the given processes were run in the given order.
+         *
+         * @param list<\Closure|array<array-key, string>|string> $callbacks
+         * @return \Illuminate\Process\Factory
+         * @static
+         */
+        public static function assertRanInOrder($callbacks)
+        {
+            /** @var \Illuminate\Process\Factory $instance */
+            return $instance->assertRanInOrder($callbacks);
+        }
+
+        /**
          * Assert that a process was not recorded matching a given truth test.
          *
-         * @param \Closure|string $callback
+         * @param \Closure|array<array-key, string>|string $callback
          * @return \Illuminate\Process\Factory
          * @static
          */
@@ -13125,7 +13138,7 @@ namespace Illuminate\Support\Facades {
         /**
          * Assert that a process was not recorded matching a given truth test.
          *
-         * @param \Closure|string $callback
+         * @param \Closure|array<array-key, string>|string $callback
          * @return \Illuminate\Process\Factory
          * @static
          */
@@ -13376,6 +13389,21 @@ namespace Illuminate\Support\Facades {
         {
             /** @var \Illuminate\Queue\QueueManager $instance */
             $instance->route($class, $queue, $connection);
+        }
+
+        /**
+         * Forward the given queue to another queue and/or connection.
+         *
+         * @param array<string, \UnitEnum|string>|\UnitEnum|string $queue
+         * @param \UnitEnum|string|null $to
+         * @param \UnitEnum|string|null $connection
+         * @return void
+         * @static
+         */
+        public static function forward($queue, $to = null, $connection = null)
+        {
+            /** @var \Illuminate\Queue\QueueManager $instance */
+            $instance->forward($queue, $to, $connection);
         }
 
         /**
@@ -19073,6 +19101,16 @@ namespace Illuminate\Support\Facades {
             return \Illuminate\Routing\Router::inertia($uri, $component, $props);
         }
 
+        /**
+         * @see \Spatie\LaravelPasskeys\LaravelPasskeysServiceProvider::registerPasskeyRouteMacro()
+         * @param string $prefix
+         * @static
+         */
+        public static function passkeys($prefix = 'passkeys')
+        {
+            return \Illuminate\Routing\Router::passkeys($prefix);
+        }
+
             }
     /**
      * @method static \Illuminate\Console\Scheduling\PendingEventAttributes withoutOverlapping(int $expiresAt = 1440, bool $releaseOnTerminationSignals = true)
@@ -21129,6 +21167,20 @@ namespace Illuminate\Support\Facades {
         {
             /** @var \Illuminate\Filesystem\FilesystemManager $instance */
             return $instance->createS3Driver($config);
+        }
+
+        /**
+         * Create a read-through filesystem driver.
+         *
+         * @param array $config
+         * @param string $name
+         * @return \Illuminate\Filesystem\LocalFilesystemAdapter
+         * @static
+         */
+        public static function createReadThroughDriver($config, $name = 'read-through')
+        {
+            /** @var \Illuminate\Filesystem\FilesystemManager $instance */
+            return $instance->createReadThroughDriver($config, $name);
         }
 
         /**
@@ -25429,6 +25481,16 @@ namespace Illuminate\Routing {
             return \Illuminate\Routing\Router::inertia($uri, $component, $props);
         }
 
+        /**
+         * @see \Spatie\LaravelPasskeys\LaravelPasskeysServiceProvider::registerPasskeyRouteMacro()
+         * @param string $prefix
+         * @static
+         */
+        public static function passkeys($prefix = 'passkeys')
+        {
+            return \Illuminate\Routing\Router::passkeys($prefix);
+        }
+
             }
     }
 
@@ -29476,7 +29538,7 @@ namespace  {
          * Add an "order by" clause to order results by a given sequence of values.
          *
          * @param \Illuminate\Contracts\Database\Query\Expression|string $column
-         * @param \Illuminate\Contracts\Support\Arrayable|array $values
+         * @param \Illuminate\Contracts\Support\Arrayable|array<\UnitEnum|string|int|float|bool> $values
          * @return \Illuminate\Database\Eloquent\Builder<static>
          * @static
          */

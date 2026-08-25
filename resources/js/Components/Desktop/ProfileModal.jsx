@@ -15,7 +15,11 @@ import {
     Tabs,
     Badge,
     Box,
+    CopyButton,
+    Tooltip,
+    PinInput,
 } from '@mantine/core';
+import { QRCodeSVG } from 'qrcode.react';
 import { router } from '@inertiajs/react';
 import {
     IconUser,
@@ -25,6 +29,8 @@ import {
     IconKey,
     IconTrash,
     IconShield,
+    IconCopy,
+    IconCheck as IconCheckFilled,
 } from '@tabler/icons-react';
 import { startRegistration } from '@simplewebauthn/browser';
 
@@ -47,6 +53,20 @@ export function ProfileModal({ opened, onClose }) {
     const [passkeyError, setPasskeyError] = useState(null);
     const [registeringPasskey, setRegisteringPasskey] = useState(false);
     const [passkeyName, setPasskeyName] = useState('');
+
+    // 2FA state
+    const [twoFaEnabled, setTwoFaEnabled] = useState(false);
+    const [twoFaLoading, setTwoFaLoading] = useState(false);
+    const [twoFaSetupStep, setTwoFaSetupStep] = useState(null); // null | 'qr' | 'verify'
+    const [twoFaSecret, setTwoFaSecret] = useState('');
+    const [twoFaProvisioningUri, setTwoFaProvisioningUri] = useState('');
+    const [twoFaCode, setTwoFaCode] = useState('');
+    const [twoFaError, setTwoFaError] = useState(null);
+    const [twoFaSuccess, setTwoFaSuccess] = useState(null);
+    const [disablePassword, setDisablePassword] = useState('');
+    const [showDisableForm, setShowDisableForm] = useState(false);
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     const fetchProfile = async () => {
         try {
@@ -78,12 +98,30 @@ export function ProfileModal({ opened, onClose }) {
         }
     }, []);
 
+    const fetchTwoFaStatus = useCallback(async () => {
+        try {
+            const response = await fetch('/api/2fa');
+            const data = await response.json();
+            setTwoFaEnabled(data.enabled);
+        } catch (err) {
+            // Silently fail — status will show as disabled
+        }
+    }, []);
+
     useEffect(() => {
         if (opened) {
             fetchProfile();
             fetchPasskeys();
+            fetchTwoFaStatus();
+            // Reset 2FA setup state when opening
+            setTwoFaSetupStep(null);
+            setTwoFaCode('');
+            setTwoFaError(null);
+            setTwoFaSuccess(null);
+            setShowDisableForm(false);
+            setDisablePassword('');
         }
-    }, [opened, fetchPasskeys]);
+    }, [opened, fetchPasskeys, fetchTwoFaStatus]);
 
     const handleChange = (field) => (event) => {
         setFormData((prev) => ({
@@ -103,7 +141,7 @@ export function ProfileModal({ opened, onClose }) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify({
                     name: formData.name,
@@ -141,7 +179,7 @@ export function ProfileModal({ opened, onClose }) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify({
                     current_password: formData.current_password,
@@ -186,7 +224,7 @@ export function ProfileModal({ opened, onClose }) {
         try {
             const optionsResponse = await fetch('/api/passkeys/generate-options', {
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
             });
 
@@ -201,7 +239,7 @@ export function ProfileModal({ opened, onClose }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify({
                     options: JSON.stringify(options),
@@ -237,7 +275,7 @@ export function ProfileModal({ opened, onClose }) {
             const response = await fetch(`/api/passkeys/${passkeyId}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-CSRF-TOKEN': csrfToken,
                 },
             });
 
@@ -251,11 +289,119 @@ export function ProfileModal({ opened, onClose }) {
         }
     };
 
+    // 2FA handlers
+    const handleStartTwoFaSetup = async () => {
+        setTwoFaLoading(true);
+        setTwoFaError(null);
+        setTwoFaSuccess(null);
+
+        try {
+            const response = await fetch('/api/2fa', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to generate 2FA secret');
+            }
+
+            setTwoFaSecret(data.secret);
+            setTwoFaProvisioningUri(data.provisioning_uri);
+            setTwoFaSetupStep('qr');
+        } catch (err) {
+            setTwoFaError(err.message);
+        } finally {
+            setTwoFaLoading(false);
+        }
+    };
+
+    const handleConfirmTwoFa = async () => {
+        if (twoFaCode.length !== 6) {
+            setTwoFaError('Please enter a 6-digit code.');
+            return;
+        }
+
+        setTwoFaLoading(true);
+        setTwoFaError(null);
+
+        try {
+            const response = await fetch('/api/2fa/confirm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ code: twoFaCode }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to verify code');
+            }
+
+            setTwoFaEnabled(true);
+            setTwoFaSetupStep(null);
+            setTwoFaCode('');
+            setTwoFaSuccess('Two-factor authentication has been enabled.');
+        } catch (err) {
+            setTwoFaError(err.message);
+        } finally {
+            setTwoFaLoading(false);
+        }
+    };
+
+    const handleDisableTwoFa = async () => {
+        if (!disablePassword) {
+            setTwoFaError('Please enter your password.');
+            return;
+        }
+
+        setTwoFaLoading(true);
+        setTwoFaError(null);
+
+        try {
+            const response = await fetch('/api/2fa', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ password: disablePassword }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to disable 2FA');
+            }
+
+            setTwoFaEnabled(false);
+            setShowDisableForm(false);
+            setDisablePassword('');
+            setTwoFaSuccess('Two-factor authentication has been disabled.');
+        } catch (err) {
+            setTwoFaError(err.message);
+        } finally {
+            setTwoFaLoading(false);
+        }
+    };
+
     const handleClose = () => {
         setError(null);
         setSuccess(null);
         setPasskeyError(null);
         setActiveTab('profile');
+        setTwoFaSetupStep(null);
+        setTwoFaCode('');
+        setTwoFaError(null);
+        setTwoFaSuccess(null);
+        setShowDisableForm(false);
+        setDisablePassword('');
         setFormData((prev) => ({
             ...prev,
             current_password: '',
@@ -298,7 +444,17 @@ export function ProfileModal({ opened, onClose }) {
                     >
                         Passkeys
                     </Tabs.Tab>
-                    <Tabs.Tab value="2fa" leftSection={<IconShield size={16} />}>
+                    <Tabs.Tab
+                        value="2fa"
+                        leftSection={<IconShield size={16} />}
+                        rightSection={
+                            twoFaEnabled ? (
+                                <Badge size="xs" variant="light" color="green">
+                                    On
+                                </Badge>
+                            ) : null
+                        }
+                    >
                         2FA
                     </Tabs.Tab>
                 </Tabs.List>
@@ -483,20 +639,216 @@ export function ProfileModal({ opened, onClose }) {
                     </Stack>
                 </Tabs.Panel>
 
-                {/* 2FA Tab (placeholder) */}
+                {/* 2FA Tab */}
                 <Tabs.Panel value="2fa" pt="md">
-                    <Stack gap="md" align="center" py="xl">
-                        <ThemeIcon variant="light" size={64} radius="xl">
-                            <IconShield size={32} />
-                        </ThemeIcon>
-                        <Text fw={500}>Two-Factor Authentication</Text>
-                        <Text size="sm" c="dimmed" ta="center" maw={400}>
-                            Add an extra layer of security to your account by enabling two-factor
-                            authentication.
-                        </Text>
-                        <Badge size="lg" variant="light" color="yellow">
-                            Coming Soon
-                        </Badge>
+                    <Stack gap="md">
+                        {twoFaError && (
+                            <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setTwoFaError(null)} withCloseButton>
+                                {twoFaError}
+                            </Alert>
+                        )}
+
+                        {twoFaSuccess && (
+                            <Alert icon={<IconCheck size={16} />} color="green" onClose={() => setTwoFaSuccess(null)} withCloseButton>
+                                {twoFaSuccess}
+                            </Alert>
+                        )}
+
+                        {twoFaEnabled ? (
+                            /* 2FA is enabled — show status and disable option */
+                            <>
+                                <Group
+                                    p="md"
+                                    style={{
+                                        border: '1px solid var(--mantine-color-green-light)',
+                                        borderRadius: 'var(--mantine-radius-sm)',
+                                        backgroundColor: 'var(--mantine-color-green-light)',
+                                    }}
+                                >
+                                    <ThemeIcon variant="light" color="green" size="lg">
+                                        <IconShield size={20} />
+                                    </ThemeIcon>
+                                    <div>
+                                        <Text fw={500} size="sm">
+                                            Two-factor authentication is enabled
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            Your account is protected with an authenticator app.
+                                        </Text>
+                                    </div>
+                                </Group>
+
+                                {showDisableForm ? (
+                                    <Stack gap="md">
+                                        <Divider />
+                                        <Text size="sm" fw={500}>
+                                            Disable Two-Factor Authentication
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            Enter your password to confirm.
+                                        </Text>
+                                        <PasswordInput
+                                            placeholder="Current password"
+                                            value={disablePassword}
+                                            onChange={(e) => setDisablePassword(e.target.value)}
+                                            leftSection={<IconLock size={16} />}
+                                        />
+                                        <Group justify="flex-end" gap="xs">
+                                            <Button
+                                                variant="subtle"
+                                                color="gray"
+                                                onClick={() => {
+                                                    setShowDisableForm(false);
+                                                    setDisablePassword('');
+                                                    setTwoFaError(null);
+                                                }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                color="red"
+                                                onClick={handleDisableTwoFa}
+                                                loading={twoFaLoading}
+                                            >
+                                                Disable 2FA
+                                            </Button>
+                                        </Group>
+                                    </Stack>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        color="red"
+                                        onClick={() => setShowDisableForm(true)}
+                                        fullWidth
+                                    >
+                                        Disable Two-Factor Authentication
+                                    </Button>
+                                )}
+                            </>
+                        ) : twoFaSetupStep === 'qr' ? (
+                            /* Setup step 1: Show QR code */
+                            <>
+                                <Text size="sm" fw={500}>
+                                    Step 1: Scan QR Code
+                                </Text>
+                                <Text size="xs" c="dimmed">
+                                    Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).
+                                </Text>
+
+                                <Group justify="center" py="md">
+                                    <Box
+                                        p="md"
+                                        style={{
+                                            backgroundColor: 'white',
+                                            borderRadius: 'var(--mantine-radius-sm)',
+                                        }}
+                                    >
+                                        <QRCodeSVG value={twoFaProvisioningUri} size={180} />
+                                    </Box>
+                                </Group>
+
+                                <Text size="xs" c="dimmed" ta="center">
+                                    Or enter this code manually:
+                                </Text>
+
+                                <CopyButton value={twoFaSecret}>
+                                    {({ copied, copy }) => (
+                                        <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow position="bottom">
+                                            <Button
+                                                variant="subtle"
+                                                size="compact-sm"
+                                                onClick={copy}
+                                                fullWidth
+                                                styles={{
+                                                    root: {
+                                                        fontFamily: 'monospace',
+                                                        fontSize: 'var(--mantine-font-size-sm)',
+                                                        letterSpacing: '0.1em',
+                                                    },
+                                                }}
+                                                rightSection={copied ? <IconCheckFilled size={14} /> : <IconCopy size={14} />}
+                                            >
+                                                {twoFaSecret}
+                                            </Button>
+                                        </Tooltip>
+                                    )}
+                                </CopyButton>
+
+                                <Button
+                                    fullWidth
+                                    onClick={() => setTwoFaSetupStep('verify')}
+                                >
+                                    Continue
+                                </Button>
+                            </>
+                        ) : twoFaSetupStep === 'verify' ? (
+                            /* Setup step 2: Verify code */
+                            <>
+                                <Text size="sm" fw={500}>
+                                    Step 2: Verify Code
+                                </Text>
+                                <Text size="xs" c="dimmed">
+                                    Enter the 6-digit code from your authenticator app to complete setup.
+                                </Text>
+
+                                <Group justify="center" py="md">
+                                    <PinInput
+                                        length={6}
+                                        size="lg"
+                                        gap="sm"
+                                        autoFocus
+                                        value={twoFaCode}
+                                        onChange={setTwoFaCode}
+                                        styles={{
+                                            input: {
+                                                textAlign: 'center',
+                                            },
+                                        }}
+                                    />
+                                </Group>
+
+                                <Group justify="flex-end" gap="xs">
+                                    <Button
+                                        variant="subtle"
+                                        color="gray"
+                                        onClick={() => {
+                                            setTwoFaSetupStep('qr');
+                                            setTwoFaCode('');
+                                            setTwoFaError(null);
+                                        }}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button
+                                        onClick={handleConfirmTwoFa}
+                                        loading={twoFaLoading}
+                                        disabled={twoFaCode.length !== 6}
+                                    >
+                                        Enable 2FA
+                                    </Button>
+                                </Group>
+                            </>
+                        ) : (
+                            /* Initial state: Show enable button */
+                            <Stack gap="md" align="center" py="xl">
+                                <ThemeIcon variant="light" size={64} radius="xl">
+                                    <IconShield size={32} />
+                                </ThemeIcon>
+                                <Text fw={500}>Two-Factor Authentication</Text>
+                                <Text size="sm" c="dimmed" ta="center" maw={400}>
+                                    Add an extra layer of security to your account by enabling
+                                    two-factor authentication. You'll need an authenticator app
+                                    like Google Authenticator or Authy.
+                                </Text>
+                                <Button
+                                    onClick={handleStartTwoFaSetup}
+                                    loading={twoFaLoading}
+                                    leftSection={<IconShield size={16} />}
+                                >
+                                    Enable Two-Factor Authentication
+                                </Button>
+                            </Stack>
+                        )}
                     </Stack>
                 </Tabs.Panel>
             </Tabs>

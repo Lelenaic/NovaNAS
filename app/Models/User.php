@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\SambaService;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
 use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
+use Spatie\LaravelPasskeys\Models\Passkey;
 
 /**
  * @property int $id
@@ -31,9 +33,12 @@ use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
  * @property Carbon|null $password_set_at
  * @property string $file_manager_layout
  * @property bool $show_hidden_files
+ * @property string|null $two_factor_secret
+ * @property bool $two_factor_enabled
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
- *
+ * @property-read Collection<int, Passkey> $passkeys
+ * @property-read int|null $passkeys_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User active()
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
@@ -54,9 +59,10 @@ use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereRememberToken($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereShowHiddenFiles($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereTwoFactorEnabled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereTwoFactorSecret($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUsername($value)
- *
  * @mixin \Eloquent
  */
 class User extends Authenticatable implements HasPasskeys
@@ -81,6 +87,8 @@ class User extends Authenticatable implements HasPasskeys
         'is_admin',
         'file_manager_layout',
         'show_hidden_files',
+        'two_factor_secret',
+        'two_factor_enabled',
     ];
 
     /**
@@ -92,6 +100,7 @@ class User extends Authenticatable implements HasPasskeys
         'password',
         'remember_token',
         'invitation_token',
+        'two_factor_secret',
     ];
 
     /**
@@ -107,6 +116,7 @@ class User extends Authenticatable implements HasPasskeys
             'password_set_at' => 'datetime',
             'is_admin' => 'boolean',
             'show_hidden_files' => 'boolean',
+            'two_factor_enabled' => 'boolean',
         ];
     }
 

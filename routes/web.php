@@ -30,6 +30,7 @@ use App\Http\Controllers\StorageController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\TerminalController;
+use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\UpnpController;
 use App\Http\Controllers\UpsSettingsController;
@@ -54,6 +55,8 @@ Route::get('/wizard/skip', [WizardController::class, 'skip']);
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 
 Route::post('/login', [AuthController::class, 'authenticate']);
+
+Route::post('/login/2fa', [AuthController::class, 'verifyTwoFactor'])->name('login.2fa');
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -215,6 +218,12 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/api/passkeys', [PasskeyController::class, 'store']);
         Route::get('/api/passkeys/generate-options', [PasskeyController::class, 'generateOptions']);
         Route::delete('/api/passkeys/{id}', [PasskeyController::class, 'destroy']);
+
+        // Two-factor authentication routes
+        Route::get('/api/2fa', [TwoFactorController::class, 'show']);
+        Route::post('/api/2fa', [TwoFactorController::class, 'store']);
+        Route::post('/api/2fa/confirm', [TwoFactorController::class, 'confirm']);
+        Route::delete('/api/2fa', [TwoFactorController::class, 'destroy']);
 
         // User invitation routes
         Route::get('/api/users/pending', [UserController::class, 'pending']);
