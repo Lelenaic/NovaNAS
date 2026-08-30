@@ -17,17 +17,15 @@ if [ "$1" = "--force" ]; then
 fi
 
 # Get current version
-if [ "$FORCE" = false ]; then
-    CURRENT_VERSION=$(php artisan tinker --execute "echo config('app.version');" | tail -n1 | tr -d '\n')
+CURRENT_VERSION=$(php artisan tinker --execute "echo config('app.version');" | tail -n1 | tr -d '\n')
 
-    if [ -z "$CURRENT_VERSION" ]; then
-        echo "Error: Could not retrieve current version"
-        php artisan up
-        exit 1
-    fi
-
-    echo "Current version: $CURRENT_VERSION"
+if [ -z "$CURRENT_VERSION" ]; then
+    echo "Error: Could not retrieve current version"
+    php artisan up
+    exit 1
 fi
+
+echo "Current version: $CURRENT_VERSION"
 
 # Fetch latest release info
 RELEASE_JSON=$(curl -s "$API_URL")
@@ -121,6 +119,15 @@ php artisan migrate --force
 # Run all pending update scripts in version order
 LOCK_FILE="update-scripts/.update_lock"
 touch "$LOCK_FILE"
+
+# When --force, re-run the current version's update script
+if [ "$FORCE" = true ] && [ -n "$CURRENT_VERSION" ]; then
+    CURRENT_SCRIPT="update-scripts/${CURRENT_VERSION}.sh"
+    if [ -f "$CURRENT_SCRIPT" ]; then
+        echo "Force reinstall: removing $CURRENT_VERSION from lock file"
+        sed -i "/^${CURRENT_VERSION}\.sh$/d" "$LOCK_FILE"
+    fi
+fi
 
 PENDING_SCRIPTS=()
 for script in update-scripts/*.sh; do
