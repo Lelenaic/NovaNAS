@@ -76,7 +76,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
     }
 
     /**
-     * @return array<int, array{id: string, title: string, tagline: string|null, category: string, version: string, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, architectures: list<string>}>
+     * @return array<int, array{id: string, title: string, tagline: string|null, category: string, version: string|null, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, architectures: list<string>}>
      */
     public function getApps(?string $category = null, ?string $search = null): array
     {
@@ -104,7 +104,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
                 'title' => $title,
                 'tagline' => $tagline,
                 'category' => $entry['category'],
-                'version' => $entry['version'],
+                'version' => $entry['version'] ?? '',
                 'author' => $entry['author'] ?? null,
                 'developer' => $entry['developer'] ?? null,
                 'icon' => $this->resolveAssetUrl($entry['icon'] ?? null),
@@ -117,7 +117,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
     }
 
     /**
-     * @return array{id: string, title: string, tagline: string|null, description: string|null, category: string, version: string, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, screenshot_link: list<string>, architectures: list<string>, website: string|null, repo: string|null, support: string|null, docs: string|null, release_notes: string|null}|null
+     * @return array{id: string, title: string, tagline: string|null, description: string|null, category: string, version: string|null, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, screenshot_link: list<string>, architectures: list<string>, website: string|null, repo: string|null, support: string|null, docs: string|null, release_notes: string|null}|null
      */
     public function getAppDetails(string $appId): ?array
     {
@@ -225,7 +225,7 @@ class CasaOSStoreProvider implements StoreProviderInterface
     /**
      * Get the store index (cached for the request lifecycle).
      *
-     * @return list<array{id: string, title: string, tagline: string|null, category: string, version: string, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, architectures: list<string>}>
+     * @return list<array{id: string, title: string, tagline: string|null, category: string, version: string|null, author: string|null, developer: string|null, icon: string|null, thumbnail: string|null, architectures: list<string>}>
      */
     private function getIndex(): array
     {
